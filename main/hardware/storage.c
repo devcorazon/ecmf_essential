@@ -72,7 +72,7 @@ static void storage_init_configuration_settings(void) {
 	memset(&application_data.configuration_settings, 0, sizeof(application_data.configuration_settings));
 
 //#TODO
-	// Example
+	// Verify the default values
 	application_data.configuration_settings.relative_humidity_set = RH_THRESHOLD_SETTING_MEDIUM;
 	application_data.configuration_settings.voc_set = VOC_THRESHOLD_SETTING_MEDIUM;
 	application_data.configuration_settings.lux_set = LUMINOSITY_SENSOR_SETTING_MEDIUM;

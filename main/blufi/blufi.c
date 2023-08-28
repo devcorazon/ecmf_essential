@@ -650,7 +650,7 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
 static void blufi_task(void *pvParameters)
 {
     initialise_wifi_mode(WIFI_AP);
-  //  initialise_bluetooth();
+    initialise_bluetooth();
 
     while (1)
     {
@@ -669,7 +669,7 @@ int blufi_deinit()
 {
 	stop_wifi_mode();
 
-//   stop_bluetooth();
+   stop_bluetooth();
 
     return 0;
 }
