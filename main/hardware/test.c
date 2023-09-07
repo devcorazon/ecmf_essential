@@ -153,7 +153,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     }
     else
     {
-        printf("LUX =  %u.%01u %%\n", RH_RAW_TO_INT(lux), RH_RAW_TO_DEC(lux));
+        printf("LUX =  %u.%01u %%\n", LUX_RAW_TO_INT(lux), LUX_RAW_TO_DEC(lux));
     }
 
 //    uint16_t ntc_temp = get_ntc_temperature();

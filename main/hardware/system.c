@@ -26,6 +26,7 @@
 #include "fan.h"
 #include "ir_receiver.h"
 #include "blufi.h"
+#include "../feature/device_controller.c"
 
 ///
 static struct i2c_dev_s i2c_dev;
@@ -134,5 +135,7 @@ int system_init(void) {
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d\r\n",
 			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset());
 
+
+	device_controller_init();
 	return 0;
 }

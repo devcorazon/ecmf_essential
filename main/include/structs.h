@@ -28,6 +28,7 @@ struct runtime_data_s {
 	int16_t     lux;
 	int16_t     internal_temperature;
 	int16_t     external_temperature;
+	uint16_t    automatic_cycle_duration;
 };
 
 ///
@@ -39,6 +40,7 @@ struct configuration_settings_s {
 	uint8_t     voc_set;
 	int16_t		temperature_offset;
 	int16_t    	relative_humidity_offset;
+	uint16_t    automatic_cycle_duration;
 };
 
 struct application_data_s {

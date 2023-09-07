@@ -71,11 +71,13 @@ static void storage_init_runtime_data(void) {
 static void storage_init_configuration_settings(void) {
 	memset(&application_data.configuration_settings, 0, sizeof(application_data.configuration_settings));
 
-//#TODO
-	// Verify the default values
-	application_data.configuration_settings.relative_humidity_set = RH_THRESHOLD_SETTING_MEDIUM;
-	application_data.configuration_settings.voc_set = VOC_THRESHOLD_SETTING_MEDIUM;
-	application_data.configuration_settings.lux_set = LUMINOSITY_SENSOR_SETTING_MEDIUM;
+	application_data.configuration_settings.relative_humidity_set = RH_THRESHOLD_SETTING_NOT_CONFIGURED;
+	application_data.configuration_settings.voc_set = VOC_THRESHOLD_SETTING_NOT_CONFIGURED;
+	application_data.configuration_settings.lux_set = LUMINOSITY_SENSOR_SETTING_NOT_CONFIGURED;
+	application_data.configuration_settings.speed_set = SPEED_NONE;
+	application_data.configuration_settings.mode_set = MODE_OFF;
+	application_data.configuration_settings.temperature_offset = 0;
+	application_data.configuration_settings.relative_humidity_offset = 0;
 }
 
 int storage_init(void) {
@@ -338,6 +340,13 @@ int set_relative_humidity_offset(int16_t relative_humidity_offset) {
     return 0;
 }
 
+uint16_t get_automatic_cycle_duration(void) {
+    return application_data.runtime_data.automatic_cycle_duration;
+}
+
+void set_automatic_cycle_duration(uint16_t automatic_cycle_duration) {
+    application_data.runtime_data.automatic_cycle_duration = automatic_cycle_duration;
+}
 static int storage_serial_number_obtain(void) {
     uint8_t serial_number_byte[4];
     size_t start_bit = 28 * 8;

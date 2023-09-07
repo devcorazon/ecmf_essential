@@ -11,12 +11,12 @@
 #define TEMPERATURE_INVALID						INT16_MAX
 #define RELATIVE_HUMIDITY_INVALID				UINT16_MAX
 #define VOC_INVALID								UINT16_MAX
-#define LUX_INVALID								UINT16_MAX
+#define LUX_INVALID								INT16_MAX
 
 #define TEMPERATURE_SCALE						(10)
 #define RELATIVE_HUMIDITY_SCALE					(10u)
 #define VOC_SCALE								(1u)
-#define LUMINOSITY_SCALE						(1000u)
+#define LUX_SCALE						        (1000u)
 
 // Offset
 #define TEMPERATURE_OFFSET_FIXED				(0)
@@ -25,15 +25,77 @@
 #define OFFSET_BOUND_MIN						(-500)
 #define OFFSET_BOUND_MAX						(500)
 
-
 #define SET_VALUE_TO_TEMP_RAW(val)				(val == TEMPERATURE_INVALID ? TEMPERATURE_INVALID : (int16_t) (val * TEMPERATURE_SCALE))
 #define SET_VALUE_TO_RH_RAW(val)				(val == RELATIVE_HUMIDITY_INVALID ? RELATIVE_HUMIDITY_INVALID : (uint16_t) (val * RELATIVE_HUMIDITY_SCALE))
+#define SET_VALUE_TO_LUX_RAW(val)				(val == LUX_INVALID ? LUX_INVALID : (uint16_t) (val * LUX_SCALE))
 
 #define TEMP_RAW_TO_INT(t)						(int16_t) (t / TEMPERATURE_SCALE)
 #define TEMP_RAW_TO_DEC(t)						(int16_t) (abs((int) t) % TEMPERATURE_SCALE)
 
 #define RH_RAW_TO_INT(rh)						(uint16_t) (rh / RELATIVE_HUMIDITY_SCALE)
 #define RH_RAW_TO_DEC(rh)						(uint16_t) (rh % RELATIVE_HUMIDITY_SCALE)
+
+#define LUX_RAW_TO_INT(lux)						(int16_t) (lux / LUX_SCALE)
+#define LUX_RAW_TO_DEC(lux)						(int16_t) (abs((int) lux ) % LUX_SCALE)
+
+#define SECONDS_PER_HOUR 3600
+
+/// Timing
+#define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
+#define DURATION_FIXED_CYCLE					(45U)
+#define DURATION_AUTOMATIC_CYCLE_OUT			(45U)
+#define DURATION_AUTOMATIC_CYCLE_IN				(150U)
+#define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
+#define DURATION_EXTRA_CYCLE_BOOST				(200U)
+#define DURATION_RESTART_EXTRA_CYCLE			(60U * 60U)
+
+/// Thresholds and differentials
+#define LUMINOSITY_THRESHOLD_LOW				(100U * LUX_SCALE / 1000U)
+#define LUMINOSITY_THRESHOLD_MEDIUM				(125U * LUX_SCALE / 1000U)
+#define LUMINOSITY_THRESHOLD_HIGH				(150U * LUX_SCALE / 1000U)
+
+#define LUMINOSITY_DIFFERENTIAL_LOW				(0U * LUX_SCALE / 1000U)
+#define LUMINOSITY_DIFFERENTIAL_HIGH			(5U * LUX_SCALE / 1000U)
+
+#define RH_THRESHOLD_LOW						(55U * RELATIVE_HUMIDITY_INVALID)
+#define RH_THRESHOLD_MEDIUM						(60U * RELATIVE_HUMIDITY_INVALID)
+#define RH_THRESHOLD_HIGH						(65U * RELATIVE_HUMIDITY_INVALID)
+
+#define RH_DIFFERENTIAL_LOW						(5U * RELATIVE_HUMIDITY_INVALID)
+#define RH_DIFFERENTIAL_HIGH					(0U * RELATIVE_HUMIDITY_INVALID)
+
+#define RH_THRESHOLD_ADV_CTRL_PERCENTAGE		(90U)
+
+#define VOC_THRESHOLD_LOW						(250U * VOC_SCALE)
+#define VOC_THRESHOLD_MEDIUM					(300U * VOC_SCALE)
+#define VOC_THRESHOLD_HIGH						(350U * VOC_SCALE)
+
+#define VOC_DIFFERENTIAL_LOW					(10U * VOC_SCALE)
+#define VOC_DIFFERENTIAL_HIGH					(0U * VOC_SCALE)
+
+// Flags
+#define COND_LUMINOSITY							BIT(0)
+#define COND_RH_EXTRA_CYCLE						BIT(1)
+#define COND_VOC_EXTRA_CYCLE					BIT(2)
+
+// Offset
+#define TEMPERATURE_OFFSET_FIXED				(0)
+#define RELATIVE_HUMIDITY_OFFSET_FIXED			(0)
+
+#define OFFSET_BOUND_MIN						(-500)
+#define OFFSET_BOUND_MAX						(500)
+
+// FIlters
+#define FILTER_THRESHOLD						(1000U)
+
+// Enumerations
+
+// Rotation setting
+enum {
+    ROTATION_SETTING_NOT_CONFIGURED				= 0x00,
+    ROTATION_SETTING_CONCORDANT					= 0x01,
+    ROTATION_SETTING_OPPOSITE					= 0x02,
+};
 
 // Rh threshold setting
 enum {
@@ -66,6 +128,8 @@ enum {
     MODE_EMISSION         						= 0x02,
     MODE_FIXED_CYCLE      						= 0x03,
     MODE_AUTOMATIC_CYCLE  						= 0x04,
+	MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE			= BIT(4),
+	MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION		= BIT(5),
 };
 
 // Speed
@@ -76,6 +140,8 @@ enum {
     SPEED_MEDIUM								= 0x03,
     SPEED_HIGH									= 0x04,
     SPEED_BOOST									= 0x05,
+	SPEED_AUTOMATIC_CYCLE_FORCE_BOOST			= BIT(5),
+	SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT			= BIT(6),
 };
 
 // Direction of rotation state
@@ -107,5 +173,18 @@ enum rgb_led_duration {
     RGB_LED_DURATION_2000MS     = 2000,
     RGB_LED_DURATION_FOREVER    = 0xFF,
 };
+
+/// Temperature in �C.
+typedef int16_t temperature_t;
+
+/// Relative humidity percentage.
+typedef uint16_t relative_humidity_t;
+
+/// Luminosity in lux
+typedef int16_t luminosity_t;
+
+/// VOC
+typedef uint16_t voc_t;
+
 
 #endif /* SRC_INCLUDE_TYPES_H_ */

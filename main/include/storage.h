@@ -39,6 +39,15 @@ int set_relative_humidity(uint16_t relative_humidity);
 uint16_t get_voc(void);
 int set_voc(uint16_t voc);
 
+int16_t get_lux(void);
+int set_lux(int16_t lux);
+
+int16_t get_internal_temperature(void);
+int set_internal_temperature(int16_t temperature);
+
+int16_t get_external_temperature(void);
+int set_external_temperature(int16_t temperature);
+
 /// configuration settings
 uint8_t get_mode_set(void);
 int set_mode_set(uint8_t mode_set);
@@ -60,5 +69,9 @@ int set_temperature_offset(int16_t temperature_offset);
 
 int16_t get_relative_humidity_offset(void);
 int set_relative_humidity_offset(int16_t relative_humidity_offset);
+
+uint16_t get_automatic_cycle_duration(void);
+void set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
+
 
 #endif /* MAIN_INCLUDE_STORAGE_H_ */
