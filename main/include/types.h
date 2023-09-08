@@ -16,7 +16,7 @@
 #define TEMPERATURE_SCALE						(10)
 #define RELATIVE_HUMIDITY_SCALE					(10u)
 #define VOC_SCALE								(1u)
-#define LUX_SCALE						        (1000u)
+#define LUX_SCALE						        (10u)
 
 // Offset
 #define TEMPERATURE_OFFSET_FIXED				(0)
@@ -41,13 +41,15 @@
 #define SECONDS_PER_HOUR 30 //3600
 #define SECONDS_TO_MS(seconds) ((seconds) * 1000UL)
 
+#define ceiling_fraction(numerator, divider) (((numerator) + ((divider) - 1)) / (divider))
+
 /// Timing
 #define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
 #define DURATION_FIXED_CYCLE					(5U)//(45U)
 #define DURATION_AUTOMATIC_CYCLE_OUT			(10U)//(45U)
 #define DURATION_AUTOMATIC_CYCLE_IN				(20U)//(150U)
 #define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
-#define DURATION_EXTRA_CYCLE_BOOST				(200U)
+#define DURATION_EXTRA_CYCLE_BOOST				(10U)//(200U)
 #define DURATION_RESTART_EXTRA_CYCLE			(60U * 60U)
 
 /// Thresholds and differentials

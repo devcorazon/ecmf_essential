@@ -39,7 +39,7 @@
 
 #define CONDITION_COUNT_MAX						    3U
 
-static uint16_t duration_automatic_cycle;
+static uint32_t duration_automatic_cycle;
 //
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature, int16_t immission_temperature);
 //
@@ -48,6 +48,9 @@ static void controller_set(void);
 static void reset_automatic_cycle_count(void);
 //
 static void work_task(void* arg);
+
+// Define Semaphore handler
+static SemaphoreHandle_t extra_cycle_count_sem;
 
 // Define the timer handle
 TimerHandle_t  controller_timer = NULL;
@@ -138,7 +141,7 @@ static void controller_task(void *pvParameters) {
             case MODE_AUTOMATIC_CYCLE:
             	set_mode_state(MODE_AUTOMATIC_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
             	set_automatic_cycle_duration(0U);
-            	xTaskCreate(work_task, "work task 2", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
+            	xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
             	break;
 
             default:
@@ -192,10 +195,6 @@ static void controller_task(void *pvParameters) {
 
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
   }
-}
-
-static inline int16_t ceiling_fraction(int16_t numerator, int16_t denominator) {
-    return (int16_t)ceil((float)numerator / (float)denominator);
 }
 
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature, int16_t immission_temperature) {
@@ -314,18 +313,18 @@ static void controller_set(void) {
 					count_voc_extra_cycle = 0U;
 				}
 
-//				if (cond_flags & (COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE)) {
-//					if (!(get_mode_state() & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE)) {
-//						if (!k_sem_take(&master_extra_cycle_count_sem, K_NO_WAIT)) {
-//							LOG_INF("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - [%" PRId16 "]", MASTER_EXTRA_CYCLE_COUNT_MAX - k_sem_count_get(&master_extra_cycle_count_sem));
-//							set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);
-//							if (speed_state > SPEED_NIGHT) {
-//								speed_state |= SPEED_AUTOMATIC_CYCLE_FORCE_BOOST;
-//							}
-//							k_work_submit(&master_work);
-//							if (!k_timer_remaining_get(&master_restart_extra_cycle_timer)) {
-//								k_timer_start(&master_restart_extra_cycle_timer, MASTER_DURATION_RESTART_EXTRA_CYCLE, K_NO_WAIT);
-//							}
+				if (cond_flags & (COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE)) {
+					if (!(get_mode_state() & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE)) {
+						if (xSemaphoreTake(extra_cycle_count_sem, 0) == pdPASS) {
+							printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - [%d]\n", EXTRA_CYCLE_COUNT_MAX - uxSemaphoreGetCount(extra_cycle_count_sem));
+							set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);
+							if (speed_state > SPEED_NIGHT) {
+								speed_state |= SPEED_AUTOMATIC_CYCLE_FORCE_BOOST;
+							}
+							xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
+							if (!xTimerIsTimerActive(restart_extra_cycle_timer)) {
+							    xTimerStart(restart_extra_cycle_timer, 0);
+							}
 //							struct log_evt_extra_cycle event_data;
 //							event_data.data.relative_humidity = relative_humidity;
 //							event_data.data.voc = voc;
@@ -333,16 +332,16 @@ static void controller_set(void) {
 //							event_data.data.voc_extra_cycle_cond = cond_flags & COND_VOC_EXTRA_CYCLE ? 1U : 0U;
 //							event_data.data.extra_cycle_count = MASTER_EXTRA_CYCLE_COUNT_MAX - k_sem_count_get(&master_extra_cycle_count_sem);
 //							log_save_event(EVENT_EXTRA_CYCLE, &event_data);
-//
-//							cond_flags &= ~(COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE);
-//							count_rh_extra_cycle = 0U;
-//							count_voc_extra_cycle = 0U;
-//						}
-//					}
-//				}
-//				else {
-//					speed_state &= ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST;
-//				}
+
+							cond_flags &= ~(COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE);
+							count_rh_extra_cycle = 0U;
+							count_voc_extra_cycle = 0U;
+						}
+					}
+				}
+				else {
+					speed_state &= ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST;
+				}
 
 			}
 			else {
@@ -370,7 +369,7 @@ static void reset_automatic_cycle_count(void) {
 }
 
 static void controller_timer_expiry(TimerHandle_t xTimer) {
-	printf("expired\n");
+	printf("Timer_Expired\n");
     xTaskCreate(work_task, "work task 1", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
 
 }
@@ -386,16 +385,16 @@ static void restart_automatic_cycle_timer_expiry(TimerHandle_t xTimer) {
 }
 
 static void restart_extra_cycle_timer_expiry(TimerHandle_t xTimer) {
-
-//	k_sem_init(&master_extra_cycle_count_sem, MASTER_EXTRA_CYCLE_COUNT_MAX, MASTER_EXTRA_CYCLE_COUNT_MAX);
-	printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - RESET COUNT");
+    while (uxSemaphoreGetCount(extra_cycle_count_sem) < EXTRA_CYCLE_COUNT_MAX) {
+        xSemaphoreGive(extra_cycle_count_sem);
+    }
+    printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - RESET COUNT\n");
 }
 
 static void work_task(void* arg) {
 	uint8_t	mode_state = get_mode_state();
 
 	mode_state &= ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
-
     switch (mode_state) {
         case MODE_OFF:
         	break;
@@ -426,6 +425,7 @@ static void work_task(void* arg) {
         	else if (get_direction_state() == DIRECTION_IN) {
         		set_direction_state(DIRECTION_OUT);
         	}
+
         	if (get_mode_state() & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION) {
         		// Extra cycle not started
         		if (extra_cycle_inversions_count == 0U) {
@@ -434,7 +434,7 @@ static void work_task(void* arg) {
 						set_direction_state(DIRECTION_OUT);
 			        	xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_OUT_MS), portMAX_DELAY);
 			        	xTimerStart(controller_timer, 0);
-						printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START");
+						printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START\n");
         			}
         			else if (calculate_duration_inversions_count <= CALCULATE_DURATION_INVERSIONS_MAX) {
         				printf("inversione_count=%d\n",calculate_duration_inversions_count);
@@ -486,6 +486,13 @@ static void work_task(void* arg) {
         			}
         	    }
         	}
+
+        	// Calculate duration and Extra cycle not started
+        	if ((calculate_duration_inversions_count == 0U) && (extra_cycle_inversions_count == 0U)) {
+	        	xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(duration_automatic_cycle), portMAX_DELAY);
+				xTimerStart(controller_timer, 0);
+        	}
+
         	break;
 
         default:
@@ -496,6 +503,9 @@ static void work_task(void* arg) {
 }
 int controller_init()
 {
+	// Initialization of the semaphore
+	extra_cycle_count_sem = xSemaphoreCreateCounting(EXTRA_CYCLE_COUNT_MAX, EXTRA_CYCLE_COUNT_MAX);
+
 	// Create the timer
 	controller_timer = xTimerCreate("controller_timer", pdMS_TO_TICKS(1000), pdFALSE, (void*)0, controller_timer_expiry);
 

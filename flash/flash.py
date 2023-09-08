@@ -5,7 +5,7 @@ from binascii import unhexlify, hexlify
 import re
 
 ESP_DEVICE = "COM9" # Adjust this to your actual ESP device
-FIRMWARE_BIN_FILE = "ecocomfort_essential.bin" # Path to your firmware binary file
+FIRMWARE_BIN_FILE = "ecmf_essential.bin" # Path to your firmware binary file
 SERIAL_FILE = "serial_number.txt" # File that contains the serial number
 BIN_FILE = "serial_number.bin" # Binary file to be created
 

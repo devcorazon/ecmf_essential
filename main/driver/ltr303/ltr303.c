@@ -87,7 +87,7 @@ static int read_register_16(uint8_t reg, uint16_t *val) {
     }
 
     xSemaphoreGive(ltr303_config.i2c_dev->lock);
-    *val = (rx_data[0] << 8) | rx_data[1];
+    *val = (rx_data[1] << 8) | rx_data[0];
     return 0;
 }
 

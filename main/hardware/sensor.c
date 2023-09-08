@@ -162,7 +162,7 @@ static void sensor_task(void *pvParameters) {
 //		printf("voc_idx: %u\r\n", voc_idx);
 
 		ltr303_measure_lux(&lux);
-		set_lux(lux);
+		set_lux(SET_VALUE_TO_LUX_RAW(lux));
 //		printf("lux: %.1f\r\n", lux);
 
 		sensor_ntc_sample(&temp);
@@ -171,7 +171,7 @@ static void sensor_task(void *pvParameters) {
 		temperature_sensor_sample_get(&t_sens);
 		add_t_sens_to_pool(t_sens);
 
-		if (get_direction_state() == DIRECTION_OUT) {
+		if (get_direction_state() == DIRECTION_OUT){
 			set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
 		}
 		else if (get_direction_state() == DIRECTION_IN){

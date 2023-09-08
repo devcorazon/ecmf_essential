@@ -146,8 +146,8 @@ static int cmd_test_all_func(int argc, char** argv) {
         printf("VOC Index =  %ld \n", voc);
     }
 
-    uint16_t lux = get_lux();
-    if (lux == UINT16_MAX)
+    int16_t lux = get_lux();
+    if (lux == INT16_MAX)
     {
         printf("LUX reading error\n");
     }
@@ -155,6 +155,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     {
         printf("LUX =  %u.%01u %%\n", LUX_RAW_TO_INT(lux), LUX_RAW_TO_DEC(lux));
     }
+
 
 //    uint16_t ntc_temp = get_ntc_temperature();
 //    if (ntc_temp == UINT16_MAX)
