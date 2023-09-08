@@ -1,0 +1,30 @@
+INSTALL PYTHON 3.8
+INSTALL GIT
+
+using Git
+mkdir esp
+cd esp
+git clone --recursive https://github.com/espressif/esp-idf.git --
+
+cd esp-idf
+git checkout v5.0.1
+git submodule update --init --recursive
+
+
+After Open CMD and install the ESP IDF environnement :
+
+cd %userprofilee%\esp\esp-idf
+.\install.bat
+%userprofile%\esp\esp-idf\export.bat
+
+After go to cmd and install 
+pip install esptool
+
+Go to flash folder , then edit the the flash.py , and put the path of esptool and espefuse
+Finaly run the script using "python flash.py" command
+
+
+
+
+
+

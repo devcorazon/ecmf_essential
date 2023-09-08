@@ -140,10 +140,10 @@ uint8_t get_mode_state(void) {
 }
 
 int set_mode_state(uint8_t mode_state) {
-	if ((mode_state & 0x3f) > MODE_AUTOMATIC_CYCLE) {
-
-		return -1;
-	}
+//	if ((mode_state & 0x3f) > MODE_AUTOMATIC_CYCLE) {
+//
+//		return -1;
+//	}
 
 	application_data.runtime_data.mode_state = mode_state;
 
@@ -155,10 +155,10 @@ uint8_t get_speed_state(void) {
 }
 
 int set_speed_state(uint8_t speed_state) {
-	if ((speed_state & 0x3f) > SPEED_BOOST) {
-
-		return -1;
-	}
+//	if ((speed_state & 0x3f) > SPEED_BOOST) {
+//
+//		return -1;
+//	}
 
 	application_data.runtime_data.speed_state = speed_state;
 

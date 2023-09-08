@@ -26,7 +26,8 @@
 #include "fan.h"
 #include "ir_receiver.h"
 #include "blufi.h"
-#include "../feature/device_controller.c"
+
+#include "../feature/controller.c"
 
 ///
 static struct i2c_dev_s i2c_dev;
@@ -121,6 +122,9 @@ int system_init(void) {
 	fan_init();
 	ir_receiver_init();
 //	blufi_init();
+	set_mode_set(0);
+	set_speed_set(0);
+	controller_init();
 
 #if 0
 	set_mode_set(4);
@@ -136,6 +140,5 @@ int system_init(void) {
 			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset());
 
 
-	device_controller_init();
 	return 0;
 }

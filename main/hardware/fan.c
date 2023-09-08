@@ -38,7 +38,12 @@ int fan_init()
 int fan_set(uint8_t direction, uint8_t speed)
 {
 
-    gpio_set_level(FAN_DIRECTION_PIN, (int)direction);
+	if ( direction == DIRECTION_IN){
+    gpio_set_level(FAN_DIRECTION_PIN, 0);
+	}
+	else if( direction == DIRECTION_OUT){
+	gpio_set_level(FAN_DIRECTION_PIN, 1);
+	}
 
     if (speed > 5)
     {
@@ -46,13 +51,14 @@ int fan_set(uint8_t direction, uint8_t speed)
         speed = 5;
     }
 
-    if (direction == FAN_IN)
-    {
+    if (direction == DIRECTION_IN){
         fan_speed = fan_pwm_pulse_in[speed];
     }
-    else
-    {
+    else if( direction == DIRECTION_OUT){
         fan_speed = fan_pwm_pulse_out[speed];
+    }
+    else if(direction == DIRECTION_NONE){
+    	fan_speed = 0;
     }
 
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, fan_speed);
@@ -61,7 +67,7 @@ int fan_set(uint8_t direction, uint8_t speed)
     set_direction_state(direction);
     set_speed_state(fan_speed);
 
-    printf("Fan set: direction=%u, speed=%d.\n", direction, fan_speed);
+ //   printf("Fan set: direction=%u, speed=%d.\n", direction, speed);
 
     return 0;
 }

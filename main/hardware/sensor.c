@@ -150,8 +150,10 @@ static void sensor_task(void *pvParameters) {
 			r_hum += (float)RELATIVE_HUMIDITY_OFFSET_FIXED / (float)RELATIVE_HUMIDITY_SCALE;
 			r_hum += (float)get_relative_humidity_offset() / (float)RELATIVE_HUMIDITY_SCALE;
 		}
+		if (get_direction_state() != DIRECTION_IN){
 		set_temperature(SET_VALUE_TO_TEMP_RAW(t_amb));
 		set_relative_humidity(SET_VALUE_TO_RH_RAW(r_hum));
+		}
 
 //		printf("t_amb: %.1f - r_hum: %.1f\r\n", t_amb, r_hum);
 
@@ -168,6 +170,13 @@ static void sensor_task(void *pvParameters) {
 
 		temperature_sensor_sample_get(&t_sens);
 		add_t_sens_to_pool(t_sens);
+
+		if (get_direction_state() == DIRECTION_OUT) {
+			set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
+		}
+		else if (get_direction_state() == DIRECTION_IN){
+			set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
+		}
 //		printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());
 
 //		printf("t_amb: %.1f - r_hum: %.1f - temp: %.1f\r\n", t_amb, r_hum, temp);

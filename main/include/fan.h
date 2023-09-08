@@ -52,13 +52,6 @@ static const uint32_t fan_pwm_pulse_out[] = {
     FAN_PWM_PULSE_SPEED_BOOST_OUT
 };
 
-enum
-{
-    FAN_STOP = 0,
-    FAN_IN = 0,
-    FAN_OUT = 1
-};
-
 int fan_init();
 int fan_set(uint8_t direction,uint8_t speed);
 

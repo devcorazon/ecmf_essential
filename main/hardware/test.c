@@ -193,43 +193,43 @@ static int cmd_test_fan_func(int argc, char** argv) {
     {
         case 0:
             speed = SPEED_NONE;
-            direction = FAN_STOP;
+            direction = DIRECTION_NONE;
             break;
         case 1:
             speed = SPEED_NIGHT;
-            direction = FAN_IN;
+            direction = DIRECTION_IN;
             break;
         case 2:
             speed = SPEED_LOW;
-            direction = FAN_IN;
+            direction = DIRECTION_IN;
             break;
         case 3:
             speed = SPEED_MEDIUM;
-            direction = FAN_IN;
+            direction = DIRECTION_IN;
             break;
         case 4:
             speed = SPEED_HIGH;
-            direction = FAN_IN;
+            direction = DIRECTION_IN;
             break;
         case 5:
             speed = SPEED_NIGHT;
-            direction = FAN_OUT;
+            direction = DIRECTION_OUT;
             break;
         case 6:
             speed = SPEED_LOW;
-            direction = FAN_OUT;
+            direction = DIRECTION_OUT;
             break;
         case 7:
             speed = SPEED_MEDIUM;
-            direction = FAN_OUT;
+            direction = DIRECTION_OUT;
             break;
         case 8:
             speed = SPEED_HIGH;
-            direction = FAN_OUT;
+            direction = DIRECTION_OUT;
             break;
         case 9:
             speed = SPEED_BOOST;
-            direction = FAN_OUT;
+            direction = DIRECTION_OUT;
             break;
         default: // This should never happen
             printf("Invalid index. Supported fan speeds: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");

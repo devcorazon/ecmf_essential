@@ -15,7 +15,7 @@ idf_component_register(
                     	"blufi/blufi.c"
                     	"blufi/blufi_init.c"
                     	"blufi/blufi_security.c"
-                    	"feature/device_controller.c"
+                    	"feature/controller.c"
      	
 
                     INCLUDE_DIRS 
