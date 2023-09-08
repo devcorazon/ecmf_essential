@@ -6,6 +6,7 @@
  */
 
 #include "test.h"
+#include "stdbool.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -26,7 +27,21 @@ static esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEF
 static esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
 static esp_console_repl_t *repl = NULL;
 
+static int testing_in_progress = false;
 ///
+static int test_in_progress_set()
+{
+	return testing_in_progress = true;
+}
+static int test_in_progress_reset()
+{
+	return testing_in_progress = false;
+}
+
+int test_in_progress(){
+	return testing_in_progress;
+}
+
 static int cmd_set_mode_speed_func(int argc, char** argv) {
 
     if(argc < 3)
@@ -156,17 +171,6 @@ static int cmd_test_all_func(int argc, char** argv) {
         printf("LUX =  %u.%01u %%\n", LUX_RAW_TO_INT(lux), LUX_RAW_TO_DEC(lux));
     }
 
-
-//    uint16_t ntc_temp = get_ntc_temperature();
-//    if (ntc_temp == UINT16_MAX)
-//    {
-//        printf("NTC Temperature reading error\n");
-//    }
-//    else
-//    {
-//        printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(ntc_temp), TEMP_RAW_TO_DEC(ntc_temp));
-//    }
-
 	return 0;
 }
 
@@ -243,11 +247,13 @@ static int cmd_test_fan_func(int argc, char** argv) {
 }
 
 static int cmd_test_start_func(int argc, char** argv) {
+	test_in_progress_set();
 	blufi_init();
 	return 0;
 }
 
 static int cmd_test_stop_func(int argc, char** argv) {
+	test_in_progress_reset();
 	blufi_deinit();
 	return 0;
 }

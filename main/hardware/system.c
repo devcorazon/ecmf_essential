@@ -122,8 +122,6 @@ int system_init(void) {
 	fan_init();
 	ir_receiver_init();
 //	blufi_init();
-	set_mode_set(0);
-	set_speed_set(0);
 	controller_init();
 
 #if 0

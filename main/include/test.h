@@ -8,6 +8,7 @@
 #ifndef MAIN_INCLUDE_TEST_H_
 #define MAIN_INCLUDE_TEST_H_
 
+int test_in_progress();
 int test_init(void);
 
 #endif /* MAIN_INCLUDE_TEST_H_ */
