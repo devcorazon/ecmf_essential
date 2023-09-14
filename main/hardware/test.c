@@ -61,6 +61,13 @@ static int cmd_set_mode_speed_func(int argc, char** argv) {
 //        return -1;
 //    }
 
+	if ( mode_set < 5 ){
+		set_mode_state(get_mode_state() & ~MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);  // disable extra cycle
+	}
+	else {
+		mode_set = 4;
+		set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);  // Enable extra cycle
+	}
 	set_mode_set(mode_set);
 	set_speed_set(speed_set);
 

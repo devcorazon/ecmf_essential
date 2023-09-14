@@ -249,6 +249,7 @@ static void controller_set(void) {
 	}
 
 	if (get_mode_set() == MODE_AUTOMATIC_CYCLE) {
+
 		if (!(get_mode_state() & (MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION))) {
 			if (get_lux_set() != LUMINOSITY_SENSOR_SETTING_NOT_CONFIGURED) {
 				if (luminosity > (luminosity_threshold + LUMINOSITY_DIFFERENTIAL_HIGH)) {
