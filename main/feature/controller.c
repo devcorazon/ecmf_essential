@@ -155,10 +155,6 @@ static void controller_task(void *pvParameters) {
 
 			fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
 
-			set_mode_state(get_mode_state());
-			set_speed_state(get_speed_state());
-			set_direction_state(get_direction_state());
-
 //			static const char *mode_log_str[] = { "Off", "Immission","Emission", "Fixed cycle", "Automatic cycle" };
 //			static const char *speed_log_str[] = { "None", "Night", "Vel1","Vel2", "Vel3", "Boost", "Profiled" };
 //			static const char *direction_log_str[] = { "None", "Out", "In" };
@@ -330,8 +326,7 @@ static void controller_set(void) {
 //							event_data.data.extra_cycle_count = MASTER_EXTRA_CYCLE_COUNT_MAX - k_sem_count_get(&master_extra_cycle_count_sem);
 //							log_save_event(EVENT_EXTRA_CYCLE, &event_data);
 
-						cond_flags &= ~(COND_RH_EXTRA_CYCLE
-								| COND_VOC_EXTRA_CYCLE);
+						cond_flags &= ~(COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE);
 						count_rh_extra_cycle = 0U;
 						count_voc_extra_cycle = 0U;
 					}

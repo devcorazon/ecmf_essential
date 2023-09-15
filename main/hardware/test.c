@@ -138,8 +138,8 @@ static int cmd_test_all_func(int argc, char** argv) {
 
     printf("Firmware version: v%d.%d.%d\n", FW_VERSION_MAJOR,FW_VERSION_MINOR,FW_VERSION_PATCH);
 
-    uint16_t temp = get_temperature();
-    if (temp == UINT16_MAX)
+    int16_t temp = get_temperature();
+    if (temp == INT16_MAX)
     {
         printf("Temperature reading error\n");
     }
@@ -176,6 +176,17 @@ static int cmd_test_all_func(int argc, char** argv) {
     else
     {
         printf("LUX =  %u.%01u %%\n", LUX_RAW_TO_INT(lux), LUX_RAW_TO_DEC(lux));
+    }
+
+    float ntc_temp;
+    sensor_ntc_sample(&ntc_temp);
+    if (ntc_temp == INT16_MAX)
+    {
+        printf("NTC Temperature reading error\n");
+    }
+    else
+    {
+        printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(ntc_temp), TEMP_RAW_TO_DEC(ntc_temp));
     }
 
 	return 0;

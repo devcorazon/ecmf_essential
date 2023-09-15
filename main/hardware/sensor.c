@@ -91,7 +91,7 @@ static int sensor_adc_binding(struct adc_dev_s *adc_d) {
 	return 0;
 }
 
-static int sensor_ntc_sample(float *temp) {
+int sensor_ntc_sample(float *temp) {
 	int sample_raw;
 	long sum_samples;
 	int voltage_val;
