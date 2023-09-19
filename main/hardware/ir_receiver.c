@@ -26,8 +26,7 @@ static uint16_t s_nec_code_command;
 /**
  * @brief Check whether a duration is within expected range
  */
-static inline bool nec_check_in_range(uint32_t signal_duration, uint32_t spec_duration)
-{
+static inline bool nec_check_in_range(uint32_t signal_duration, uint32_t spec_duration) {
     return (signal_duration < (spec_duration + IR_NEC_DECODE_MARGIN)) &&
            (signal_duration > (spec_duration - IR_NEC_DECODE_MARGIN));
 }
@@ -35,8 +34,7 @@ static inline bool nec_check_in_range(uint32_t signal_duration, uint32_t spec_du
 /**
  * @brief Check whether a RMT symbol represents NEC logic zero
  */
-static bool nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols)
-{
+static bool nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols) {
     return nec_check_in_range(rmt_nec_symbols->duration0, NEC_PAYLOAD_ZERO_DURATION_0) &&
            nec_check_in_range(rmt_nec_symbols->duration1, NEC_PAYLOAD_ZERO_DURATION_1);
 }
@@ -44,8 +42,7 @@ static bool nec_parse_logic0(rmt_symbol_word_t *rmt_nec_symbols)
 /**
  * @brief Check whether a RMT symbol represents NEC logic one
  */
-static bool nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols)
-{
+static bool nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols) {
     return nec_check_in_range(rmt_nec_symbols->duration0, NEC_PAYLOAD_ONE_DURATION_0) &&
            nec_check_in_range(rmt_nec_symbols->duration1, NEC_PAYLOAD_ONE_DURATION_1);
 }
@@ -53,8 +50,7 @@ static bool nec_parse_logic1(rmt_symbol_word_t *rmt_nec_symbols)
 /**
  * @brief Decode RMT symbols into NEC address and command
  */
-static bool nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols)
-{
+static bool nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols) {
     rmt_symbol_word_t *cur = rmt_nec_symbols;
     uint16_t address = 0;
     uint16_t command = 0;
@@ -93,8 +89,7 @@ static bool nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols)
 /**
  * @brief Check whether the RMT symbols represent NEC repeat code
  */
-static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols)
-{
+static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols) {
     return nec_check_in_range(rmt_nec_symbols->duration0, NEC_REPEAT_CODE_DURATION_0) &&
            nec_check_in_range(rmt_nec_symbols->duration1, NEC_REPEAT_CODE_DURATION_1);
 }
@@ -102,8 +97,7 @@ static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols)
 /**
  * @brief Decode RMT symbols into NEC scan code and print the result
  */
-static void parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num)
-{
+static void parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num) {
     printf("NEC frame start---\r\n");
     for (size_t i = 0; i < symbol_num; i++) {
 //        printf("{%d:%d},{%d:%d}\r\n", rmt_nec_symbols[i].level0, rmt_nec_symbols[i].duration0,
@@ -128,8 +122,7 @@ static void parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_nu
     }
 }
 
-static bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data)
-{
+static bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data) {
     BaseType_t high_task_wakeup = pdFALSE;
     QueueHandle_t receive_queue = (QueueHandle_t)user_data;
     // send the received RMT symbols to the parser task
@@ -137,8 +130,7 @@ static bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done
     return high_task_wakeup == pdTRUE;
 }
 
-static void ir_receive_task(void* param)
-{
+static void ir_receive_task(void* param) {
 	printf("create RMT RX channel\n");
     rmt_rx_channel_config_t rx_channel_cfg = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
@@ -171,8 +163,7 @@ static void ir_receive_task(void* param)
     rmt_rx_done_event_data_t rx_data;
     // ready to receive
     ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
-    while (1)
-    {
+    while (1) {
         // wait for RX done signal
         if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
             // parse the receive symbols and print the result
@@ -183,8 +174,7 @@ static void ir_receive_task(void* param)
     }
 }
 
-int ir_receiver_init()
-{
+int ir_receiver_init(){
     BaseType_t task_created = xTaskCreate(ir_receive_task, "IR Receiver task ", IR_TASK_STACK_SIZE, NULL, IR_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;

@@ -100,8 +100,7 @@ int storage_init(void) {
     	for (size_t i = 0u; i < ARRAY_SIZE(storage_entry_poll); i++ ) {
     		storage_read_entry_with_idx(i);
     	}
-    }
-    else {
+    } else {
     	printf("nvs_open - ERROR\r\n");
     }
 

@@ -81,8 +81,7 @@ static int adc_init(void) {
     return 0;
 }
 
-static int pwm_init(void)
-{
+static int pwm_init(void) {
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,

@@ -90,8 +90,7 @@ static wifi_sta_list_t gl_sta_list;
 static bool gl_sta_is_connecting = false;
 static esp_blufi_extra_info_t gl_sta_conn_info;
 
-static void record_wifi_conn_info(int rssi, uint8_t reason)
-{
+static void record_wifi_conn_info(int rssi, uint8_t reason) {
     memset(&gl_sta_conn_info, 0, sizeof(esp_blufi_extra_info_t));
     if (gl_sta_is_connecting) {
         gl_sta_conn_info.sta_max_conn_retry_set = true;
@@ -104,15 +103,13 @@ static void record_wifi_conn_info(int rssi, uint8_t reason)
     }
 }
 
-static void wifi_connect(void)
-{
+static void wifi_connect(void) {
     wifi_retry = 0;
     gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
 }
 
-static bool wifi_reconnect(void)
-{
+static bool wifi_reconnect(void) {
     bool ret;
     if (gl_sta_is_connecting && wifi_retry++ < WIFI_CONNECTION_MAXIMUM_RETRY) {
     	printf("BLUFI WiFi starts reconnection\n");
@@ -125,8 +122,7 @@ static bool wifi_reconnect(void)
     return ret;
 }
 
-static int softap_get_current_connection_number(void)
-{
+static int softap_get_current_connection_number(void) {
     esp_err_t ret;
     ret = esp_wifi_ap_get_sta_list(&gl_sta_list);
     if (ret == ESP_OK)
@@ -137,9 +133,7 @@ static int softap_get_current_connection_number(void)
     return 0;
 }
 
-static void ip_event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
-{
+static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) {
     wifi_mode_t mode;
 
     switch (event_id) {
@@ -168,9 +162,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     return;
 }
 
-static void wifi_event_handler(void* arg, esp_event_base_t event_base,
-                                int32_t event_id, void* event_data)
-{
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) {
     wifi_event_sta_connected_t *event;
     wifi_event_sta_disconnected_t *disconnected_event;
     wifi_mode_t mode;
@@ -296,16 +288,14 @@ static void initialise_wifi_mode(uint8_t wifi_mode) {
     if (wifi_mode == WIFI_STA) {
         strcpy((char*)wifi_config.sta.ssid, ESP_WIFI_SSID);
         strcpy((char*)wifi_config.sta.password, ESP_WIFI_PASS);
-    }
-    else if (wifi_mode == WIFI_AP) {
+    } else if (wifi_mode == WIFI_AP) {
         strcpy((char*)wifi_config.ap.ssid, ESP_WIFI_SSID);
         wifi_config.ap.ssid_len = strlen(ESP_WIFI_SSID);
         strcpy((char*)wifi_config.ap.password, ESP_WIFI_PASS);
         wifi_config.ap.channel = 6;
         wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
         wifi_config.ap.max_connection = 4;
-    }
-    else {
+    } else {
         printf("Invalid WiFi mode selected.\n");
         return;
     }
@@ -336,8 +326,7 @@ static void initialise_wifi_mode(uint8_t wifi_mode) {
             printf("Failed to create default WiFi STA.\n");
             return;
         }
-    }
-    else if (wifi_mode == WIFI_AP && !ap_netif) {
+    } else if (wifi_mode == WIFI_AP && !ap_netif) {
         ap_netif = esp_netif_create_default_wifi_ap();
         if (!ap_netif) {
             printf("Failed to create default WiFi AP.\n");
@@ -373,8 +362,7 @@ static void initialise_wifi_mode(uint8_t wifi_mode) {
             printf("Failed to set WiFi Config STA: %s\n", esp_err_to_name(err));
             return;
         }
-    }
-    else if (wifi_mode == WIFI_AP) {
+    } else if (wifi_mode == WIFI_AP) {
         err = esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
         if (err != ESP_OK) {
             printf("Failed to set WiFi Config AP: %s\n", esp_err_to_name(err));
@@ -389,8 +377,7 @@ static void initialise_wifi_mode(uint8_t wifi_mode) {
     }
 }
 
-static void stop_wifi_mode()
-{
+static void stop_wifi_mode() {
     esp_err_t err;
 
     printf("Stopping WiFi access point...");
@@ -506,8 +493,7 @@ static void stop_bluetooth(void) {
     }
 }
 
-static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param)
-{
+static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
     /* actually, should post to blufi_task handle the procedure,
      * now, as a example, we do it more simply */
     switch (event) {
@@ -635,7 +621,7 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
         esp_wifi_set_config(WIFI_IF_AP, &ap_config);
         printf("Recv SOFTAP CHANNEL %d\n", ap_config.ap.channel);
         break;
-    case ESP_BLUFI_EVENT_GET_WIFI_LIST:{
+    case ESP_BLUFI_EVENT_GET_WIFI_LIST:
         wifi_scan_config_t scanConf = {
             .ssid = NULL,
             .bssid = NULL,
@@ -647,7 +633,7 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
             esp_blufi_send_error_info(ESP_BLUFI_WIFI_SCAN_FAIL);
         }
         break;
-    }
+
     case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA:
         printf("Recv Custom Data %" PRIu32 "\n", param->custom_data.data_len);
         esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
@@ -675,26 +661,22 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
     }
 }
 
-static void blufi_task(void *pvParameters)
-{
+static void blufi_task(void *pvParameters) {
     initialise_wifi_mode(WIFI_AP);
     initialise_bluetooth();
 
-    while (1)
-    {
+    while (1) {
         vTaskDelay(pdMS_TO_TICKS(BLUFI_TASK_PERIOD));  // Sleep for 100 ms
     }
 }
 
-int blufi_init()
-{
+int blufi_init() {
     BaseType_t task_created = xTaskCreate(blufi_task, "BLUFI task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;
 }
 
-int blufi_deinit()
-{
+int blufi_deinit() {
    stop_wifi_mode();
    stop_bluetooth();
 

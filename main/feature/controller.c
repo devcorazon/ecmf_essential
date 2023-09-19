@@ -439,12 +439,8 @@ static void work_task(void *arg) {
 //            					get_automatic_cycle_duration(), get_emission_temperature() / TEMPERATURE_SCALE, abs(get_emission_temperature() % TEMPERATURE_SCALE), get_immission_temperature() / TEMPERATURE_SCALE, abs(get_immission_temperature() % TEMPERATURE_SCALE));
 					duration_automatic_cycle = SECONDS_TO_MS( get_automatic_cycle_duration());
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
-//						LOG_INF("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - STOP");
-//						struct log_evt_calculate_duration event_data;
-//						event_data.data.emission_temperature = get_emission_temperature();
-//						event_data.data.immission_temperature = get_immission_temperature();
-//						event_data.data.automatic_cycle_duration = get_automatic_cycle_duration();
-//						log_save_event(EVENT_CALCULATE_DURATION, &event_data);
+				    printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - STOP\n");
+
 
 				}
 			}

@@ -116,11 +116,9 @@ int sensor_ntc_sample(float *temp) {
 
 	if (i == 0u) {
 		*temp = ntc_convert[i].temperature;
-	}
-	else if (i == ARRAY_SIZE(ntc_convert)) {
+	} else if (i == ARRAY_SIZE(ntc_convert)) {
 		*temp = ntc_convert[ARRAY_SIZE(ntc_convert) - 1].temperature;
-	}
-	else {
+	} else {
 		*temp = ntc_convert[i - 1].temperature
 				+ (((int32_t)(tmp - ntc_convert[i - 1].resistance) * (ntc_convert[i - 1].temperature - ntc_convert[i].temperature))
 						/ (int32_t)(ntc_convert[i - 1].resistance - ntc_convert[i].resistance));
@@ -173,8 +171,7 @@ static void sensor_task(void *pvParameters) {
 
 		if (get_direction_state() == DIRECTION_OUT){
 			set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
-		}
-		else if (get_direction_state() == DIRECTION_IN){
+		} else if (get_direction_state() == DIRECTION_IN){
 			set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
 		}
 //		printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());

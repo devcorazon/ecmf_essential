@@ -22,8 +22,9 @@ static uint8_t sht4x_compute_crc(uint8_t *buf, size_t size) {
     for (size_t i = 0u; i < size; i++) {
         crc ^= buf[i];
 
-        for (size_t j = 0; j < 8; j++)
+        for (size_t j = 0; j < 8; j++) {
             crc = crc & 0x80 ? (crc << 1) ^ SHT4X_CRC_POLY : crc << 1;
+        }
     }
 
     return crc;

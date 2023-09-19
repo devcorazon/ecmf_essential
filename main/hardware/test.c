@@ -29,16 +29,14 @@ static esp_console_repl_t *repl = NULL;
 
 static int testing_in_progress = false;
 ///
-static int test_in_progress_set()
-{
+static int test_in_progress_set() {
 	return testing_in_progress = true;
 }
-static int test_in_progress_reset()
-{
+static int test_in_progress_reset() {
 	return testing_in_progress = false;
 }
 
-int test_in_progress(){
+int test_in_progress() {
 	return testing_in_progress;
 }
 
@@ -63,8 +61,7 @@ static int cmd_set_mode_speed_func(int argc, char** argv) {
 
 	if ( mode_set < 5 ){
 		set_mode_state(get_mode_state() & ~MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);  // disable extra cycle
-	}
-	else {
+	} else {
 		mode_set = 4;
 		set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);  // Enable extra cycle
 	}
@@ -142,9 +139,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     if (temp == INT16_MAX)
     {
         printf("Temperature reading error\n");
-    }
-    else
-    {
+    } else {
         printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
     }
 
@@ -152,9 +147,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     if (rh == UINT16_MAX)
     {
         printf("Relative humidity reading error\n");
-    }
-    else
-    {
+    } else {
         printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
     }
 
@@ -162,9 +155,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     if (voc == UINT16_MAX)
     {
         printf("VOC Index reading error\n");
-    }
-    else
-    {
+    } else {
         printf("VOC Index =  %ld \n", voc);
     }
 
@@ -172,9 +163,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     if (lux == INT16_MAX)
     {
         printf("LUX reading error\n");
-    }
-    else
-    {
+    } else {
         printf("LUX =  %u.%01u %%\n", LUX_RAW_TO_INT(lux), LUX_RAW_TO_DEC(lux));
     }
 
@@ -183,9 +172,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     if (ntc_temp == INT16_MAX)
     {
         printf("NTC Temperature reading error\n");
-    }
-    else
-    {
+    } else {
         printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(ntc_temp), TEMP_RAW_TO_DEC(ntc_temp));
     }
 

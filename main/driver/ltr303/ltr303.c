@@ -152,20 +152,21 @@ int ltr303_measure_lux(float *lux) {
 	float ratio = (float) CH1_data_raw
 			/ ((float) CH0_data_raw + (float) CH1_data_raw);
 
-	if (ratio < 0.45f)
+	if (ratio < 0.45f) {
 		*lux = (1.7743f * (float) CH0_data_raw + 1.1059f * (float) CH1_data_raw)
 				/ ltr303_gain[LTR303_GAIN]
 				/ ltr303_integration_time[LTR303_INTEGRATION_TIME];
-	else if (ratio < 0.64f)
+	} else if (ratio < 0.64f) {
 		*lux = (4.2785f * (float) CH0_data_raw - 1.9548f * (float) CH1_data_raw)
 				/ ltr303_gain[LTR303_GAIN]
 				/ ltr303_integration_time[LTR303_INTEGRATION_TIME];
-	else if (ratio < 0.85f)
+	} else if (ratio < 0.85f) {
 		*lux = (0.5926f * (float) CH0_data_raw + 0.1185f * (float) CH1_data_raw)
 				/ ltr303_gain[LTR303_GAIN]
 				/ ltr303_integration_time[LTR303_INTEGRATION_TIME];
-	else
+	} else {
 		*lux = 0.f;
+	}
 
 	return 0;
 }
