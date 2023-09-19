@@ -136,7 +136,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     printf("Firmware version: v%d.%d.%d\n", FW_VERSION_MAJOR,FW_VERSION_MINOR,FW_VERSION_PATCH);
 
     int16_t temp = get_temperature();
-    if (temp == INT16_MAX)
+    if (temp == TEMPERATURE_INVALID)
     {
         printf("Temperature reading error\n");
     } else {
@@ -144,7 +144,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     }
 
     uint16_t rh = get_relative_humidity();
-    if (rh == UINT16_MAX)
+    if (rh == RELATIVE_HUMIDITY_INVALID )
     {
         printf("Relative humidity reading error\n");
     } else {
@@ -152,7 +152,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     }
 
     int32_t voc = get_voc();
-    if (voc == UINT16_MAX)
+    if (voc == VOC_INVALID)
     {
         printf("VOC Index reading error\n");
     } else {
@@ -160,7 +160,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     }
 
     int16_t lux = get_lux();
-    if (lux == INT16_MAX)
+    if (lux == LUX_INVALID)
     {
         printf("LUX reading error\n");
     } else {
@@ -171,7 +171,7 @@ static int cmd_test_all_func(int argc, char** argv) {
     sensor_ntc_sample(&ntc_temp);
     int16_t i16_ntc_temp = SET_VALUE_TO_TEMP_RAW(ntc_temp);
 
-    if (i16_ntc_temp == INT16_MAX)
+    if (i16_ntc_temp == TEMPERATURE_INVALID)
     {
         printf("NTC Temperature reading error\n");
     } else {

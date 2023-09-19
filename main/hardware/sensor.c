@@ -98,6 +98,8 @@ int sensor_ntc_sample(float *temp) {
 	uint32_t tmp;
 	size_t i;
 
+	*temp = TEMP_F_INVALID;
+
 	for (i = 0u, sum_samples = 0; i < NTC_ADC_NB_SAMPLE; i++) {
 		adc_oneshot_read(adc_dev.adc_handle, adc_dev.adc_channel, &sample_raw);
 		sum_samples += sample_raw;
@@ -106,6 +108,9 @@ int sensor_ntc_sample(float *temp) {
 	adc_cali_raw_to_voltage(adc_dev.adc_cali_handle, sum_samples / NTC_ADC_NB_SAMPLE, &voltage_val);
 //	printf("Voltage: %u\r\n", voltage_val);
 
+	if ( voltage_val == NTC_ADC_VIN){
+		return -1;
+	}
 	tmp = voltage_val * NTC_ADC_LEG_RESISTANCE;
 	tmp /= NTC_ADC_VIN - voltage_val;
 
