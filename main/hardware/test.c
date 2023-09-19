@@ -169,11 +169,13 @@ static int cmd_test_all_func(int argc, char** argv) {
 
     float ntc_temp;
     sensor_ntc_sample(&ntc_temp);
-    if (ntc_temp == INT16_MAX)
+    int16_t i16_ntc_temp = SET_VALUE_TO_TEMP_RAW(ntc_temp);
+
+    if (i16_ntc_temp == INT16_MAX)
     {
         printf("NTC Temperature reading error\n");
     } else {
-        printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(ntc_temp), TEMP_RAW_TO_DEC(ntc_temp));
+    	printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
     }
 
 	return 0;
