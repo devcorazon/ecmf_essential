@@ -148,8 +148,6 @@ static void sensor_task(void *pvParameters) {
 
 	while(true) {
 
-		if (test_in_progress() == false) {
-
 			if (!sht4x_sample(&t_amb, &r_hum)) {
 				t_amb += (float)TEMPERATURE_OFFSET_FIXED / (float)TEMPERATURE_SCALE;
 				t_amb += (float)get_temperature_offset() / (float)TEMPERATURE_SCALE;
@@ -187,7 +185,6 @@ static void sensor_task(void *pvParameters) {
 
 			//		printf("t_amb: %.1f - r_hum: %.1f - temp: %.1f\r\n", t_amb, r_hum, temp);
 			//		printf("t_amb: %.1f - r_hum: %.1f - voc_idx: %u - temp: %.1f - t_sens: %.1f - t_sens_avg: %.1f\r\n", t_amb, r_hum, voc_idx, temp, t_sens, calculate_t_sens_avg());
-		}
 
 		vTaskDelayUntil(&sensor_task_time, SENSOR_TASK_PERIOD);
 	}

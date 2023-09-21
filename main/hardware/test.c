@@ -11,6 +11,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
+#include "freertos/timers.h"
 
 #include "esp_console.h"
 
@@ -24,6 +25,11 @@
 #include "sht4x.h"
 #include "sgp40.h"
 #include "ltr303.h"
+
+TimerHandle_t xSensorTimer;
+
+// Forward declaration
+void SensorTimerCallback(TimerHandle_t xTimer);
 
 ///
 static esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
@@ -140,6 +146,29 @@ static int cmd_test_led_func(int argc, char** argv) {
 
 static int cmd_test_all_func(int argc, char **argv) {
 
+    // Check if the timer is already created, if not, create it
+    if (xSensorTimer == NULL) {
+        xSensorTimer = xTimerCreate(
+            "SensorTimer",
+            pdMS_TO_TICKS(1000),
+            pdTRUE,
+            (void *) 0,
+            SensorTimerCallback
+        );
+    }
+
+    // If the timer was created successfully, start it
+    if (xSensorTimer != NULL) {
+        xTimerStart(xSensorTimer, 0);
+    } else {
+        printf("Failed to create sensor timer.\n");
+    }
+
+    return 0;
+}
+
+void SensorTimerCallback(TimerHandle_t xTimer)  {
+
 	float t_amb;
 	float r_hum;
 	float lux;
@@ -204,8 +233,9 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 		}
 	}
-
-	return 0;
+	if (xSensorTimer != NULL) {
+	    xTimerStop(xSensorTimer, 0);
+	}
 }
 
 static int cmd_test_fan_func(int argc, char **argv) {
