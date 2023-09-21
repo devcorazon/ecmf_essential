@@ -54,6 +54,7 @@
 
 #define TEMP_F_INVALID					65535.f
 #define HUM_F_INVALID					65535.f
+#define LUX_F_INVALID                   65535.f
 #define GAS_U_INVALID					65535u
 
 struct i2c_dev_s {

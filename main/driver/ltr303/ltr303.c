@@ -134,6 +134,8 @@ int ltr303_measure_lux(float *lux) {
 		return -1;
 	}
 
+	*lux = TEMP_F_INVALID;
+
 	uint16_t CH0_data_raw = 0;
 	uint16_t CH1_data_raw = 0;
 

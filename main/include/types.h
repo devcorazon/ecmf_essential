@@ -25,9 +25,9 @@
 #define OFFSET_BOUND_MIN						(-500)
 #define OFFSET_BOUND_MAX						(500)
 
-#define SET_VALUE_TO_TEMP_RAW(val)				(val == TEMPERATURE_INVALID ? TEMPERATURE_INVALID : (int16_t) (val * TEMPERATURE_SCALE))
-#define SET_VALUE_TO_RH_RAW(val)				(val == RELATIVE_HUMIDITY_INVALID ? RELATIVE_HUMIDITY_INVALID : (uint16_t) (val * RELATIVE_HUMIDITY_SCALE))
-#define SET_VALUE_TO_LUX_RAW(val)				(val == LUX_INVALID ? LUX_INVALID : (uint16_t) (val * LUX_SCALE))
+#define SET_VALUE_TO_TEMP_RAW(val)				(val == TEMP_F_INVALID ? TEMPERATURE_INVALID : (int16_t) (val * TEMPERATURE_SCALE))
+#define SET_VALUE_TO_RH_RAW(val)				(val == HUM_F_INVALID ? RELATIVE_HUMIDITY_INVALID : (uint16_t) (val * RELATIVE_HUMIDITY_SCALE))
+#define SET_VALUE_TO_LUX_RAW(val)				(val == LUX_F_INVALID ? LUX_INVALID : (uint16_t) (val * LUX_SCALE))
 
 #define TEMP_RAW_TO_INT(t)						(int16_t) (t / TEMPERATURE_SCALE)
 #define TEMP_RAW_TO_DEC(t)						(int16_t) (abs((int) t) % TEMPERATURE_SCALE)

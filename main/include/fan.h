@@ -10,8 +10,16 @@
 
 #include "system.h"
 
+#if REVA
 #define FAN_SPEED_PIN    19
 #define FAN_DIRECTION_PIN 18
+
+#else
+
+#define FAN_SPEED_PIN    7
+#define FAN_DIRECTION_PIN 6
+
+#endif
 
 #define FAN_PWM_PERIOD    (USEC_PER_SEC / 10000UL)
 #define FAN_PWM_MAX    (8191UL)
