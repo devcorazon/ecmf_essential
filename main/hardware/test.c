@@ -11,7 +11,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
-#include "freertos/timers.h"
 
 #include "esp_console.h"
 
@@ -25,11 +24,6 @@
 #include "sht4x.h"
 #include "sgp40.h"
 #include "ltr303.h"
-
-TimerHandle_t xSensorTimer;
-
-// Forward declaration
-void SensorTimerCallback(TimerHandle_t xTimer);
 
 ///
 static esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
@@ -68,10 +62,6 @@ static int cmd_set_mode_speed_func(int argc, char **argv) {
 		return -1;
 	}
 
-	if (test_in_progress() == false) {
-		printf("Make sure to run test_start \n");
-	} else {
-
 //	if ( mode_set < 5 ){
 //		set_mode_state(get_mode_state() & ~MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);  // disable extra cycle
 //	} else {
@@ -80,7 +70,6 @@ static int cmd_set_mode_speed_func(int argc, char **argv) {
 //	}
 		set_mode_set(mode_set);
 		set_speed_set(speed_set);
-	}
 
 	return 0;
 }
@@ -146,34 +135,8 @@ static int cmd_test_led_func(int argc, char** argv) {
 
 static int cmd_test_all_func(int argc, char **argv) {
 
-    // Check if the timer is already created, if not, create it
-    if (xSensorTimer == NULL) {
-        xSensorTimer = xTimerCreate(
-            "SensorTimer",
-            pdMS_TO_TICKS(1000),
-            pdTRUE,
-            (void *) 0,
-            SensorTimerCallback
-        );
-    }
-
-    // If the timer was created successfully, start it
-    if (xSensorTimer != NULL) {
-        xTimerStart(xSensorTimer, 0);
-    } else {
-        printf("Failed to create sensor timer.\n");
-    }
-
-    return 0;
-}
-
-void SensorTimerCallback(TimerHandle_t xTimer)  {
-
-	float t_amb;
-	float r_hum;
 	float lux;
 	float ntc_temp;
-	uint16_t voc_idx;
 
 	if (test_in_progress() == false) {
 		printf("Make sure to run test_start \n");
@@ -185,35 +148,27 @@ void SensorTimerCallback(TimerHandle_t xTimer)  {
 
 		printf("Firmware version: v%d.%d.%d\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
 
-		if (!sht4x_sample(&t_amb, &r_hum)) {
-			t_amb += (float) TEMPERATURE_OFFSET_FIXED / (float) TEMPERATURE_SCALE;
-			t_amb += (float) get_temperature_offset() / (float) TEMPERATURE_SCALE;
-
-			r_hum += (float) RELATIVE_HUMIDITY_OFFSET_FIXED / (float) RELATIVE_HUMIDITY_SCALE;
-			r_hum += (float) get_relative_humidity_offset() / (float)RELATIVE_HUMIDITY_SCALE;
-		}
-
-		uint16_t u16_r_hum = SET_VALUE_TO_TEMP_RAW(r_hum);
-		int16_t i16_t_amb = SET_VALUE_TO_TEMP_RAW(t_amb);
-
-		if (i16_t_amb == TEMPERATURE_INVALID) {
+		int16_t temp = get_temperature();
+		if (temp == TEMPERATURE_INVALID) {
 			printf("Temperature reading error\n");
 		} else {
-			printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_t_amb), TEMP_RAW_TO_DEC(i16_t_amb));
+			printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 		}
 
-		if (u16_r_hum == RELATIVE_HUMIDITY_INVALID) {
+		uint16_t rh = get_relative_humidity();
+		if (rh == RELATIVE_HUMIDITY_INVALID) {
 			printf("Relative humidity reading error\n");
 		} else {
-			printf("Relative humidity =  %u.%01u %%\n", TEMP_RAW_TO_INT(u16_r_hum), TEMP_RAW_TO_DEC(u16_r_hum));
+			printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
 		}
 
-		sgp40_sample(t_amb, r_hum, &voc_idx);
-		if (voc_idx == VOC_INVALID) {
-			printf("VOC Index reading error\n");
-		} else {
-			printf("VOC Index =  %ld \n", voc_idx);
-		}
+	    int32_t voc = get_voc();
+	    if (voc == VOC_INVALID)
+	    {
+	        printf("VOC Index reading error\n");
+	    } else {
+	        printf("VOC Index =  %ld \n", voc);
+	    }
 
 		ltr303_measure_lux(&lux);
 		int16_t i16_lux = SET_VALUE_TO_TEMP_RAW(lux);
@@ -233,9 +188,8 @@ void SensorTimerCallback(TimerHandle_t xTimer)  {
 			printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 		}
 	}
-	if (xSensorTimer != NULL) {
-	    xTimerStop(xSensorTimer, 0);
-	}
+
+	return 0;
 }
 
 static int cmd_test_fan_func(int argc, char **argv) {

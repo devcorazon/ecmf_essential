@@ -91,7 +91,6 @@ static int read_register_16(uint8_t reg, uint16_t *val) {
     return 0;
 }
 
-
 int ltr303_init(struct i2c_dev_s *i2c_dev) {
 	ltr303_config.i2c_dev = i2c_dev;
 	ltr303_config.i2c_dev_address = LTR303_I2C_ADDR;

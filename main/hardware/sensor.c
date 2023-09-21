@@ -160,18 +160,18 @@ static void sensor_task(void *pvParameters) {
 				set_relative_humidity(SET_VALUE_TO_RH_RAW(r_hum));
 			}
 
-			//		printf("t_amb: %.1f - r_hum: %.1f\r\n", t_amb, r_hum);
+		//	printf("t_amb: %.1f - r_hum: %.1f\r\n", t_amb, r_hum);
 
 			sgp40_sample(t_amb, r_hum, &voc_idx);
 			set_voc(voc_idx);
-			//		printf("voc_idx: %u\r\n", voc_idx);
+		//	printf("voc_idx: %u\r\n", voc_idx);
 
 			ltr303_measure_lux(&lux);
 			set_lux(SET_VALUE_TO_LUX_RAW(lux));
-			//		printf("lux: %.1f\r\n", lux);
+		//	printf("lux: %.1f\r\n", lux);
 
 			sensor_ntc_sample(&temp);
-			//		printf("temp: %.1f\r\n", temp);
+		//	printf("temp: %.1f\r\n", temp);
 
 			temperature_sensor_sample_get(&t_sens);
 			add_t_sens_to_pool(t_sens);
@@ -181,10 +181,10 @@ static void sensor_task(void *pvParameters) {
 			} else if (get_direction_state() == DIRECTION_IN){
 				set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
 			}
-			//		printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());
+		//	printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());
 
-			//		printf("t_amb: %.1f - r_hum: %.1f - temp: %.1f\r\n", t_amb, r_hum, temp);
-			//		printf("t_amb: %.1f - r_hum: %.1f - voc_idx: %u - temp: %.1f - t_sens: %.1f - t_sens_avg: %.1f\r\n", t_amb, r_hum, voc_idx, temp, t_sens, calculate_t_sens_avg());
+		//	printf("t_amb: %.1f - r_hum: %.1f - temp: %.1f\r\n", t_amb, r_hum, temp);
+		//	printf("t_amb: %.1f - r_hum: %.1f - voc_idx: %u - temp: %.1f - t_sens: %.1f - t_sens_avg: %.1f\r\n", t_amb, r_hum, voc_idx, temp, t_sens, calculate_t_sens_avg());
 
 		vTaskDelayUntil(&sensor_task_time, SENSOR_TASK_PERIOD);
 	}

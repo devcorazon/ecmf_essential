@@ -195,6 +195,8 @@ static void controller_task(void *pvParameters) {
 //			}
 
 		}
+
+		// add statistic Handler function
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
 	}
 }
@@ -361,7 +363,7 @@ static void reset_automatic_cycle_count(void) {
 
 static void controller_timer_expiry(TimerHandle_t xTimer) {
 	printf("Timer_Expired\n");
-	xTaskCreate(work_task, "work task 1", CONTROLLER_TASK_STACK_SIZE, NULL,CONTROLLER_TASK_PRIORITY, NULL);
+	xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL,CONTROLLER_TASK_PRIORITY, NULL);
 
 }
 
