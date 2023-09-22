@@ -91,6 +91,8 @@
 // FIlters
 #define FILTER_THRESHOLD						(1000U)
 
+#define VALORE_NON_MODIFICATO                   0xFF
+
 // Enumerations
 
 // Rotation setting
