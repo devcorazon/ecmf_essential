@@ -293,7 +293,7 @@ static void user_experience_state_machine() {
 				rgb_led_mode(RGB_LED_MODE_OFF, false);
 				system_mode_speed_set(MODE_OFF, SPEED_NONE);
 			} else {
-				system_mode_speed_set(VALORE_NON_MODIFICATO, VALORE_NON_MODIFICATO);
+				system_mode_speed_set(VALUE_UNMODIFIED, VALUE_UNMODIFIED);
 				switch (get_mode_set()) {
 				case MODE_IMMISSION:
 					rgb_led_mode(RGB_LED_MODE_IMMISSION, false);
@@ -312,11 +312,11 @@ static void user_experience_state_machine() {
 			break;
 		case BUTTON_7:
 			rgb_led_mode(RGB_LED_MODE_SPEED_NIGHT, false);
-			system_mode_speed_set(VALORE_NON_MODIFICATO, SPEED_NIGHT);
+			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_NIGHT);
 			break;
 		case BUTTON_8:
 			rgb_led_mode(RGB_LED_MODE_SPEED_LOW, false);
-			system_mode_speed_set(VALORE_NON_MODIFICATO, SPEED_LOW);
+			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_LOW);
 			break;
 		case BUTTON_9:
 			switch (get_speed_set()) {
@@ -339,11 +339,11 @@ static void user_experience_state_machine() {
 			break;
 		case BUTTON_10:
 			rgb_led_mode(RGB_LED_MODE_SPEED_MEDIUM, false);
-			system_mode_speed_set(VALORE_NON_MODIFICATO, SPEED_MEDIUM);
+			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_MEDIUM);
 			break;
 		case BUTTON_11:
 			rgb_led_mode(RGB_LED_MODE_SPEED_HIGH, false);
-			system_mode_speed_set(VALORE_NON_MODIFICATO, SPEED_HIGH);
+			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_HIGH);
 			break;
 
 		case (BUTTON_9_LONG):
@@ -462,10 +462,10 @@ static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
 	static uint8_t speed_ux = SPEED_MEDIUM;
 
 	// Apply the new settings
-    if (mode != VALORE_NON_MODIFICATO && mode != MODE_OFF) {
+    if (mode != VALUE_UNMODIFIED && mode != MODE_OFF) {
     	mode_ux = mode;
     }
-    if (speed != VALORE_NON_MODIFICATO && speed != SPEED_NONE) {
+    if (speed != VALUE_UNMODIFIED && speed != SPEED_NONE) {
     	speed_ux = speed;
     }
 
