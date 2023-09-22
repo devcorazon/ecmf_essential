@@ -28,5 +28,6 @@
 
 
 int ir_receiver_init();
+uint32_t ir_receiver_take_button(void);
 
 #endif /* MAIN_INCLUDE_IR_RECEIVER_H_ */

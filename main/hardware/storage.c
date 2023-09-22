@@ -73,7 +73,7 @@ static void storage_init_configuration_settings(void) {
 
 	application_data.configuration_settings.relative_humidity_set = RH_THRESHOLD_SETTING_NOT_CONFIGURED;
 	application_data.configuration_settings.voc_set = VOC_THRESHOLD_SETTING_NOT_CONFIGURED;
-	application_data.configuration_settings.lux_set = LUMINOSITY_SENSOR_SETTING_NOT_CONFIGURED;
+	application_data.configuration_settings.lux_set = LUX_THRESHOLD_SETTING_NOT_CONFIGURED;
 	application_data.configuration_settings.speed_set = SPEED_NONE;
 	application_data.configuration_settings.mode_set = MODE_OFF;
 	application_data.configuration_settings.temperature_offset = 0;
@@ -290,7 +290,7 @@ uint8_t get_lux_set(void) {
 }
 
 int set_lux_set(uint8_t lux_set) {
-	if (lux_set > LUMINOSITY_SENSOR_SETTING_HIGH) {
+	if (lux_set > LUX_THRESHOLD_SETTING_HIGH) {
 		return -1;
 	}
 

@@ -171,12 +171,12 @@ static int cmd_test_all_func(int argc, char **argv) {
 	    }
 
 		ltr303_measure_lux(&lux);
-		int16_t i16_lux = SET_VALUE_TO_TEMP_RAW(lux);
+		uint16_t u16_lux = SET_VALUE_TO_TEMP_RAW(lux);
 
-		if (i16_lux == LUX_INVALID) {
+		if (u16_lux == LUX_INVALID) {
 			printf("LUX reading error\n");
 		} else {
-			printf("LUX =  %d.%01d %%\n", TEMP_RAW_TO_INT(i16_lux), TEMP_RAW_TO_DEC(i16_lux));
+			printf("LUX =  %u.%01u %%\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
 		}
 
 		sensor_ntc_sample(&ntc_temp);

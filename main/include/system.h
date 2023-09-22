@@ -57,6 +57,14 @@
 #define LUX_F_INVALID                   65535.f
 #define GAS_U_INVALID					65535u
 
+#define FLASH_PERIOD					8
+#define TOTAL_PERIOD					5120
+
+#define FLASH_PERIOD_POWER_OFF			6
+
+#define FLASH_PERIOD_SPEED_NIGHT		14
+#define FLASH_PERIOD_SPEED_BLINK		6
+
 struct i2c_dev_s {
 	i2c_port_t i2c_num;
 	i2c_config_t i2c_conf;

@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/timers.h"
 
 #include "driver/rmt_rx.h"
 
@@ -16,6 +17,19 @@
 #define	IR_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	IR_TASK_PRIORITY			(1)
 #define	IR_TASK_PERIOD				(1000ul / portTICK_PERIOD_MS)
+
+#define IR_RECEIVER_MAX_REPEAT_SHORT_PRESS		10
+#define IR_RECEIVER_REPEAT_LONG_PRESS			30
+
+struct ir_receiver_s {
+	uint16_t		keycode;
+	uint16_t		count;
+	bool			released;
+	bool			long_press;
+	TimerHandle_t	xTimer;
+};
+
+struct ir_receiver_s ir_receiver;
 
 /**
  * @brief Saving NEC decode results
@@ -98,26 +112,35 @@ static bool nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols) {
  * @brief Decode RMT symbols into NEC scan code and print the result
  */
 static void parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num) {
-    printf("NEC frame start---\r\n");
+//    printf("NEC frame start---\r\n");
     for (size_t i = 0; i < symbol_num; i++) {
 //        printf("{%d:%d},{%d:%d}\r\n", rmt_nec_symbols[i].level0, rmt_nec_symbols[i].duration0,
 //               rmt_nec_symbols[i].level1, rmt_nec_symbols[i].duration1);
     }
-    printf("---NEC frame end: ");
+//    printf("---NEC frame end: ");
     // decode RMT symbols
     switch (symbol_num) {
     case 34: // NEC normal frame
         if (nec_parse_frame(rmt_nec_symbols)) {
-            printf("Address=%04X, Command=%04X\r\n\r\n", s_nec_code_address, s_nec_code_command);
+        	ir_receiver.keycode = s_nec_code_command;
+        	ir_receiver.count = 0;
+        	ir_receiver.released = false;
+        	ir_receiver.long_press = false;
+            xTimerStart( ir_receiver.xTimer, 0 );
+ //           printf("Address=%04X, Command=%04X\r\n\r\n", s_nec_code_address, s_nec_code_command);
         }
         break;
     case 2: // NEC repeat frame
         if (nec_parse_frame_repeat(rmt_nec_symbols)) {
-            printf("Address=%04X, Command=%04X, repeat\r\n\r\n", s_nec_code_address, s_nec_code_command);
+       		if (ir_receiver.count < IR_RECEIVER_REPEAT_LONG_PRESS) {
+       			ir_receiver.count++;
+       			xTimerStart( ir_receiver.xTimer, 0 );
+       		}
+//            printf("Address=%04X, Command=%04X, repeat\r\n\r\n", s_nec_code_address, s_nec_code_command);
         }
         break;
     default:
-        printf("Unknown NEC frame\r\n\r\n");
+//        printf("Unknown NEC frame\r\n\r\n");
         break;
     }
 }
@@ -174,8 +197,41 @@ static void ir_receive_task(void* param) {
     }
 }
 
-int ir_receiver_init(){
+void vButtonReleaseTimerCallback( TimerHandle_t xTimer ) {
+	if (ir_receiver.count < IR_RECEIVER_MAX_REPEAT_SHORT_PRESS) {
+		ir_receiver.released = true;
+	}
+	else if (ir_receiver.count == IR_RECEIVER_REPEAT_LONG_PRESS) {
+		ir_receiver.released = true;
+		ir_receiver.long_press = true;
+	}
+}
+
+int ir_receiver_init()
+{
     BaseType_t task_created = xTaskCreate(ir_receive_task, "IR Receiver task ", IR_TASK_STACK_SIZE, NULL, IR_TASK_PRIORITY, NULL);
 
+    ir_receiver.xTimer = xTimerCreate( "button_release_timer", 150 / portTICK_PERIOD_MS, pdFALSE, ( void * ) 0, vButtonReleaseTimerCallback );
+
     return task_created == pdPASS ? 0 : -1;
+}
+
+uint32_t ir_receiver_take_button(void) {
+	uint32_t but = 0;
+
+	if (ir_receiver.keycode && ir_receiver.released) {
+		but = ir_receiver.keycode;
+		if (ir_receiver.long_press) {
+			but |= 0x80000000;
+		}
+
+		printf("button %s press - code=%04X\r\n\r\n", (but & 0x80000000 ? "LONG" : "SHORT"), ir_receiver.keycode);
+
+		ir_receiver.keycode = 0;
+		ir_receiver.count = 0;
+		ir_receiver.released = false;
+		ir_receiver.long_press = false;
+	}
+
+	return but;
 }

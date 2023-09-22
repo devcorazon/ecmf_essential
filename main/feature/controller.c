@@ -12,13 +12,20 @@
 
 #include "math.h"
 
+#include "ir_receiver.h"
 #include "storage.h"
 #include "fan.h"
 #include "test.h"
+#include "rgb_led.h"
+
 
 #define	CONTROLLER_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
 #define	CONTROLLER_TASK_PRIORITY			        (1)
 #define	CONTROLLER_TASK_PERIOD				        (1000ul / portTICK_PERIOD_MS)
+
+#define	USER_EXPERIENCE_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
+#define	USER_EXPERIENCE_TASK_PRIORITY			        (1)
+#define	USER_EXPERIENCE_TASK_PERIOD				        (100ul / portTICK_PERIOD_MS)
 
 #define DURATION_IMMISSION_EMISSION_MS              SECONDS_TO_MS(DURATION_IMMISSION_EMISSION)
 #define DURATION_FIXED_CYCLE_MS						SECONDS_TO_MS(DURATION_FIXED_CYCLE)
@@ -42,10 +49,14 @@
 
 static uint32_t duration_automatic_cycle;
 //
-static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,
-		int16_t immission_temperature);
+static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,int16_t immission_temperature);
 //
 static void controller_task(void *pvParameters);
+static void user_experience_task(void *pvParameters);
+
+static void controller_state_machine();
+static void user_experience_state_machine();
+
 static void controller_set(void);
 static void reset_automatic_cycle_count(void);
 //
@@ -81,6 +92,17 @@ static const struct time_shape time_convert[] = {
 		{ 25 * TEMPERATURE_SCALE, 35U },
 };
 
+enum conf_s {
+	OPER = 0x00,
+	CONF_RH,
+	CONF_VOC,
+	CONF_LUX,
+};
+
+static uint8_t mode_demo = MODE_AUTOMATIC_CYCLE;
+static uint8_t speed_demo = SPEED_MEDIUM;
+static uint8_t demo = OPER;
+
 static inline uint8_t ADJUST_SPEED(uint8_t speed) {
 	if (speed & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT) {
 		speed = SPEED_NIGHT;
@@ -99,61 +121,89 @@ static void controller_task(void *pvParameters) {
 	while (1) {
 
 		if (test_in_progress() == false) {
-			uint8_t mode_set = get_mode_set();
-			uint8_t mode_state = get_mode_state();
+			controller_state_machine();
+		}
+		// add statistic Handler function
+		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
+	}
+}
 
-			mode_state &= ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
+static void user_experience_task(void *pvParameters) {
+	TickType_t user_experience_task_time;
 
-			if (mode_state != mode_set) {
-				xTimerStop(controller_timer, 0);
-				xTimerStop(restart_automatic_cycle_timer, 0);
-				reset_automatic_cycle_count();
+	user_experience_task_time = xTaskGetTickCount();
+	while (1) {
 
-				switch (mode_set) {
-				case MODE_OFF:
-					set_mode_state(MODE_OFF);
-					set_direction_state(DIRECTION_NONE);
-					set_speed_state(SPEED_NONE);
-					set_automatic_cycle_duration(0U);
-					break;
+		if (test_in_progress() == false) {
+           user_experience_state_machine();
+		}
 
-				case MODE_IMMISSION:
-					set_mode_state(MODE_IMMISSION);
-					set_direction_state(DIRECTION_IN);
-					set_automatic_cycle_duration(0U);
-					xTimerChangePeriod(controller_timer,pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS),portMAX_DELAY);
-					xTimerStart(controller_timer, 0);
-					break;
+		vTaskDelayUntil(&user_experience_task_time,USER_EXPERIENCE_TASK_PERIOD);
+	}
+}
 
-				case MODE_EMISSION:
-					set_mode_state(MODE_EMISSION);
-					set_direction_state(DIRECTION_OUT);
-					set_automatic_cycle_duration(0U);
-					xTimerChangePeriod(controller_timer,pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS),portMAX_DELAY);
-					xTimerStart(controller_timer, 0);
-					break;
+static void controller_state_machine() {
+	uint8_t mode_set = get_mode_set();
+	uint8_t mode_state = get_mode_state();
 
-				case MODE_FIXED_CYCLE:
-					set_mode_state(MODE_FIXED_CYCLE);
-					set_direction_state(DIRECTION_OUT);
-					set_automatic_cycle_duration(0U);
-					xTimerChangePeriod(controller_timer,pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS),portMAX_DELAY);
-					xTimerStart(controller_timer, 0);
-					break;
+	mode_state &= ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 
-				case MODE_AUTOMATIC_CYCLE:
-					set_mode_state(MODE_AUTOMATIC_CYCLE| MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
-					set_automatic_cycle_duration(0U);
-					xTaskCreate(work_task, "work task",CONTROLLER_TASK_STACK_SIZE, NULL,CONTROLLER_TASK_PRIORITY, NULL);
-					break;
+	if (mode_state != mode_set) {
+		xTimerStop(controller_timer, 0);
+		xTimerStop(restart_automatic_cycle_timer, 0);
+		reset_automatic_cycle_count();
 
-				default:
-					break;
-				}
-			}
-			controller_set();
+		switch (mode_set) {
+		case MODE_OFF:
+			set_mode_state(MODE_OFF);
+			set_direction_state(DIRECTION_NONE);
+			set_speed_state(SPEED_NONE);
+			set_automatic_cycle_duration(0U);
+			break;
 
-			fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
+		case MODE_IMMISSION:
+
+			printf("MODE IMMISSION STARTED\n");
+			set_mode_state(MODE_IMMISSION);
+			set_direction_state(DIRECTION_IN);
+			set_automatic_cycle_duration(0U);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
+			xTimerStart(controller_timer, 0);
+			break;
+
+		case MODE_EMISSION:
+
+			printf("MODE ESPULSIONE STARTED\n");
+			set_mode_state(MODE_EMISSION);
+			set_direction_state(DIRECTION_OUT);
+			set_automatic_cycle_duration(0U);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
+			xTimerStart(controller_timer, 0);
+			break;
+
+		case MODE_FIXED_CYCLE:
+
+			printf("MODE FIXED CYCLE STARTED\n");
+			set_mode_state(MODE_FIXED_CYCLE);
+			set_direction_state(DIRECTION_OUT);
+			set_automatic_cycle_duration(0U);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), portMAX_DELAY);
+			xTimerStart(controller_timer, 0);
+			break;
+
+		case MODE_AUTOMATIC_CYCLE:
+			set_mode_state( MODE_AUTOMATIC_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
+			set_automatic_cycle_duration(0U);
+			xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
+			break;
+
+		default:
+			break;
+		}
+	}
+	controller_set();
+
+	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
 
 //			static const char *mode_log_str[] = { "Off", "Immission","Emission", "Fixed cycle", "Automatic cycle" };
 //			static const char *speed_log_str[] = { "None", "Night", "Vel1","Vel2", "Vel3", "Boost", "Profiled" };
@@ -193,14 +243,301 @@ static void controller_task(void *pvParameters) {
 //							"Y" : "N"), (direction_log_str[direction_log]));
 //	}
 //			}
-
-		}
-
-		// add statistic Handler function
-		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
-	}
 }
 
+static void user_experience_state_machine() {
+	uint32_t button = ir_receiver_take_button();
+
+	switch (demo) {
+	case OPER:
+		if (button == 0xBA45) {						//
+			rgb_led_mode(RGB_LED_MODE_LUX_THR_LOW, false);
+		} else if (button == 0xB946) {				// OK
+			switch (get_mode_set()) {
+			case MODE_OFF:
+				rgb_led_mode(RGB_LED_MODE_POWER_OFF, false);
+				break;
+			case MODE_IMMISSION:
+				rgb_led_mode(RGB_LED_MODE_IMMISSION, false);
+				break;
+			case MODE_EMISSION:
+				rgb_led_mode(RGB_LED_MODE_EMISSION, false);
+				break;
+			case MODE_FIXED_CYCLE:
+				rgb_led_mode(RGB_LED_MODE_FIXED_CYCLE, false);
+				break;
+			case MODE_AUTOMATIC_CYCLE:
+				rgb_led_mode(RGB_LED_MODE_AUTOMATIC_CYCLE, false);
+				break;
+			}
+		} else if (button == 0xBB44) {		// SX
+			rgb_led_mode(RGB_LED_MODE_IMMISSION, false);
+			mode_demo = MODE_IMMISSION;
+			set_mode_set(MODE_IMMISSION);
+			if (get_speed_set() == SPEED_NONE) {
+				if (speed_demo != SPEED_NONE) {
+					set_speed_set(speed_demo);
+				} else {
+					speed_demo = SPEED_MEDIUM;
+					set_speed_set(SPEED_MEDIUM);
+				}
+			}
+		} else if (button == 0xBC43) {		// DX
+			rgb_led_mode(RGB_LED_MODE_EMISSION, false);
+			mode_demo = MODE_EMISSION;
+			set_mode_set(MODE_EMISSION);
+			if (get_speed_set() == SPEED_NONE) {
+				if (speed_demo != SPEED_NONE) {
+					set_speed_set(speed_demo);
+				} else {
+					speed_demo = SPEED_MEDIUM;
+					set_speed_set(SPEED_MEDIUM);
+				}
+			}
+		} else if (button == 0xBF40) {		// UP
+			rgb_led_mode(RGB_LED_MODE_FIXED_CYCLE, false);
+			mode_demo = MODE_FIXED_CYCLE;
+			set_mode_set(MODE_FIXED_CYCLE);
+			if (get_speed_set() == SPEED_NONE) {
+				if (speed_demo != SPEED_NONE) {
+					set_speed_set(speed_demo);
+				} else {
+					speed_demo = SPEED_MEDIUM;
+					set_speed_set(SPEED_MEDIUM);
+				}
+			}
+		} else if (button == 0xEA15) {		// DOWN
+			rgb_led_mode(RGB_LED_MODE_AUTOMATIC_CYCLE, false);
+			mode_demo = MODE_AUTOMATIC_CYCLE;
+			set_mode_set(MODE_AUTOMATIC_CYCLE);
+			if (get_speed_set() == SPEED_NONE) {
+				if (speed_demo != SPEED_NONE) {
+					set_speed_set(speed_demo);
+				} else {
+					speed_demo = SPEED_MEDIUM;
+					set_speed_set(SPEED_MEDIUM);
+				}
+			}
+		} else if (button == 0xE916) {		// POWER
+			if (get_mode_set() != MODE_OFF) {
+				rgb_led_mode(RGB_LED_MODE_POWER_OFF, false);
+				set_mode_set(MODE_OFF);
+				set_speed_set(SPEED_NONE);
+			} else {
+				if (mode_demo != MODE_OFF) {
+					switch (mode_demo) {
+					case MODE_IMMISSION:
+						rgb_led_mode(RGB_LED_MODE_IMMISSION, false);
+						break;
+					case MODE_EMISSION:
+						rgb_led_mode(RGB_LED_MODE_EMISSION, false);
+						break;
+					case MODE_FIXED_CYCLE:
+						rgb_led_mode(RGB_LED_MODE_FIXED_CYCLE, false);
+						break;
+					case MODE_AUTOMATIC_CYCLE:
+						rgb_led_mode(RGB_LED_MODE_AUTOMATIC_CYCLE, false);
+						break;
+					}
+					set_mode_set(mode_demo);
+					if (get_speed_set() == SPEED_NONE) {
+						if (speed_demo != SPEED_NONE) {
+							set_speed_set(speed_demo);
+						} else {
+							speed_demo = SPEED_MEDIUM;
+							set_speed_set(SPEED_MEDIUM);
+						}
+					}
+				} else {
+					rgb_led_mode(RGB_LED_MODE_AUTOMATIC_CYCLE, false);
+					mode_demo = MODE_AUTOMATIC_CYCLE;
+					set_mode_set(MODE_AUTOMATIC_CYCLE);
+					speed_demo = SPEED_MEDIUM;
+					set_speed_set(SPEED_MEDIUM);
+				}
+			}
+		} else if (button == 0xB847) {		// UP-SX
+			rgb_led_mode(RGB_LED_MODE_SPEED_NIGHT, false);
+			speed_demo = SPEED_NIGHT;
+			set_speed_set(SPEED_NIGHT);
+			if (get_mode_set() == MODE_OFF) {
+				if (mode_demo != MODE_OFF) {
+					set_mode_set(mode_demo);
+				} else {
+					mode_demo = MODE_AUTOMATIC_CYCLE;
+					set_mode_set(MODE_AUTOMATIC_CYCLE);
+				}
+			}
+		} else if (button == 0xA55A) {		// UP-DX
+			rgb_led_mode(RGB_LED_MODE_SPEED_LOW, false);
+			speed_demo = SPEED_LOW;
+			set_speed_set(SPEED_LOW);
+			if (get_mode_set() == MODE_OFF) {
+				if (mode_demo != MODE_OFF) {
+					set_mode_set(mode_demo);
+				} else {
+					mode_demo = MODE_AUTOMATIC_CYCLE;
+					set_mode_set(MODE_AUTOMATIC_CYCLE);
+				}
+			}
+		} else if (button == 0xF609) {		// DW-SX
+			rgb_led_mode(RGB_LED_MODE_SPEED_MEDIUM, false);
+			speed_demo = SPEED_MEDIUM;
+			set_speed_set(SPEED_MEDIUM);
+			if (get_mode_set() == MODE_OFF) {
+				if (mode_demo != MODE_OFF) {
+					set_mode_set(mode_demo);
+				} else {
+					mode_demo = MODE_AUTOMATIC_CYCLE;
+					set_mode_set(MODE_AUTOMATIC_CYCLE);
+				}
+			}
+		} else if (button == 0xF807) {		// DW-DX
+			rgb_led_mode(RGB_LED_MODE_SPEED_HIGH, false);
+			speed_demo = SPEED_HIGH;
+			set_speed_set(SPEED_HIGH);
+			if (get_mode_set() == MODE_OFF) {
+				if (mode_demo != MODE_OFF) {
+					set_mode_set(mode_demo);
+				} else {
+					mode_demo = MODE_AUTOMATIC_CYCLE;
+					set_mode_set(MODE_AUTOMATIC_CYCLE);
+				}
+			}
+		} else if (button == 0xE619) {		// CENTER
+			switch (get_speed_set()) {
+			case SPEED_NONE:
+				rgb_led_mode(RGB_LED_MODE_POWER_OFF, false);
+				break;
+			case SPEED_NIGHT:
+				rgb_led_mode(RGB_LED_MODE_SPEED_NIGHT, false);
+				break;
+			case SPEED_LOW:
+				rgb_led_mode(RGB_LED_MODE_SPEED_LOW, false);
+				break;
+			case SPEED_MEDIUM:
+				rgb_led_mode(RGB_LED_MODE_SPEED_MEDIUM, false);
+				break;
+			case SPEED_HIGH:
+				rgb_led_mode(RGB_LED_MODE_SPEED_HIGH, false);
+				break;
+			}
+		} else if (button == 0x8000E619) {	// long press SENS_CONF
+			demo = CONF_RH;
+			switch (get_relative_humidity_set()) {
+			case RH_THRESHOLD_SETTING_NOT_CONFIGURED:
+				rgb_led_mode(RGB_LED_MODE_RH_NOT_CONF, true);
+				break;
+			case RH_THRESHOLD_SETTING_LOW:
+				rgb_led_mode(RGB_LED_MODE_RH_THR_LOW, true);
+				break;
+			case RH_THRESHOLD_SETTING_MEDIUM:
+				rgb_led_mode(RGB_LED_MODE_RH_THR_NORM, true);
+				break;
+			case RH_THRESHOLD_SETTING_HIGH:
+				rgb_led_mode(RGB_LED_MODE_RH_THR_HIGH, true);
+				break;
+			}
+		} else if (button == 0x8000BA45) {	// long press CLR_WRN
+		}
+		break;
+
+	case CONF_RH:
+		if (button == 0xB847) {
+			set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
+			demo = CONF_VOC;
+		} else if (button == 0xA55A) {
+			set_relative_humidity_set(RH_THRESHOLD_SETTING_LOW);
+			demo = CONF_VOC;
+		} else if (button == 0xF609) {
+			set_relative_humidity_set(RH_THRESHOLD_SETTING_MEDIUM);
+			demo = CONF_VOC;
+		} else if (button == 0xF807) {
+			set_relative_humidity_set(RH_THRESHOLD_SETTING_HIGH);
+			demo = CONF_VOC;
+		} else if (button == 0xE619) {
+			demo = CONF_VOC;
+		}
+
+		if (demo == CONF_VOC) {
+			switch (get_voc_set()) {
+			case VOC_THRESHOLD_SETTING_NOT_CONFIGURED:
+				rgb_led_mode(RGB_LED_MODE_VOC_NOT_CONF, true);
+				break;
+			case VOC_THRESHOLD_SETTING_LOW:
+				rgb_led_mode(RGB_LED_MODE_VOC_THR_LOW, true);
+				break;
+			case VOC_THRESHOLD_SETTING_MEDIUM:
+				rgb_led_mode(RGB_LED_MODE_VOC_THR_NORM, true);
+				break;
+			case VOC_THRESHOLD_SETTING_HIGH:
+				rgb_led_mode(RGB_LED_MODE_VOC_THR_HIGH, true);
+				break;
+			}
+		}
+
+		break;
+
+	case CONF_VOC:
+		if (button == 0xB847) {
+			set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
+			demo = CONF_LUX;
+		} else if (button == 0xA55A) {
+			set_voc_set(VOC_THRESHOLD_SETTING_LOW);
+			demo = CONF_LUX;
+		} else if (button == 0xF609) {
+			set_voc_set(VOC_THRESHOLD_SETTING_MEDIUM);
+			demo = CONF_LUX;
+		} else if (button == 0xF807) {
+			set_voc_set(VOC_THRESHOLD_SETTING_HIGH);
+			demo = CONF_LUX;
+		} else if (button == 0xE619) {
+			demo = CONF_LUX;
+		}
+
+		if (demo == CONF_LUX) {
+			switch (get_lux_set()) {
+			case LUX_THRESHOLD_SETTING_NOT_CONFIGURED:
+				rgb_led_mode(RGB_LED_MODE_LUX_NOT_CONF, true);
+				break;
+			case LUX_THRESHOLD_SETTING_LOW:
+				rgb_led_mode(RGB_LED_MODE_LUX_THR_LOW, true);
+				break;
+			case LUX_THRESHOLD_SETTING_MEDIUM:
+				rgb_led_mode(RGB_LED_MODE_LUX_THR_NORM, true);
+				break;
+			case LUX_THRESHOLD_SETTING_HIGH:
+				rgb_led_mode(RGB_LED_MODE_LUX_THR_HIGH, true);
+				break;
+			}
+		}
+
+		break;
+
+	case CONF_LUX:
+		if (button == 0xB847) {
+			set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
+			demo = OPER;
+		} else if (button == 0xA55A) {
+			set_lux_set(LUX_THRESHOLD_SETTING_LOW);
+			demo = OPER;
+		} else if (button == 0xF609) {
+			set_lux_set(LUX_THRESHOLD_SETTING_MEDIUM);
+			demo = OPER;
+		} else if (button == 0xF807) {
+			set_lux_set(LUX_THRESHOLD_SETTING_HIGH);
+			demo = OPER;
+		} else if (button == 0xE619) {
+			demo = OPER;
+		}
+
+		if (demo == OPER) {
+			rgb_led_mode(RGB_LED_MODE_NONE, false);
+		}
+
+		break;
+	}
+}
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,int16_t immission_temperature) {
 	int16_t delta = emission_temperature - immission_temperature;
 	size_t i;
@@ -249,7 +586,7 @@ static void controller_set(void) {
 	if (get_mode_set() == MODE_AUTOMATIC_CYCLE) {
 
 		if (!(get_mode_state() & (MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION))) {
-			if (get_lux_set() != LUMINOSITY_SENSOR_SETTING_NOT_CONFIGURED) {
+			if (get_lux_set() != LUX_THRESHOLD_SETTING_NOT_CONFIGURED) {
 				if (luminosity > (luminosity_threshold + LUMINOSITY_DIFFERENTIAL_HIGH)) {
 					if (count_luminosity) {
 						count_luminosity--;
@@ -418,7 +755,7 @@ static void work_task(void *arg) {
 		}
 
 		if (get_mode_state() & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION) {
-			// Extra cycle not started
+			// Extra cycle not startedwsf
 			if (extra_cycle_inversions_count == 0U) {
 				if (calculate_duration_inversions_count == 0U) {
 					calculate_duration_inversions_count++;
@@ -495,7 +832,9 @@ int controller_init() {
 
 	restart_extra_cycle_timer = xTimerCreate("restart_extra_cycle_timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, restart_extra_cycle_timer_expiry);
 
-	BaseType_t task_created = xTaskCreate(controller_task, "Controller task ", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
+	BaseType_t controller_task_created = xTaskCreate(controller_task, "Controller task ", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
 
-	return task_created == pdPASS ? 0 : -1;
+	BaseType_t user_experience_task_created = xTaskCreate(user_experience_task, "User experience task ", USER_EXPERIENCE_TASK_STACK_SIZE, NULL, USER_EXPERIENCE_TASK_PRIORITY, NULL);
+
+	return ( (controller_task_created && user_experience_task_created) == pdPASS ? 0 : -1);
 }
