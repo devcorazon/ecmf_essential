@@ -88,7 +88,7 @@
 #define OFFSET_BOUND_MIN						(-500)
 #define OFFSET_BOUND_MAX						(500)
 
-// FIlters
+// Filters
 #define FILTER_THRESHOLD						(1000U)
 
 #define VALUE_UNMODIFIED                         0xFF

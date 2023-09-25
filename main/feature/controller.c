@@ -17,6 +17,7 @@
 #include "fan.h"
 #include "test.h"
 #include "rgb_led.h"
+#include "statistic.h"
 
 
 #define	CONTROLLER_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
@@ -116,13 +117,19 @@ static inline uint8_t ADJUST_SPEED(uint8_t speed) {
 static void controller_task(void *pvParameters) {
 	TickType_t controller_task_time;
 
+    statistic_init();
+
 	controller_task_time = xTaskGetTickCount();
 	while (1) {
 
 		if (test_in_progress() == false) {
 			controller_state_machine();
 		}
-		// add statistic Handler function
+
+	    if (get_mode_state() != MODE_OFF) {
+	        statistic_update_handler(get_speed_state());
+	    }
+
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
 	}
 }
@@ -290,7 +297,7 @@ static void user_experience_state_machine() {
 			break;
 		case BUTTON_0:
 			if (get_mode_set() != MODE_OFF) {
-				rgb_led_mode(RGB_LED_MODE_OFF, false);
+				rgb_led_mode(RGB_LED_MODE_POWER_OFF, false);
 				system_mode_speed_set(MODE_OFF, SPEED_NONE);
 			} else {
 				system_mode_speed_set(VALUE_UNMODIFIED, VALUE_UNMODIFIED);
@@ -482,7 +489,7 @@ static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
     	}
     }
 
-	if (mode_ux != MODE_OFF && speed_ux != SPEED_NONE) {
+	if (mode != MODE_OFF && speed != SPEED_NONE) {
 		set_mode_set(mode_ux);
 		set_speed_set(speed_ux);
 	} else {
