@@ -93,6 +93,13 @@
 
 #define VALUE_UNMODIFIED                         0xFF
 
+// Filter coefficients
+#define COEFF_NIGHT  0.2f
+#define COEFF_LOW    0.6f
+#define COEFF_MEDIUM 1.0f
+#define COEFF_HIGH   1.4f
+#define COEFF_BOOST 1.5f
+
 // Enumerations
 
 // Rotation setting

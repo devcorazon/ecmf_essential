@@ -460,7 +460,6 @@ static void user_experience_state_machine() {
 			}
 
 		break;
-
 	}
 }
 
