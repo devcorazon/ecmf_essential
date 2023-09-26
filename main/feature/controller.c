@@ -515,9 +515,9 @@ static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,
 }
 
 static void controller_set(void) {
-	static const uint8_t luminosity_threshold_convert[] = { 0U,LUMINOSITY_THRESHOLD_LOW, LUMINOSITY_THRESHOLD_MEDIUM,LUMINOSITY_THRESHOLD_HIGH };
-	static const uint8_t relative_humidity_threshold_convert[] = { 0U,RH_THRESHOLD_LOW, RH_THRESHOLD_MEDIUM, RH_THRESHOLD_HIGH };
-	static const uint8_t voc_threshold_convert[] = { 0U, VOC_THRESHOLD_LOW, VOC_THRESHOLD_MEDIUM, VOC_THRESHOLD_HIGH };
+	static const uint16_t luminosity_threshold_convert[] = { 0U,LUMINOSITY_THRESHOLD_LOW, LUMINOSITY_THRESHOLD_MEDIUM,LUMINOSITY_THRESHOLD_HIGH };
+	static const uint16_t relative_humidity_threshold_convert[] = { 0U,RH_THRESHOLD_LOW, RH_THRESHOLD_MEDIUM, RH_THRESHOLD_HIGH };
+	static const uint16_t voc_threshold_convert[] = { 0U, VOC_THRESHOLD_LOW, VOC_THRESHOLD_MEDIUM, VOC_THRESHOLD_HIGH };
 	uint8_t speed_set = get_speed_set();
 	uint8_t speed_state = get_speed_state();
 	int16_t luminosity = get_lux();
