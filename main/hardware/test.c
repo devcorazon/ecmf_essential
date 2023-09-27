@@ -109,19 +109,19 @@ static int cmd_test_led_func(int argc, char** argv) {
 		{
 		case 0:
 			color = RGB_LED_COLOR_NONE;
-			mode = RGB_LED_MODE_OFF;
+			mode = RGB_LED_MODE_NONE;
 			break;
 		case 1:
 			color = RGB_LED_COLOR_RED;
-			mode = RGB_LED_MODE_ON;
+			mode = RGB_LED_MODE_ALWAYS_ON;
 			break;
 		case 2:
 			color = RGB_LED_COLOR_GREEN;
-			mode = RGB_LED_MODE_ON;
+			mode = RGB_LED_MODE_ALWAYS_ON;
 			break;
 		case 3:
 			color = RGB_LED_COLOR_BLUE;
-			mode = RGB_LED_MODE_ON;
+			mode = RGB_LED_MODE_ALWAYS_ON;
 			break;
 		default: // This should never happen
 		printf("Invalid index. Supported colors: 0, 1, 2, 3\n");

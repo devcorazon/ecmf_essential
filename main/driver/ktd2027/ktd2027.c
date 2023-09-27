@@ -30,6 +30,42 @@ static int write_register(uint8_t reg, uint8_t val) {
     return 0;
 }
 
+static int write_all_register(uint8_t Period, uint8_t Tslot, uint8_t PWM1, uint8_t PWM2, uint8_t RFscale, uint8_t Traise, uint8_t Tfall, uint8_t RampLinear,
+		uint8_t LED1_I, uint8_t LED2_I, uint8_t LED3_I, uint8_t LED1_EN, uint8_t LED2_EN, uint8_t LED3_EN) {
+    uint8_t data[11] = {
+    		KTD2027_REG_EN_RST,
+			(Tslot & 0x3) | ((RFscale << 5) & 0x60),
+			(Period & 0x7f) | ((RampLinear << 7) & 0x80),
+			PWM1, PWM2,
+			(LED1_EN & 0x3) | ((LED2_EN << 2) & 0xc) | ((LED3_EN << 4) & 0x30),
+//			0x00,
+			(Traise & 0xf) | ((Tfall << 4) & 0xf0),
+			LED1_I, LED2_I, LED3_I, 0x00
+	};
+
+//    uint8_t data_enable[2] = {
+//    		KTD2027_REG_LED_EN,
+//			(LED1_EN & 0x3) | ((LED2_EN << 2) & 0xc) | ((LED3_EN << 4) & 0x30)
+//    };
+
+    if (xSemaphoreTake(ktd2027_config.i2c_dev->lock, ktd2027_config.i2c_dev->i2c_timeout) != pdTRUE) {
+        return -1;
+    }
+
+    if (i2c_master_write_to_device(ktd2027_config.i2c_dev->i2c_num, ktd2027_config.i2c_dev_address, data, sizeof(data), ktd2027_config.i2c_dev->i2c_timeout)) {
+        xSemaphoreGive(ktd2027_config.i2c_dev->lock);
+        return -1;
+    }
+
+//    if (i2c_master_write_to_device(ktd2027_config.i2c_dev->i2c_num, ktd2027_config.i2c_dev_address, data_enable, sizeof(data_enable), ktd2027_config.i2c_dev->i2c_timeout)) {
+//        xSemaphoreGive(ktd2027_config.i2c_dev->lock);
+//        return -1;
+//    }
+
+    xSemaphoreGive(ktd2027_config.i2c_dev->lock);
+    return 0;
+}
+
 int ktd2027_init(struct i2c_dev_s *i2c_dev) {
 	if (!i2c_dev) {
 		printf("Error: Invalid i2c_dev pointer.\n");
@@ -113,17 +149,7 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 
 	switch (mode) {
 		case RGB_LED_MODE_OFF:
-			write_register(KTD2027_REG_EN_RST, 0);
-			write_register(KTD2027_REG_FLASH_PERIOD, 0);
-			write_register(KTD2027_REG_PWM1_TIMER, 0);
-			write_register(KTD2027_REG_PWM2_TIMER, 0);
-			write_register(KTD2027_REG_LED_EN, 0);
-			write_register(KTD2027_REG_LED_RAMP, 0);
-			write_register(KTD2027_REG_RED_LED, 0);
-			write_register(KTD2027_REG_GREEN_LED, 0);
-			write_register(KTD2027_REG_BLUE_LED, 0);
-			write_register(9, 0);
-
+			write_all_register(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 			break;
 
 		case RGB_LED_MODE_ON:
@@ -145,25 +171,6 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 					printf("Failed to turn BLUE LED on.\n");
 					return -1;
 				}
-			} else if (color == RGB_LED_COLOR_AQUA_RH) {
-				write_register(KTD2027_REG_GREEN_LED, 159);		// 191
-				write_register(KTD2027_REG_BLUE_LED, 159);		// 191
-
-				write_register(KTD2027_REG_LED_EN, 0x14);
-			} else if (color == RGB_LED_COLOR_GREEN_VOC) {
-				write_register(KTD2027_REG_GREEN_LED, 119);		// 191
-
-				write_register(KTD2027_REG_LED_EN, 0x4);
-			} else if (color == RGB_LED_COLOR_YELLOW_LUX) {
-				write_register(KTD2027_REG_RED_LED, 159);		// 191
-				write_register(KTD2027_REG_GREEN_LED, 159);		// 159
-
-				write_register(KTD2027_REG_LED_EN, 0x5);
-			} else if (color == RGB_LED_COLOR_POWER_OFF) {
-				write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD_POWER_OFF);
-				write_register(KTD2027_REG_RED_LED, 191);
-				write_register(KTD2027_REG_LED_EN, 0x2);
-				write_register(KTD2027_REG_PWM1_TIMER, 50);
 			} else if (color == RGB_LED_COLOR_IMMISSION) {
 				write_register(KTD2027_REG_RED_LED, 191);
 				write_register(KTD2027_REG_BLUE_LED, 39);
@@ -178,105 +185,144 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 				write_register(KTD2027_REG_BLUE_LED, 191);
 				write_register(KTD2027_REG_LED_EN, 0x15);
 			} else if (color == RGB_LED_COLOR_AUTOMATIC_CYCLE) {
-				write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD);
 				write_register(KTD2027_REG_BLUE_LED, 191);
 				write_register(KTD2027_REG_LED_EN, 0x10);
-			} else if (color == RGB_LED_BLANK) {
-				write_register(KTD2027_REG_LED_EN, 0);
-//				write_register(KTD2027_REG_FLASH_PERIOD, 0);
-//				write_register(KTD2027_REG_PWM1_TIMER, 0);
-//				write_register(KTD2027_REG_PWM2_TIMER, 0);
-//				write_register(KTD2027_REG_LED_RAMP, 0);
-//				write_register(KTD2027_REG_RED_LED, 0);
-//				write_register(KTD2027_REG_GREEN_LED, 0);
-//				write_register(KTD2027_REG_BLUE_LED, 0);
-			} else if (color == RGB_LED_COLOR_AQUA_RH_NOT_CONF) {
-				write_register(KTD2027_REG_GREEN_LED, 39);
-				write_register(KTD2027_REG_BLUE_LED, 39);
-				write_register(KTD2027_REG_LED_EN, 0x14);
-			} else if (color == RGB_LED_COLOR_AQUA_RH_PRE) {
-				write_register(KTD2027_REG_GREEN_LED, 159);
-				write_register(KTD2027_REG_BLUE_LED, 159);
-				write_register(KTD2027_REG_FLASH_PERIOD, 0x80 | FLASH_PERIOD);
-				write_register(KTD2027_REG_LED_RAMP, 0x50);
-				write_register(KTD2027_REG_LED_EN, 0x28);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_AQUA_RH_BLINK_INVERTED) {
-				write_register(KTD2027_REG_LED_EN, 0x28);
-				write_register(KTD2027_REG_PWM1_TIMER, 4);
-			} else if (color == RGB_LED_COLOR_AQUA_RH_END) {
-				write_register(KTD2027_REG_LED_EN, 0x28);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_GREEN_VOC_NOT_CONF) {
-				write_register(KTD2027_REG_GREEN_LED, 39);
-				write_register(KTD2027_REG_LED_EN, 0x4);
-			} else if (color == RGB_LED_COLOR_GREEN_VOC_PRE) {
-				write_register(KTD2027_REG_GREEN_LED, 119);
-				write_register(KTD2027_REG_FLASH_PERIOD, 0x80 | FLASH_PERIOD);
-				write_register(KTD2027_REG_LED_RAMP, 0x50);
-				write_register(KTD2027_REG_LED_EN, 0x8);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_GREEN_VOC_BLINK_INVERTED) {
-write_register(KTD2027_REG_LED_RAMP, 0x20);
-write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD);
-				write_register(KTD2027_REG_LED_EN, 0x8);
-				write_register(KTD2027_REG_PWM1_TIMER, 4);
-			} else if (color == RGB_LED_COLOR_GREEN_VOC_END) {
-				write_register(KTD2027_REG_LED_EN, 0x8);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_YELLOW_LUX_NOT_CONF) {
-				write_register(KTD2027_REG_RED_LED, 79);
-				write_register(KTD2027_REG_GREEN_LED, 39);
-				write_register(KTD2027_REG_LED_EN, 0x5);
-			} else if (color == RGB_LED_COLOR_YELLOW_LUX_PRE) {
-				write_register(KTD2027_REG_RED_LED, 159);
-				write_register(KTD2027_REG_GREEN_LED, 119);
-				write_register(KTD2027_REG_FLASH_PERIOD, 0x80 | FLASH_PERIOD);
-				write_register(KTD2027_REG_LED_RAMP, 0x50);
-				write_register(KTD2027_REG_LED_EN, 0xa);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_YELLOW_LUX_BLINK_INVERTED) {
-				write_register(KTD2027_REG_LED_EN, 0xa);
-				write_register(KTD2027_REG_PWM1_TIMER, 4);
-			} else if (color == RGB_LED_COLOR_YELLOW_LUX_END) {
-				write_register(KTD2027_REG_LED_EN, 0xa);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
-			} else if (color == RGB_LED_COLOR_SPEED_NIGHT) {
-//				write_register(KTD2027_REG_EN_RST, 0x60);
-//				write_register(KTD2027_REG_BLUE_LED, 19);
-//				write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD_SPEED_NIGHT);
-//				write_register(KTD2027_REG_LED_RAMP, 0x01);
-//				write_register(KTD2027_REG_LED_EN, 0x20);
-//				write_register(KTD2027_REG_PWM1_TIMER, 255);
-				write_register(KTD2027_REG_BLUE_LED, 19);
-				write_register(KTD2027_REG_LED_EN, 0x10);
-			} else if (color == RGB_LED_COLOR_SPEED_BLINK) {
-				write_register(KTD2027_REG_EN_RST, 0x60);
-				write_register(KTD2027_REG_BLUE_LED, 159);
-				write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD_SPEED_BLINK);
-				write_register(KTD2027_REG_LED_RAMP, 0x11);
-				write_register(KTD2027_REG_LED_EN, 0x20);
-				write_register(KTD2027_REG_PWM1_TIMER, 59);
-			} else if (color == RGB_LED_COLOR_TEST) {
-				write_register(KTD2027_REG_FLASH_PERIOD, FLASH_PERIOD);
-				write_register(KTD2027_REG_LED_RAMP, 0x30);
-				write_register(KTD2027_REG_RED_LED, 159);
-				write_register(KTD2027_REG_GREEN_LED, 159);
-//				write_register(KTD2027_REG_BLUE_LED, 159);
-
-				////////
-//				write_register(KTD2027_REG_LED_EN, 0x2);
-//				write_register(KTD2027_REG_PWM1_TIMER, 4);
-
-				////////
-				write_register(KTD2027_REG_LED_RAMP, 0x50);
-				write_register(KTD2027_REG_LED_EN, 0xa);
-				write_register(KTD2027_REG_PWM1_TIMER, 255);
 			} else {
 				printf("Error: Invalid color value.\n");
 				return -1;
 			}
 			break;
+
+		case RGB_LED_MODE_BLANK:
+			write_register(KTD2027_REG_LED_EN, 0);
+//			write_all_register(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+			break;
+
+		case RGB_LED_MODE_BLINK_FAST:
+			switch(color) {
+				case RGB_LED_COLOR_POWER_ON:
+					write_all_register(FLASH_PERIOD_POWER_ON, 0, 30, 0, 0, 0, 0, 0, 0, 191, 0, 0, 2, 0);
+					break;
+			}
+			break;
+
+		case RGB_LED_MODE_BLINK_SLOW:
+			switch(color) {
+				case RGB_LED_COLOR_POWER_OFF:
+					write_all_register(FLASH_PERIOD_POWER_OFF, 0, 50, 0, 0, 0, 0, 0, 191, 0, 0, 2, 0, 0);
+					break;
+			}
+			break;
+
+		case RGB_LED_MODE_SPEED_NIGHT_FADE:
+			switch(color) {
+				case RGB_LED_COLOR_IMMISSION:
+					write_all_register(FLASH_PERIOD_SPEED_NIGHT, 0, 200, 0, 3, 2, 2, 0, 19, 0, 9, 2, 0, 2);
+					break;
+				case RGB_LED_COLOR_EMISSION:
+					write_all_register(FLASH_PERIOD_SPEED_NIGHT, 0, 200, 0, 3, 2, 2, 0, 9, 0, 19, 2, 0, 2);
+					break;
+				case RGB_LED_COLOR_FIXED_CYCLE:
+					write_all_register(FLASH_PERIOD_SPEED_NIGHT, 0, 200, 0, 3, 2, 2, 0, 19, 19, 19, 2, 2, 2);
+					break;
+				case RGB_LED_COLOR_AUTOMATIC_CYCLE:
+					write_all_register(FLASH_PERIOD_SPEED_NIGHT, 0, 200, 0, 3, 2, 2, 0, 0, 0, 19, 0, 0, 2);
+					break;
+			}
+			break;
+
+		case RGB_LED_MODE_SPEED_BLINK:
+			switch(color) {
+				case RGB_LED_COLOR_IMMISSION:
+					write_all_register(FLASH_PERIOD_SPEED_BLINK, 0, 64, 0, 3, 1, 1, 0, 191, 0, 39, 2, 0, 2);
+					break;
+				case RGB_LED_COLOR_EMISSION:
+					write_all_register(FLASH_PERIOD_SPEED_BLINK, 0, 64, 0, 3, 1, 1, 0, 39, 0, 191, 2, 0, 2);
+					break;
+				case RGB_LED_COLOR_FIXED_CYCLE:
+					write_all_register(FLASH_PERIOD_SPEED_BLINK, 0, 64, 0, 3, 1, 1, 0, 191, 191, 191, 2, 2, 2);
+					break;
+				case RGB_LED_COLOR_AUTOMATIC_CYCLE:
+					write_all_register(FLASH_PERIOD_SPEED_BLINK, 0, 64, 0, 3, 1, 1, 0, 0, 0, 191, 0, 0, 2);
+					break;
+			}
+			break;
+
+		case RGB_LED_MODE_NOT_CONF:
+			switch(color) {
+				case RGB_LED_COLOR_AQUA_RH:
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 39, 39, 0, 2, 2);
+					break;
+
+				case RGB_LED_COLOR_GREEN_VOC:
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 39, 0, 0, 2, 0);
+					break;
+
+				case RGB_LED_COLOR_YELLOW_LUX:
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 39, 29, 0, 2, 2, 0);
+					break;
+			}
+			break;
+
+		case RGB_LED_MODE_PRE:
+			switch(color) {
+				case RGB_LED_COLOR_AQUA_RH:
+//					write_all_register(PRE_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 159, 0, 2, 2);
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 159, 0, 2, 2);
+					break;
+
+				case RGB_LED_COLOR_GREEN_VOC:
+//					write_all_register(PRE_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 0, 0, 2, 0);
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 0, 0, 2, 0);
+					break;
+
+				case RGB_LED_COLOR_YELLOW_LUX:
+//					write_all_register(PRE_PERIOD, 0, 255, 0, 0, 0, 0, 0, 159, 119, 0, 2, 2, 0);
+					write_all_register(FLASH_PERIOD, 0, 255, 0, 0, 0, 0, 0, 159, 119, 0, 2, 2, 0);
+					break;
+			}
+			break;
+
+			case RGB_LED_MODE_BLINK_INVERTED:
+				switch(color) {
+					case RGB_LED_COLOR_AQUA_RH:
+//						write_all_register(FLASH_PERIOD, 0, 4, 0, 0, 0, FLASH_FALL, 0, 0, 159, 159, 0, 2, 2);
+						write_register(KTD2027_REG_LED_RAMP, FLASH_FALL << 4);
+						write_register(KTD2027_REG_PWM1_TIMER, 4);
+						break;
+
+					case RGB_LED_COLOR_GREEN_VOC:
+//						write_all_register(FLASH_PERIOD, 0, 4, 0, 0, 0, FLASH_FALL, 0, 0, 159, 0, 0, 2, 0);
+						write_register(KTD2027_REG_LED_RAMP, FLASH_FALL << 4);
+						write_register(KTD2027_REG_PWM1_TIMER, 4);
+						break;
+
+					case RGB_LED_COLOR_YELLOW_LUX:
+//						write_all_register(FLASH_PERIOD, 0, 4, 0, 0, 0, FLASH_FALL, 0, 159, 119, 0, 2, 2, 0);
+						write_register(KTD2027_REG_LED_RAMP, FLASH_FALL << 4);
+						write_register(KTD2027_REG_PWM1_TIMER, 4);
+						break;
+				}
+				break;
+
+				case RGB_LED_MODE_END:
+					switch(color) {
+						case RGB_LED_COLOR_AQUA_RH:
+//							write_all_register(END_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 159, 0, 2, 2);
+							write_register(KTD2027_REG_PWM1_TIMER, 255);
+							break;
+
+						case RGB_LED_COLOR_GREEN_VOC:
+//							write_all_register(END_PERIOD, 0, 255, 0, 0, 0, 0, 0, 0, 159, 0, 0, 2, 0);
+							write_register(KTD2027_REG_PWM1_TIMER, 255);
+							break;
+
+						case RGB_LED_COLOR_YELLOW_LUX:
+//							write_all_register(END_PERIOD, 0, 255, 0, 0, 0, 0, 0, 159, 119, 0, 2, 2, 0);
+							write_register(KTD2027_REG_PWM1_TIMER, 255);
+							break;
+					}
+					break;
 
 		default:
 			printf("Error: Invalid mode.\n");

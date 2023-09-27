@@ -57,9 +57,13 @@
 #define LUX_F_INVALID                   65535.f
 #define GAS_U_INVALID					65535u
 
+#define PRE_PERIOD						2
 #define FLASH_PERIOD					8
-#define TOTAL_PERIOD					5120
+#define END_PERIOD						18
 
+#define FLASH_FALL						6
+
+#define FLASH_PERIOD_POWER_ON			4
 #define FLASH_PERIOD_POWER_OFF			6
 
 #define FLASH_PERIOD_SPEED_NIGHT		14

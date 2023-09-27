@@ -10,40 +10,8 @@
 
 #include "system.h"
 
-enum {
-	RGB_LED_MODE_NONE = 0,
-
-	RGB_LED_MODE_POWER_OFF,
-	RGB_LED_MODE_IMMISSION,
-	RGB_LED_MODE_EMISSION,
-	RGB_LED_MODE_FIXED_CYCLE,
-	RGB_LED_MODE_AUTOMATIC_CYCLE,
-
-	RGB_LED_MODE_RH_NOT_CONF,
-	RGB_LED_MODE_RH_THR_LOW,
-	RGB_LED_MODE_RH_THR_NORM,
-	RGB_LED_MODE_RH_THR_HIGH,
-
-	RGB_LED_MODE_VOC_NOT_CONF,
-	RGB_LED_MODE_VOC_THR_LOW,
-	RGB_LED_MODE_VOC_THR_NORM,
-	RGB_LED_MODE_VOC_THR_HIGH,
-
-	RGB_LED_MODE_LUX_NOT_CONF,
-	RGB_LED_MODE_LUX_THR_LOW,
-	RGB_LED_MODE_LUX_THR_NORM,
-	RGB_LED_MODE_LUX_THR_HIGH,
-
-	RGB_LED_MODE_SPEED_NIGHT,
-	RGB_LED_MODE_SPEED_LOW,
-	RGB_LED_MODE_SPEED_MEDIUM,
-	RGB_LED_MODE_SPEED_HIGH,
-
-	RGB_LED_MODE_TEST,
-};
-
 int rgb_led_init(struct i2c_dev_s *i2c_dev);
 int rgb_led_set(uint8_t led_color, uint8_t led_mode);
-int rgb_led_mode(uint32_t mode, bool end);
+int rgb_led_mode(uint8_t color, uint32_t mode, bool end);
 
 #endif /* MAIN_INCLUDE_RGB_LED_H_ */

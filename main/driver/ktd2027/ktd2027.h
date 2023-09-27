@@ -43,6 +43,20 @@ struct ktd2027_config {
 	uint8_t	i2c_dev_address;
 };
 
+enum {
+    RGB_LED_MODE_OFF            = 0,
+    RGB_LED_MODE_ON,
+    RGB_LED_MODE_BLANK,
+    RGB_LED_MODE_BLINK_FAST,
+    RGB_LED_MODE_BLINK_SLOW,
+	RGB_LED_MODE_SPEED_NIGHT_FADE,
+	RGB_LED_MODE_SPEED_BLINK,
+    RGB_LED_MODE_NOT_CONF,
+    RGB_LED_MODE_PRE,
+    RGB_LED_MODE_BLINK_INVERTED,
+	RGB_LED_MODE_END,
+};
+
 int ktd2027_init(struct i2c_dev_s *i2c_dev);
 int ktd2027_led_set(uint8_t color, uint8_t mode);
 
