@@ -8,6 +8,7 @@
 #include "statistic.h"
 #include "types.h"
 #include "storage.h"
+#include "structs.h"
 
 typedef struct {
     struct {
@@ -19,13 +20,14 @@ typedef struct {
     } speed_counters_tot_hour;
 } statistics_ts;
 
-static float filter_operating = 0; // Count for the filter operation in hours
-
+static uint32_t filter_operating = 0;
 static statistics_ts statistics_current;
-static uint32_t seconds_elapsed = 0; // Count of seconds elapsed
+static uint32_t seconds_counter = 0;
 
 void statistic_init(void) {
-    filter_operating = 0;
+    filter_operating = get_fan_runtime();  // Assuming this function exists in your storage module
+    seconds_counter = filter_operating * 60;  // Convert fan runtime to seconds
+
     statistics_current.speed_counters_tot_hour.night = 0;
     statistics_current.speed_counters_tot_hour.low = 0;
     statistics_current.speed_counters_tot_hour.medium = 0;
@@ -33,8 +35,18 @@ void statistic_init(void) {
     statistics_current.speed_counters_tot_hour.boost = 0;
 }
 
-void statistic_update_handler(int speed_mode) {
-    switch(speed_mode) {
+
+void statistic_update_handler(int speed_state) {
+
+    // Increment seconds counter
+    seconds_counter++;
+
+    // Every minute, update the fan runtime
+    if (seconds_counter % 60 == 0) {
+    	storage_increment_fan_runtime();
+    }
+
+    switch(speed_state) {
         case SPEED_NIGHT:
             statistics_current.speed_counters_tot_hour.night++;
             break;
@@ -54,8 +66,9 @@ void statistic_update_handler(int speed_mode) {
             break;
     }
 
+
     // Check every hour
-    if(seconds_elapsed >= 3600) {
+    if(seconds_counter >= 3600) {
         filter_operating += (statistics_current.speed_counters_tot_hour.night) * COEFF_NIGHT;
         filter_operating += (statistics_current.speed_counters_tot_hour.low) * COEFF_LOW;
         filter_operating += (statistics_current.speed_counters_tot_hour.medium) * COEFF_MEDIUM;
@@ -69,7 +82,9 @@ void statistic_update_handler(int speed_mode) {
         statistics_current.speed_counters_tot_hour.high = 0;
         statistics_current.speed_counters_tot_hour.boost = 0;
 
-        seconds_elapsed = 0; // Reset seconds counter
+        seconds_counter = 0; // Reset seconds counter
+        storage_reset_fan_runtime(); // Reset fan runtime
+
     }
 
     // Check threshold
@@ -78,6 +93,7 @@ void statistic_update_handler(int speed_mode) {
         current_state |= (1 << 0);  // Set the 0th bit directly
         set_device_state(current_state);
     }
+
 }
 
 void statistic_reset_filter(void) {

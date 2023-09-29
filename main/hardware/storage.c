@@ -22,6 +22,9 @@
 #define VOC_SET_KEY		    "voc_set"
 #define TEMP_OFFSET_KEY	    "temp_offset"
 #define R_HUM_OFFSET_KEY    "r_hum_offset"
+#define DEVICE_STATE_KEY    "device_state"
+#define FAN_RUNTIME_KEY     "fan_runtime"
+
 
 
 static nvs_handle_t storage_handle;
@@ -45,6 +48,9 @@ static struct storage_entry_s storage_entry_poll[] = {
 
 		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
 		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
+
+		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
+ 		{FAN_RUNTIME_KEY,       &application_data.runtime_data.fan_runtime,                             DATA_TYPE_UINT32,   4 },
 };
 
 
@@ -65,6 +71,8 @@ static void storage_init_runtime_data(void) {
 	application_data.runtime_data.lux = LUX_INVALID;
 	application_data.runtime_data.internal_temperature = TEMPERATURE_INVALID;
 	application_data.runtime_data.external_temperature = TEMPERATURE_INVALID;
+	application_data.runtime_data.device_state = 0;
+	application_data.runtime_data.fan_runtime = 0;
 
 }
 
@@ -346,6 +354,16 @@ uint16_t get_automatic_cycle_duration(void) {
 void set_automatic_cycle_duration(uint16_t automatic_cycle_duration) {
     application_data.runtime_data.automatic_cycle_duration = automatic_cycle_duration;
 }
+
+uint32_t get_fan_runtime(void) {
+    return application_data.runtime_data.fan_runtime;
+}
+
+void set_fan_runtime(uint32_t time) {
+    application_data.runtime_data.automatic_cycle_duration = time;
+}
+
+
 static int storage_serial_number_obtain(void) {
     uint8_t serial_number_byte[4];
     size_t start_bit = 28 * 8;
@@ -358,6 +376,20 @@ static int storage_serial_number_obtain(void) {
     application_data.runtime_data.serial_number = ((uint32_t)serial_number_byte[0]) << 24 | ((uint32_t)serial_number_byte[1]) << 16 | ((uint32_t)serial_number_byte[2]) << 8 | ((uint32_t)serial_number_byte[3]);
 
     return 0;
+}
+
+// Function to increment save fan runtime
+void storage_increment_fan_runtime(void) {
+	application_data.runtime_data.fan_runtime++;
+    nvs_set_u32(storage_handle, FAN_RUNTIME_KEY, application_data.runtime_data.fan_runtime);
+    nvs_commit(storage_handle);
+}
+
+// Function to reset & save fan runtime
+void storage_reset_fan_runtime(void) {
+	application_data.runtime_data.fan_runtime = 0;
+    nvs_set_u32(storage_handle, FAN_RUNTIME_KEY, application_data.runtime_data.fan_runtime);
+    nvs_commit(storage_handle);
 }
 
 static int storage_read_entry_with_idx(size_t i) {

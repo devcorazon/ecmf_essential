@@ -29,6 +29,7 @@ struct runtime_data_s {
 	int16_t     internal_temperature;
 	int16_t     external_temperature;
 	uint16_t    automatic_cycle_duration;
+	uint32_t    fan_runtime;
 };
 
 ///
