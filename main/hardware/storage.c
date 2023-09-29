@@ -360,7 +360,7 @@ uint32_t get_fan_runtime(void) {
 }
 
 void set_fan_runtime(uint32_t time) {
-    application_data.runtime_data.automatic_cycle_duration = time;
+    application_data.runtime_data.fan_runtime = time;
 }
 
 
