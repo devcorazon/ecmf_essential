@@ -73,11 +73,12 @@ int set_relative_humidity_offset(int16_t relative_humidity_offset);
 uint16_t get_automatic_cycle_duration(void);
 void set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
 
-uint32_t get_fan_runtime(void);
-void set_fan_runtime(uint32_t time);
+void storage_save_filter_operating(uint32_t filter_operating);
+void storage_reset_filter_operating(void);
 
-void storage_increment_fan_runtime(void);
-void storage_reset_fan_runtime(void);
+uint32_t get_filter_operation(void);
+void set_filter_operating(uint32_t filter_operating);
+
 
 
 #endif /* MAIN_INCLUDE_STORAGE_H_ */

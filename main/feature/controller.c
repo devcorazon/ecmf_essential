@@ -445,7 +445,6 @@ static void user_experience_state_machine() {
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_THR_HIGH, true);
 					break;
 				}
-
 			}
 		break;
 

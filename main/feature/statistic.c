@@ -25,8 +25,7 @@ static statistics_ts statistics_current;
 static uint32_t seconds_counter = 0;
 
 void statistic_init(void) {
-    filter_operating = get_fan_runtime();  // Assuming this function exists in your storage module
-    seconds_counter = filter_operating * 60;  // Convert fan runtime to seconds
+    filter_operating = get_filter_operation();  // retrive the value of filter_operating every init
 
     statistics_current.speed_counters_tot_hour.night = 0;
     statistics_current.speed_counters_tot_hour.low = 0;
@@ -40,11 +39,6 @@ void statistic_update_handler(int speed_state) {
 
     // Increment seconds counter
     seconds_counter++;
-
-    // Every minute, update the fan runtime
-    if (seconds_counter % 60 == 0) {
-    	storage_increment_fan_runtime();
-    }
 
     switch(speed_state) {
         case SPEED_NIGHT:
@@ -69,11 +63,11 @@ void statistic_update_handler(int speed_state) {
 
     // Check every hour
     if(seconds_counter >= 3600) {
-        filter_operating += (statistics_current.speed_counters_tot_hour.night) * COEFF_NIGHT;
-        filter_operating += (statistics_current.speed_counters_tot_hour.low) * COEFF_LOW;
+        filter_operating += (statistics_current.speed_counters_tot_hour.night)  * COEFF_NIGHT;
+        filter_operating += (statistics_current.speed_counters_tot_hour.low)    * COEFF_LOW;
         filter_operating += (statistics_current.speed_counters_tot_hour.medium) * COEFF_MEDIUM;
-        filter_operating += (statistics_current.speed_counters_tot_hour.high) * COEFF_HIGH;
-        filter_operating += (statistics_current.speed_counters_tot_hour.boost) * COEFF_BOOST;
+        filter_operating += (statistics_current.speed_counters_tot_hour.high)   * COEFF_HIGH;
+        filter_operating += (statistics_current.speed_counters_tot_hour.boost)  * COEFF_BOOST;
 
         // Reset counters after applying coefficients
         statistics_current.speed_counters_tot_hour.night = 0;
@@ -82,8 +76,8 @@ void statistic_update_handler(int speed_state) {
         statistics_current.speed_counters_tot_hour.high = 0;
         statistics_current.speed_counters_tot_hour.boost = 0;
 
+        storage_save_filter_operating(filter_operating); // save filter operating every hour
         seconds_counter = 0; // Reset seconds counter
-        storage_reset_fan_runtime(); // Reset fan runtime
 
     }
 
@@ -101,4 +95,5 @@ void statistic_reset_filter(void) {
     uint8_t current_state = get_device_state();
     current_state &= ~(1 << 0);  // Clear the 0th bit directly
     set_device_state(current_state);
+    storage_reset_filter_operating();
 }
