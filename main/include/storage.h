@@ -71,13 +71,10 @@ int16_t get_relative_humidity_offset(void);
 int set_relative_humidity_offset(int16_t relative_humidity_offset);
 
 uint16_t get_automatic_cycle_duration(void);
-void set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
+int set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
 
-void storage_save_filter_operating(uint32_t filter_operating);
-void storage_reset_filter_operating(void);
-
-uint32_t get_filter_operation(void);
-void set_filter_operating(uint32_t filter_operating);
+uint32_t get_filter_operating(void);
+int set_filter_operating(uint32_t filter_operating);
 
 
 

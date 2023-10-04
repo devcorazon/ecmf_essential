@@ -85,13 +85,13 @@ struct time_shape {
 /// Constants to calculate time.
 static const struct time_shape time_convert[] = {
 		{ -10 * TEMPERATURE_SCALE, 35U },
-		{ -6 * TEMPERATURE_SCALE, 80U },
+		{ -6 * TEMPERATURE_SCALE,  80U },
 		{ -3 * TEMPERATURE_SCALE, 150U },
-		{ 3 * TEMPERATURE_SCALE, 200U },
-		{10 * TEMPERATURE_SCALE, 150U },
-        { 15 * TEMPERATURE_SCALE, 80U },
-		{ 20 * TEMPERATURE_SCALE, 50U },
-		{ 25 * TEMPERATURE_SCALE, 35U },
+		{ 3 * TEMPERATURE_SCALE,  200U },
+		{10 * TEMPERATURE_SCALE,  150U },
+        { 15 * TEMPERATURE_SCALE,  80U },
+		{ 20 * TEMPERATURE_SCALE,  50U },
+		{ 25 * TEMPERATURE_SCALE,  35U },
 };
 
 enum conf_s {
@@ -126,11 +126,8 @@ static void controller_task(void *pvParameters) {
 
 		if (test_in_progress() == false) {
 			controller_state_machine();
+			statistic_update_handler(get_speed_state());
 		}
-
-	    if (get_mode_state() != MODE_OFF) {
-	        statistic_update_handler(get_speed_state());
-	    }
 
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
 	}

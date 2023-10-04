@@ -25,7 +25,7 @@ static statistics_ts statistics_current;
 static uint32_t seconds_counter = 0;
 
 void statistic_init(void) {
-    filter_operating = get_filter_operation();  // retrive the value of filter_operating every init
+    filter_operating = get_filter_operating();  // retrive the value of filter_operating every init
 
     statistics_current.speed_counters_tot_hour.night = 0;
     statistics_current.speed_counters_tot_hour.low = 0;
@@ -40,6 +40,7 @@ void statistic_update_handler(int speed_state) {
     // Increment seconds counter
     seconds_counter++;
 
+    printf("counter=%d\n" , seconds_counter);
     switch(speed_state) {
         case SPEED_NIGHT:
             statistics_current.speed_counters_tot_hour.night++;
@@ -60,14 +61,16 @@ void statistic_update_handler(int speed_state) {
             break;
     }
 
-
+    printf("state=%d\n",speed_state);
     // Check every hour
-    if(seconds_counter >= 3600) {
-        filter_operating += (statistics_current.speed_counters_tot_hour.night)  * COEFF_NIGHT;
-        filter_operating += (statistics_current.speed_counters_tot_hour.low)    * COEFF_LOW;
-        filter_operating += (statistics_current.speed_counters_tot_hour.medium) * COEFF_MEDIUM;
-        filter_operating += (statistics_current.speed_counters_tot_hour.high)   * COEFF_HIGH;
-        filter_operating += (statistics_current.speed_counters_tot_hour.boost)  * COEFF_BOOST;
+    if(seconds_counter >= 10) {
+
+        filter_operating += ((statistics_current.speed_counters_tot_hour.night    * COEFF_NIGHT) +
+                               (statistics_current.speed_counters_tot_hour.low    * COEFF_LOW) +
+                               (statistics_current.speed_counters_tot_hour.medium * COEFF_MEDIUM) +
+                               (statistics_current.speed_counters_tot_hour.high   * COEFF_HIGH) +
+                               (statistics_current.speed_counters_tot_hour.boost  * COEFF_BOOST)) / 1000;
+
 
         // Reset counters after applying coefficients
         statistics_current.speed_counters_tot_hour.night = 0;
@@ -76,12 +79,12 @@ void statistic_update_handler(int speed_state) {
         statistics_current.speed_counters_tot_hour.high = 0;
         statistics_current.speed_counters_tot_hour.boost = 0;
 
-        storage_save_filter_operating(filter_operating); // save filter operating every hour
+        set_filter_operating(filter_operating);
         seconds_counter = 0; // Reset seconds counter
 
     }
 
-    // Check threshold
+//    // Check threshold
     if (filter_operating >= FILTER_THRESHOLD) {
         uint8_t current_state = get_device_state();
         current_state |= (1 << 0);  // Set the 0th bit directly
@@ -95,5 +98,5 @@ void statistic_reset_filter(void) {
     uint8_t current_state = get_device_state();
     current_state &= ~(1 << 0);  // Clear the 0th bit directly
     set_device_state(current_state);
-    storage_reset_filter_operating();
+    set_filter_operating(0);
 }

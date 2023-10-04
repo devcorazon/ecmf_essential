@@ -23,9 +23,7 @@
 #define TEMP_OFFSET_KEY	     "temp_offset"
 #define R_HUM_OFFSET_KEY     "r_hum_offset"
 #define DEVICE_STATE_KEY     "device_state"
-#define FILTER_OPERATING_KEY "filter_operating"
-
-
+#define FILTER_OPERATING_KEY "filter"
 
 static nvs_handle_t storage_handle;
 
@@ -49,7 +47,7 @@ static struct storage_entry_s storage_entry_poll[] = {
 		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
 		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
 
-		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
+ 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
  		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
 };
 
@@ -73,7 +71,6 @@ static void storage_init_runtime_data(void) {
 	application_data.runtime_data.external_temperature = TEMPERATURE_INVALID;
 	application_data.runtime_data.device_state = 0;
 	application_data.runtime_data.filter_operating = 0;
-
 }
 
 static void storage_init_configuration_settings(void) {
@@ -189,6 +186,8 @@ uint8_t get_device_state(void) {
 int set_device_state(uint8_t device_state) {
 	application_data.runtime_data.device_state= device_state;
 
+	storage_save_entry_with_key(DEVICE_STATE_KEY);
+
 	return 0;
 }
 
@@ -272,7 +271,7 @@ uint8_t get_speed_set(void) {
 int set_speed_set(uint8_t speed_set) {
 	application_data.configuration_settings.speed_set = speed_set;
 
-	storage_save_entry_with_key("speed_set");
+	storage_save_entry_with_key(SPEED_SET_KEY);
 
 	return 0;
 }
@@ -288,7 +287,7 @@ int set_relative_humidity_set(uint8_t relative_humidity_set) {
 	}
 
 	application_data.configuration_settings.relative_humidity_set = relative_humidity_set;
-	storage_save_entry_with_key("r_hum_set");
+	storage_save_entry_with_key(R_HUM_SET_KEY);
 
     return 0;
 }
@@ -303,7 +302,7 @@ int set_lux_set(uint8_t lux_set) {
 	}
 
 	application_data.configuration_settings.lux_set = lux_set;
-	storage_save_entry_with_key("lux_set");
+	storage_save_entry_with_key(LUX_SET_KEY);
 
     return 0;
 }
@@ -318,7 +317,7 @@ int set_voc_set(uint8_t voc_set) {
 	}
 
 	application_data.configuration_settings.voc_set = voc_set;
-	storage_save_entry_with_key("voc_set");
+	storage_save_entry_with_key(VOC_SET_KEY);
 
     return 0;
 }
@@ -330,7 +329,7 @@ int16_t get_temperature_offset(void) {
 int set_temperature_offset(int16_t temperature_offset) {
 	application_data.configuration_settings.temperature_offset = temperature_offset;
 
-	storage_save_entry_with_key("temp_offset");
+	storage_save_entry_with_key(TEMP_OFFSET_KEY);
 
     return 0;
 }
@@ -342,7 +341,7 @@ int16_t get_relative_humidity_offset(void) {
 int set_relative_humidity_offset(int16_t relative_humidity_offset) {
 	application_data.configuration_settings.relative_humidity_offset = relative_humidity_offset;
 
-	storage_save_entry_with_key("r_hum_offset");
+	storage_save_entry_with_key(R_HUM_OFFSET_KEY);
 
     return 0;
 }
@@ -351,16 +350,23 @@ uint16_t get_automatic_cycle_duration(void) {
     return application_data.runtime_data.automatic_cycle_duration;
 }
 
-void set_automatic_cycle_duration(uint16_t automatic_cycle_duration) {
+int set_automatic_cycle_duration(uint16_t automatic_cycle_duration) {
     application_data.runtime_data.automatic_cycle_duration = automatic_cycle_duration;
+
+    return 0;
 }
 
-uint32_t get_filter_operation(void) {
+uint32_t get_filter_operating(void) {
     return application_data.runtime_data.filter_operating;
+
 }
 
-void set_filter_operating(uint32_t filter_operating) {
+int set_filter_operating(uint32_t filter_operating) {
     application_data.runtime_data.filter_operating = filter_operating;
+
+    storage_save_entry_with_key(FILTER_OPERATING_KEY);
+
+    return 0;
 }
 
 static int storage_serial_number_obtain(void) {
@@ -377,21 +383,6 @@ static int storage_serial_number_obtain(void) {
     return 0;
 }
 
-// Function to save fan runtime
-void storage_save_filter_operating(uint32_t filter_operating) {
-	application_data.runtime_data.filter_operating = filter_operating;
-    nvs_set_u32(storage_handle, FILTER_OPERATING_KEY, application_data.runtime_data.filter_operating);
-    nvs_commit(storage_handle);
-}
-
-
-// Function to reset & save fan runtime
-void storage_reset_filter_operating(void) {
-	application_data.runtime_data.filter_operating = 0;
-    nvs_set_u32(storage_handle, FILTER_OPERATING_KEY, application_data.runtime_data.filter_operating);
-    nvs_commit(storage_handle);
-}
-
 static int storage_read_entry_with_idx(size_t i) {
 //	esp_err_t ret;
 
@@ -401,7 +392,7 @@ static int storage_read_entry_with_idx(size_t i) {
         case DATA_TYPE_UINT8:
         	nvs_get_u8(storage_handle, storage_entry_poll[i].key, (uint8_t *)storage_entry_poll[i].data);
 //        	ret = nvs_get_u8(storage_handle, storage_entry_poll[i].key, (uint8_t *)storage_entry_poll[i].data);
-//        	printf("storage_save_entry_with_key - nvs_get_u8 - index: %u - ret: %04x\r\n", i, ret);
+//       	printf("storage_save_entry_with_key - nvs_get_u8 - index: %u - ret: %04x\r\n", i, ret);
             break;
         case DATA_TYPE_INT8:
         	nvs_get_i8(storage_handle, storage_entry_poll[i].key, (int8_t *)storage_entry_poll[i].data);
@@ -419,8 +410,8 @@ static int storage_read_entry_with_idx(size_t i) {
 //        	printf("storage_save_entry_with_key - nvs_get_i16 - index: %u - ret: %04x\r\n", i, ret);
             break;
         case DATA_TYPE_UINT32:
-            nvs_get_i16(storage_handle, storage_entry_poll[i].key, (int16_t *)(storage_entry_poll[i].data));
-//        	ret = nvs_get_u32(storage_handle, storage_entry_poll[i].key, (uint32_t *)storage_entry_poll[i].data);
+            nvs_get_u32(storage_handle, storage_entry_poll[i].key, (uint32_t *)(storage_entry_poll[i].data));
+//     	    ret = nvs_get_u32(storage_handle, storage_entry_poll[i].key, (uint32_t *)storage_entry_poll[i].data);
 //        	printf("storage_save_entry_with_key - nvs_get_u32 - index: %u - ret: %04x\r\n", i, ret);
             break;
         case DATA_TYPE_INT32:

@@ -57,7 +57,7 @@ int fan_set(uint8_t direction, uint8_t speed) {
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
 
     set_direction_state(direction);
-    set_speed_state(fan_speed);
+    set_speed_state(speed);
 
   //  printf("Fan set: direction=%u, speed=%d.\n", direction, speed);
 
