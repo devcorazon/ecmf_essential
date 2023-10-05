@@ -45,7 +45,7 @@ int set_internal_temperature(int16_t temperature);
 int16_t get_external_temperature(void);
 int set_external_temperature(int16_t temperature);
 
-int16_t get_lux(void);
+uint16_t get_lux(void);
 int set_lux(int16_t lux);
 
 #endif /* MAIN_INCLUDE_STORAGE_INTERNAL_H_ */

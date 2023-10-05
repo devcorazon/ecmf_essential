@@ -48,7 +48,6 @@
 
 #define CONDITION_COUNT_MAX						    3U
 
-static uint32_t duration_automatic_cycle;
 //
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,int16_t immission_temperature);
 static void system_mode_speed_set(uint8_t mode, uint8_t speed);
@@ -308,6 +307,10 @@ static void user_experience_state_machine(void) {
 					user_experience_state = VOC_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
 					break;
+				case BUTTON_9:
+					user_experience_state = VOC_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					break;
 				case BUTTON_10:
 					set_relative_humidity_set(RH_THRESHOLD_SETTING_MEDIUM);
 					user_experience_state = VOC_SETTING;
@@ -333,6 +336,10 @@ static void user_experience_state_machine(void) {
 					user_experience_state = LUX_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
 					break;
+				case BUTTON_9:
+					user_experience_state = LUX_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
 				case BUTTON_10:
 					set_voc_set(VOC_THRESHOLD_SETTING_MEDIUM);
 					user_experience_state = LUX_SETTING;
@@ -355,6 +362,10 @@ static void user_experience_state_machine(void) {
 					break;
 				case BUTTON_8:
 					set_voc_set(LUX_THRESHOLD_SETTING_LOW);
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+					break;
+				case BUTTON_9:
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 					break;
@@ -503,11 +514,11 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 					case BUTTON_8:
+						set_voc_set(VOC_THRESHOLD_SETTING_LOW);
 						user_experience_state = OPERATIVE;
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 					case BUTTON_9:
-						set_voc_set(VOC_THRESHOLD_SETTING_LOW);
 						user_experience_state = OPERATIVE;
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
@@ -532,11 +543,11 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 					case BUTTON_8:
+						set_lux_set(LUX_THRESHOLD_SETTING_LOW);
 						user_experience_state = OPERATIVE;
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 					case BUTTON_9:
-						set_lux_set(LUX_THRESHOLD_SETTING_LOW);
 						user_experience_state = OPERATIVE;
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
@@ -579,6 +590,11 @@ static void controller_log(void) {
 	static uint8_t speed_log = SPEED_NONE;
 	static uint8_t speed_set_log = SPEED_NONE;
 	static uint8_t direction_log = DIRECTION_NONE;
+	int interval_time = 0;
+
+	static TickType_t last_call_tick = 0;  // Static variable to keep track of the last call tick count
+
+	TickType_t current_tick = xTaskGetTickCount(); // Get the current tick count right at the start of the function
 
 	if (mode_log != get_mode_state() || speed_log != get_speed_state() || speed_set_log != get_speed_set() || direction_log != get_direction_state()) {
 		mode_log = get_mode_state();
@@ -586,7 +602,15 @@ static void controller_log(void) {
 		speed_set_log = get_speed_set();
 		direction_log = get_direction_state();
 
-		printf("MODE:%s (calc dur:%s) (extra cycle:%s) - SPEED:%s [%s] (force night:%s) (force boost:%s) - DIRECTION:%s\r\n",
+     if (last_call_tick != 0) { // Skip during the first function call
+		TickType_t interval_ticks = current_tick - last_call_tick;
+		interval_time = (int)(interval_ticks * portTICK_PERIOD_MS / 1000.0);
+     }
+
+     last_call_tick = current_tick; // Update last_call_tick for the next call
+
+
+     printf("MODE:%s (calc dur:%s) (extra cycle:%s) - SPEED:%s [%s] (force night:%s) (force boost:%s) - DIRECTION:%s  - TIME:%d s\r\n",
 			(mode_log_str[mode_log & ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION)]),
 			(mode_log & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION ? "Y" : "N"),
 			(mode_log & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE ? "Y" : "N"),
@@ -594,7 +618,9 @@ static void controller_log(void) {
 			(speed_log_str[get_speed_set()]),
 			(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT ? "Y" : "N"),
 			(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_BOOST ? "Y" : "N"),
-			(direction_log_str[direction_log]));
+			(direction_log_str[direction_log]),
+			(interval_time));
+
 	}
 }
 
@@ -650,18 +676,18 @@ static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,
 }
 
 static void controller_set(void) {
-	static const uint16_t luminosity_threshold_convert[] = { 0U,LUMINOSITY_THRESHOLD_LOW, LUMINOSITY_THRESHOLD_MEDIUM,LUMINOSITY_THRESHOLD_HIGH };
-	static const uint16_t relative_humidity_threshold_convert[] = { 0U,RH_THRESHOLD_LOW, RH_THRESHOLD_MEDIUM, RH_THRESHOLD_HIGH };
+	static const uint16_t luminosity_threshold_convert[] = { 0U, LUMINOSITY_THRESHOLD_LOW, LUMINOSITY_THRESHOLD_MEDIUM,LUMINOSITY_THRESHOLD_HIGH };
+	static const uint16_t relative_humidity_threshold_convert[] = { 0U, RH_THRESHOLD_LOW, RH_THRESHOLD_MEDIUM, RH_THRESHOLD_HIGH };
 	static const uint16_t voc_threshold_convert[] = { 0U, VOC_THRESHOLD_LOW, VOC_THRESHOLD_MEDIUM, VOC_THRESHOLD_HIGH };
 	uint8_t speed_set = get_speed_set();
 	uint8_t speed_state = get_speed_state();
-	int16_t luminosity = get_lux();
+	uint16_t luminosity = get_lux();
 	uint16_t relative_humidity = get_relative_humidity();
 	uint16_t voc = get_voc();
 
-	uint8_t luminosity_threshold = luminosity_threshold_convert[get_lux_set()];
-	uint8_t relative_humidity_threshold = relative_humidity_threshold_convert[get_relative_humidity_set()];
-	uint8_t voc_threshold = voc_threshold_convert[get_voc_set()];
+	uint16_t luminosity_threshold = luminosity_threshold_convert[get_lux_set()];
+	uint16_t relative_humidity_threshold = relative_humidity_threshold_convert[get_relative_humidity_set()];
+	uint16_t voc_threshold = voc_threshold_convert[get_voc_set()];
 	static uint8_t cond_flags = 0U;
 	static uint8_t count_luminosity = 0U;
 	static uint8_t count_rh_extra_cycle = 0U;
@@ -708,6 +734,8 @@ static void controller_set(void) {
 			}
 
 			if (get_relative_humidity_set() != RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
+//#warning DEBUG
+//				printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
 				if (relative_humidity > (relative_humidity_threshold + RH_DIFFERENTIAL_HIGH)) {
 					if (count_rh_extra_cycle < CONDITION_COUNT_MAX) {
 						count_rh_extra_cycle++;
@@ -858,22 +886,19 @@ static void work_task(void *arg) {
 					xTimerStart(controller_timer, 0);
 					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START\n");
 				} else if (calculate_duration_inversions_count <= CALCULATE_DURATION_INVERSIONS_MAX) {
-					printf("inversione_count=%d\n", calculate_duration_inversions_count);
+					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - inversione_count=%d\n", calculate_duration_inversions_count);
 					calculate_duration_inversions_count++;
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_IN_MS), portMAX_DELAY);
 					xTimerStart(controller_timer, 0);
 				} else {
 					calculate_duration_inversions_count = 0U;
-					set_automatic_cycle_duration( calculate_duration_automatic_cycle(get_internal_temperature(), get_external_temperature())); // VERIFY the functions inside arguments
-					printf("internal_Emissione = %d\n", get_internal_temperature());
-					printf("external_Imissione = %d\n", get_external_temperature());
-					printf("duration = %d\n", get_automatic_cycle_duration());
-//            			LOG_INF("Duration automatic cycle %" PRIu16 " sec - Emmission temperature %" PRId16 ".%02" PRId16 " ï¿½C - Immission temperature %" PRId16 ".%02" PRId16 " ï¿½C",
-//            					get_automatic_cycle_duration(), get_emission_temperature() / TEMPERATURE_SCALE, abs(get_emission_temperature() % TEMPERATURE_SCALE), get_immission_temperature() / TEMPERATURE_SCALE, abs(get_immission_temperature() % TEMPERATURE_SCALE));
-					duration_automatic_cycle = SECONDS_TO_MS( get_automatic_cycle_duration());
+					set_automatic_cycle_duration(calculate_duration_automatic_cycle(get_internal_temperature(), get_external_temperature())); // VERIFY the functions inside arguments
+					printf("Int: %d.%01d - Ext: %d.%01d - duration = %u\n", TEMP_RAW_TO_INT(get_internal_temperature()), TEMP_RAW_TO_DEC(get_internal_temperature()),
+																			TEMP_RAW_TO_INT(get_external_temperature()), TEMP_RAW_TO_DEC(get_external_temperature()),
+																			get_automatic_cycle_duration());
+
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 				    printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - STOP\n");
-
 
 				}
 			}
@@ -904,7 +929,8 @@ static void work_task(void *arg) {
 		// Calculate duration and Extra cycle not started
 		if ((calculate_duration_inversions_count == 0U)
 				&& (extra_cycle_inversions_count == 0U)) {
-			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(duration_automatic_cycle), portMAX_DELAY); xTimerStart(controller_timer, 0);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_automatic_cycle_duration())), portMAX_DELAY);
+			xTimerStart(controller_timer, 0);
 		}
 
 		break;

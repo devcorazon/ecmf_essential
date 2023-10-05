@@ -162,12 +162,12 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
 		}
 
-	    int32_t voc = get_voc();
+	    uint16_t voc = get_voc();
 	    if (voc == VOC_INVALID)
 	    {
 	        printf("VOC Index reading error\n");
 	    } else {
-	        printf("VOC Index =  %ld \n", voc);
+	        printf("VOC Index =  %u4 \n", voc);
 	    }
 
 		ltr303_measure_lux(&lux);

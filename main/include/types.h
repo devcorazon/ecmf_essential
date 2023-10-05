@@ -35,13 +35,11 @@
 #define RH_RAW_TO_INT(rh)						(uint16_t) (rh / RELATIVE_HUMIDITY_SCALE)
 #define RH_RAW_TO_DEC(rh)						(uint16_t) (rh % RELATIVE_HUMIDITY_SCALE)
 
-#define LUX_RAW_TO_INT(lux)						(int16_t) (lux / LUX_SCALE)
-#define LUX_RAW_TO_DEC(lux)						(int16_t) (abs((int) lux ) % LUX_SCALE)
+#define LUX_RAW_TO_INT(lux)						(uint16_t) (lux / LUX_SCALE)
+#define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
 
-#define SECONDS_PER_HOUR						3600u//30
-#define SECONDS_TO_MS(seconds) ((seconds) * 1000UL)
-
-#define ceiling_fraction(numerator, divider) (((numerator) + ((divider) - 1)) / (divider))
+#if 1
+#define SECONDS_PER_HOUR						3600u
 
 /// Timing
 #define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
@@ -51,6 +49,21 @@
 #define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
 #define DURATION_EXTRA_CYCLE_BOOST				(200U)//(10U)
 #define DURATION_RESTART_EXTRA_CYCLE			(60U * 60U)
+#else
+
+#define SECONDS_PER_HOUR						300U
+/// Timing
+#define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
+#define DURATION_FIXED_CYCLE					(15U)
+#define DURATION_AUTOMATIC_CYCLE_OUT			(15U)
+#define DURATION_AUTOMATIC_CYCLE_IN				(30U)
+#define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
+#define DURATION_EXTRA_CYCLE_BOOST				(30U)
+#define DURATION_RESTART_EXTRA_CYCLE			(10U * 60U)
+#endif
+
+#define ceiling_fraction(numerator, divider) (((numerator) + ((divider) - 1)) / (divider))
+#define SECONDS_TO_MS(seconds) ((seconds) * 1000UL)
 
 /// Thresholds and differentials
 #define LUMINOSITY_THRESHOLD_LOW				(100U * LUX_SCALE / 1000U)

@@ -39,7 +39,7 @@ int set_relative_humidity(uint16_t relative_humidity);
 uint16_t get_voc(void);
 int set_voc(uint16_t voc);
 
-int16_t get_lux(void);
+uint16_t get_lux(void);
 int set_lux(int16_t lux);
 
 int16_t get_internal_temperature(void);

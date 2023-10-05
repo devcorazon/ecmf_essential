@@ -25,7 +25,7 @@ struct runtime_data_s {
 	int16_t		temperature;
 	uint16_t    relative_humidity;
 	uint16_t    voc;
-	int16_t     lux;
+	uint16_t    lux;
 	int16_t     internal_temperature;
 	int16_t     external_temperature;
 	uint16_t    automatic_cycle_duration;

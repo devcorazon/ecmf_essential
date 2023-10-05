@@ -221,7 +221,7 @@ int set_voc(uint16_t voc) {
 	return 0;
 }
 
-int16_t get_lux(void) {
+uint16_t get_lux(void) {
 	return application_data.runtime_data.lux;
 }
 

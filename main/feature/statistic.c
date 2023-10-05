@@ -34,7 +34,6 @@ void statistic_init(void) {
     statistics_current.speed_counters_tot_hour.boost = 0;
 }
 
-
 void statistic_update_handler(int speed_state) {
 
     // Increment seconds counter
@@ -81,7 +80,6 @@ void statistic_update_handler(int speed_state) {
 
         set_filter_operating(filter_operating);
         seconds_counter = 0; // Reset seconds counter
-
     }
 
 //    // Check threshold
@@ -90,7 +88,6 @@ void statistic_update_handler(int speed_state) {
         current_state |= (1 << 0);  // Set the 0th bit directly
         set_device_state(current_state);
     }
-
 }
 
 void statistic_reset_filter(void) {
