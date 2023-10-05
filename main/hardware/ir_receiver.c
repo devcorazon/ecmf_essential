@@ -154,7 +154,7 @@ static bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done
 }
 
 static void ir_receive_task(void* param) {
-	printf("create RMT RX channel\n");
+//	printf("create RMT RX channel\n");
     rmt_rx_channel_config_t rx_channel_cfg = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
         .resolution_hz = IR_RESOLUTION_HZ,
@@ -164,7 +164,7 @@ static void ir_receive_task(void* param) {
     rmt_channel_handle_t rx_channel = NULL;
     ESP_ERROR_CHECK(rmt_new_rx_channel(&rx_channel_cfg, &rx_channel));
 
-    printf("register RX done callback\n");
+//    printf("register RX done callback\n");
     QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
     assert(receive_queue);
     rmt_rx_event_callbacks_t cbs = {
@@ -178,7 +178,7 @@ static void ir_receive_task(void* param) {
         .signal_range_max_ns = 12000000, // the longest duration for NEC signal is 9000us, 12000000ns > 9000us, the receive won't stop early
     };
 
-    printf("enable RMT TX and RX channels\n");
+//    printf("enable RMT TX and RX channels\n");
     ESP_ERROR_CHECK(rmt_enable(rx_channel));
 
     // save the received RMT symbols
@@ -225,7 +225,7 @@ uint32_t ir_receiver_take_button(void) {
 			but |= 0x80000000;
 		}
 
-		printf("button %s press - code=%04X\r\n\r\n", (but & 0x80000000 ? "LONG" : "SHORT"), ir_receiver.keycode);
+//		printf("button %s press - code=%04X\r\n\r\n", (but & 0x80000000 ? "LONG" : "SHORT"), ir_receiver.keycode);
 
 		ir_receiver.keycode = 0;
 		ir_receiver.count = 0;

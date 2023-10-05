@@ -93,11 +93,12 @@
 
 #define VALUE_UNMODIFIED                         0xFF
 
+// Filter coefficients
 #define COEFF_NIGHT  200
 #define COEFF_LOW    600
 #define COEFF_MEDIUM 1000
 #define COEFF_HIGH   1400
-#define COEFF_BOOST  1500
+#define COEFF_BOOST 1500
 
 // Enumerations
 

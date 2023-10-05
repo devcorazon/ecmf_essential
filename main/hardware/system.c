@@ -123,19 +123,8 @@ int system_init(void) {
 //	blufi_init();
 	controller_init();
 
-#if 0
-	set_mode_set(4);
-	set_speed_set(3);
-	set_relative_humidity_set(1);
-	set_lux_set(2);
-	set_voc_set(3);
-	set_temperature_offset(45);
-	set_relative_humidity_offset(-30);
-#endif
-
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d  - filter_operating: %d\r\n",
 			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset(), get_filter_operating());
-
 
 	return 0;
 }

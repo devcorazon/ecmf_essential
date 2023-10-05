@@ -40,7 +40,7 @@ void statistic_update_handler(int speed_state) {
     // Increment seconds counter
     seconds_counter++;
 
-    printf("counter=%d\n" , seconds_counter);
+  //  printf("counter=%d\n" , seconds_counter);
     switch(speed_state) {
         case SPEED_NIGHT:
             statistics_current.speed_counters_tot_hour.night++;
@@ -61,7 +61,7 @@ void statistic_update_handler(int speed_state) {
             break;
     }
 
-    printf("state=%d\n",speed_state);
+ //   printf("state=%d\n",speed_state);
     // Check every hour
     if(seconds_counter >= 10) {
 

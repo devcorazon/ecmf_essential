@@ -5,12 +5,16 @@
  *      Author: youcef.benakmoume
  */
 
+#define OS_TIMER
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "freertos/timers.h"
 
 #include "ktd2027.h"
 #include "rgb_led.h"
+
+#define RGB_LED_ADJUST_TIMER_MS			2
 
 struct led_s {
     uint8_t			color;
@@ -24,9 +28,11 @@ struct led_s {
     bool			repeated;
 };
 
-static struct led_s led;
+static void rgb_led_pre_on_time_callback(TimerHandle_t xTimer);
+static void rgb_led_on_time_callback(TimerHandle_t xTimer);
+static void rgb_led_post_on_time_callback(TimerHandle_t xTimer);
 
-int rgb_led_mode(uint8_t color, uint32_t mode, bool end);
+static struct led_s led;
 
 static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 	led.color = color;
@@ -43,6 +49,9 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 
 		case RGB_LED_MODE_ALWAYS_ON:
 			switch(led.color) {
+				case RGB_LED_COLOR_GREEN:
+					ktd2027_led_set(RGB_LED_COLOR_GREEN, RGB_LED_MODE_BLINK);
+					break;
 				case RGB_LED_COLOR_TEST:
 					ktd2027_led_set(RGB_LED_COLOR_TEST, RGB_LED_MODE_ON);
 					break;
@@ -52,6 +61,12 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 		case RGB_LED_MODE_ONESHOOT:
 			led.on_time = 2048;
 			switch(led.color) {
+				case RGB_LED_COLOR_AQUA_RH:
+					ktd2027_led_set(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ON);
+					break;
+				case RGB_LED_COLOR_YELLOW_LUX:
+					ktd2027_led_set(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_ON);
+					break;
 				case RGB_LED_COLOR_IMMISSION:
 					ktd2027_led_set(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ON);
 					break;
@@ -71,15 +86,16 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 			switch(led.color) {
 				case RGB_LED_COLOR_POWER_ON:
 					led.on_time = 2 * (128 * (FLASH_PERIOD_POWER_ON + 2));
-					ktd2027_led_set(led.color, RGB_LED_MODE_BLINK_FAST);
+					ktd2027_led_set(led.color, RGB_LED_MODE_BLINK);
 					break;
 				case RGB_LED_COLOR_POWER_OFF:
 					led.on_time = 2 * (128 * (FLASH_PERIOD_POWER_OFF + 2));
-					ktd2027_led_set(led.color, RGB_LED_MODE_BLINK_SLOW);
+					ktd2027_led_set(led.color, RGB_LED_MODE_BLINK);
 					break;
 			}
 			break;
 
+		///
 		case RGB_LED_MODE_SPEED_NIGHT:
 			led.on_time = 128 * (FLASH_PERIOD_SPEED_NIGHT + 2);
 			ktd2027_led_set(led.color, RGB_LED_MODE_SPEED_NIGHT_FADE);
@@ -97,27 +113,27 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 			ktd2027_led_set(led.color, RGB_LED_MODE_SPEED_BLINK);
 			break;
 
+			///
 		case RGB_LED_MODE_THR_NOT_CONF:
-			led.on_time = 3048;
+			led.on_time = 3072;
 			ktd2027_led_set(led.color, RGB_LED_MODE_NOT_CONF);
 			break;
-
 		case RGB_LED_MODE_THR_LOW:
-			led.pre_on_time = 128 * (PRE_PERIOD + 2);
+			led.pre_on_time = PRE_FLASH_PERIOD_MS;
 			led.on_time = 1 * (128 * (FLASH_PERIOD + 2));
-			led.post_on_time = 128 * (END_PERIOD + 2);
+			led.post_on_time = POST_FLASH_PERIOD_MS;
 			ktd2027_led_set(led.color, RGB_LED_MODE_PRE);
 			break;
 		case RGB_LED_MODE_THR_MEDIUM:
-			led.pre_on_time = 128 * (PRE_PERIOD + 2);
+			led.pre_on_time = PRE_FLASH_PERIOD_MS;
 			led.on_time = 2 * (128 * (FLASH_PERIOD + 2));
-			led.post_on_time = 128 * (END_PERIOD + 2);
+			led.post_on_time = POST_FLASH_PERIOD_MS;
 			ktd2027_led_set(led.color, RGB_LED_MODE_PRE);
 			break;
 		case RGB_LED_MODE_THR_HIGH:
-			led.pre_on_time = 128 * (PRE_PERIOD + 2);
+			led.pre_on_time = PRE_FLASH_PERIOD_MS;
 			led.on_time = 3 * (128 * (FLASH_PERIOD + 2));
-			led.post_on_time = 128 * (END_PERIOD + 2);
+			led.post_on_time = POST_FLASH_PERIOD_MS;
 			ktd2027_led_set(led.color, RGB_LED_MODE_PRE);
 			break;
 
@@ -125,6 +141,14 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 			ktd2027_led_set(RGB_LED_COLOR_TEST, RGB_LED_MODE_ON);
 			break;
 	}
+
+	/// Adjust
+	if (led.pre_on_time)
+		led.pre_on_time -= RGB_LED_ADJUST_TIMER_MS;
+	if (led.on_time)
+		led.on_time -= RGB_LED_ADJUST_TIMER_MS;
+	if (led.post_on_time)
+		led.post_on_time -= RGB_LED_ADJUST_TIMER_MS;
 }
 
 static void rgb_led_pre_on_time_callback(TimerHandle_t xTimer) {
@@ -145,17 +169,10 @@ static void rgb_led_pre_on_time_callback(TimerHandle_t xTimer) {
 
 static void rgb_led_on_time_callback(TimerHandle_t xTimer) {
 	switch (led.mode) {
-		case RGB_LED_MODE_THR_NOT_CONF:
-			break;
-
 		case RGB_LED_MODE_THR_LOW:
 		case RGB_LED_MODE_THR_MEDIUM:
 		case RGB_LED_MODE_THR_HIGH:
-			ktd2027_led_set(led.color, RGB_LED_MODE_END);
-			break;
-
-		default:
-			ktd2027_led_set(RGB_LED_COLOR_NONE, RGB_LED_MODE_BLANK);
+			ktd2027_led_set(led.color, RGB_LED_MODE_POST);
 			break;
 	}
 
@@ -164,6 +181,7 @@ static void rgb_led_on_time_callback(TimerHandle_t xTimer) {
 		xTimerStart(led.post_on_time_xTimer, 0);
 	}
 	else if (led.repeated == false) {
+
 		ktd2027_led_set(RGB_LED_COLOR_NONE, RGB_LED_MODE_OFF);
 
 		led.color = RGB_LED_COLOR_NONE;
@@ -227,24 +245,12 @@ int rgb_led_set(uint8_t led_color, uint8_t led_mode) {
 int rgb_led_mode(uint8_t color, uint32_t mode, bool repeated) {
 	if ((led.mode == RGB_LED_MODE_NONE && led.color == RGB_LED_COLOR_NONE) || led.mode != mode || led.color != color) {
 		if (led.mode != RGB_LED_MODE_NONE || led.color != RGB_LED_COLOR_NONE) {
-			ktd2027_led_set(RGB_LED_COLOR_NONE, RGB_LED_MODE_BLANK);
+			ktd2027_led_set(RGB_LED_COLOR_NONE, RGB_LED_MODE_OFF);
 
 			xTimerStop(led.pre_on_time_xTimer, 0);
 			xTimerStop(led.on_time_xTimer, 0);
 			xTimerStop(led.on_time_xTimer, 0);
 		}
-
-//		if (xTimerIsTimerActive(led.pre_on_time_xTimer) == pdTRUE) {
-//			xTimerStop(led.pre_on_time_xTimer, 0);
-//		}
-//
-//		if (xTimerIsTimerActive(led.on_time_xTimer) == pdTRUE) {
-//			xTimerStop(led.on_time_xTimer, 0);
-//		}
-//
-//		if (xTimerIsTimerActive(led.post_on_time_xTimer) == pdTRUE) {
-//			xTimerStop(led.on_time_xTimer, 0);
-//		}
 
 		rgb_led_set_params(color, mode, repeated);
 

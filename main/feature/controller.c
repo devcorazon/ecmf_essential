@@ -56,8 +56,11 @@ static void system_mode_speed_set(uint8_t mode, uint8_t speed);
 static void controller_task(void *pvParameters);
 static void user_experience_task(void *pvParameters);
 
-static void controller_state_machine();
-static void user_experience_state_machine();
+static void controller_state_machine(void);
+static void user_experience_state_machine(void);
+
+static void controller_log(void);
+
 
 static void controller_set(void);
 static void reset_automatic_cycle_count(void);
@@ -85,23 +88,25 @@ struct time_shape {
 /// Constants to calculate time.
 static const struct time_shape time_convert[] = {
 		{ -10 * TEMPERATURE_SCALE, 35U },
-		{ -6 * TEMPERATURE_SCALE,  80U },
+		{ -6 * TEMPERATURE_SCALE, 80U },
 		{ -3 * TEMPERATURE_SCALE, 150U },
-		{ 3 * TEMPERATURE_SCALE,  200U },
-		{10 * TEMPERATURE_SCALE,  150U },
-        { 15 * TEMPERATURE_SCALE,  80U },
-		{ 20 * TEMPERATURE_SCALE,  50U },
-		{ 25 * TEMPERATURE_SCALE,  35U },
+		{ 3 * TEMPERATURE_SCALE, 200U },
+		{10 * TEMPERATURE_SCALE, 150U },
+        { 15 * TEMPERATURE_SCALE, 80U },
+		{ 20 * TEMPERATURE_SCALE, 50U },
+		{ 25 * TEMPERATURE_SCALE, 35U },
 };
 
-enum conf_s {
-	OPER = 0x00,
-	CONF_RH,
-	CONF_VOC,
-	CONF_LUX,
+enum ux_s {
+	OPERATIVE		= 0,
+	RH_SETTING,
+	VOC_SETTING,
+	LUX_SETTING,
+	SETTINGS,
 };
 
-static uint8_t user_experience_state = OPER;
+static uint8_t user_experience_state = OPERATIVE;
+static uint8_t user_experience_type = 0;
 
 static inline uint8_t ADJUST_SPEED(uint8_t speed) {
 	if (speed & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT) {
@@ -143,11 +148,11 @@ static void user_experience_task(void *pvParameters) {
            user_experience_state_machine();
 		}
 
-		vTaskDelayUntil(&user_experience_task_time,USER_EXPERIENCE_TASK_PERIOD);
+		vTaskDelayUntil(&user_experience_task_time, USER_EXPERIENCE_TASK_PERIOD);
 	}
 }
 
-static void controller_state_machine() {
+static void controller_state_machine(void) {
 	uint8_t mode_set = get_mode_set();
 	uint8_t mode_state = get_mode_state();
 
@@ -210,294 +215,386 @@ static void controller_state_machine() {
 
 	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
 
-//			static const char *mode_log_str[] = { "Off", "Immission","Emission", "Fixed cycle", "Automatic cycle" };
-//			static const char *speed_log_str[] = { "None", "Night", "Vel1","Vel2", "Vel3", "Boost", "Profiled" };
-//			static const char *direction_log_str[] = { "None", "Out", "In" };
-//			static uint8_t mode_log = MODE_OFF;
-//			static uint8_t speed_log = SPEED_NONE;
-//			static uint8_t speed_set_log = SPEED_NONE;
-//			static uint8_t direction_log = DIRECTION_NONE;
-
-//			if (mode_log != get_mode_state() || speed_log != get_speed_state()
-//					|| speed_set_log != get_speed_set()
-//					|| direction_log != get_direction_state()) {
-//				mode_log = get_mode_state();
-//				speed_log = get_speed_state();
-//				speed_set_log = get_speed_set();
-//				direction_log = get_direction_state();
-
-//			LOG_INF(
-//					"MODE:%s (calc dur:%s) (free cool:%s) (extra cycle:%s) - SPEED:%s [%s] (force night:%s) (force boost:%s) (inc speed:%s) - DIRECTION:%s",
-//					(mode_log_str[mode_log
-//							& ~(MODE_AUTOMATIC_CYCLE_FREE_COOLING
-//									| MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE
-//									| MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION)]),
-//					(mode_log & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION ?
-//							"Y" : "N"),
-//					(mode_log & MODE_AUTOMATIC_CYCLE_FREE_COOLING ? "Y" : "N"),
-//					(mode_log & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE ? "Y" : "N"),
-//					(speed_log_str[ADJUST_SPEED(get_speed_state())]),
-//					(speed_log_str[
-//							get_speed_setting() != SPEED_PROLIFED ?
-//									get_speed_setting() : 6]),
-//					(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT ?
-//							"Y" : "N"),
-//					(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_BOOST ?
-//							"Y" : "N"),
-//					(get_speed_state() & SPEED_AUTOMATIC_CYCLE_INC_SPEED ?
-//							"Y" : "N"), (direction_log_str[direction_log]));
-//	}
-//			}
+	controller_log();
 }
 
-static void user_experience_state_machine() {
+static void user_experience_state_machine(void) {
 	uint32_t button = ir_receiver_take_button();
 
-	switch (user_experience_state) {
-	case OPER:
-		switch (button) {
-		case BUTTON_1:
-			rgb_led_mode(RGB_LED_COLOR_TEST, RGB_LED_MODE_ALWAYS_ON, false);
-			break;
-		case BUTTON_4:
-			switch (get_mode_set()) {
-			case MODE_OFF:
-				rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
+	if (user_experience_type == 0) {
+		switch (user_experience_state) {
+		case OPERATIVE:
+			switch (button) {
+			case BUTTON_1:
+//				rgb_led_mode(RGB_LED_COLOR_TEST, RGB_LED_MODE_ALWAYS_ON, false);
 				break;
-			case MODE_IMMISSION:
+			case BUTTON_1_LONG:
+				user_experience_state = SETTINGS;
+				rgb_led_mode(RGB_LED_COLOR_GREEN, RGB_LED_MODE_ALWAYS_ON, false);
+				break;
+			case BUTTON_4:
+				if (get_mode_set() != MODE_OFF) {
+					rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_OFFSET + get_speed_set(), false);
+				} else {
+					rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
+				}
+				break;
+			case BUTTON_3:
+				system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
 				rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
 				break;
-			case MODE_EMISSION:
+			case BUTTON_5:
+				system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
 				rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
 				break;
-			case MODE_FIXED_CYCLE:
+			case BUTTON_2:
+				system_mode_speed_set(MODE_FIXED_CYCLE, VALUE_UNMODIFIED);
 				rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_ONESHOOT, false);
 				break;
-			case MODE_AUTOMATIC_CYCLE:
+			case BUTTON_6:
+				system_mode_speed_set(MODE_AUTOMATIC_CYCLE, VALUE_UNMODIFIED);
 				rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
 				break;
-			}
-			break;
-		case BUTTON_3:
-			system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
-			rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
-			break;
-		case BUTTON_5:
-			system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
-			rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
-			break;
-		case BUTTON_2:
-			system_mode_speed_set(MODE_FIXED_CYCLE, VALUE_UNMODIFIED);
-			rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_ONESHOOT, false);
-			break;
-		case BUTTON_6:
-			system_mode_speed_set(MODE_AUTOMATIC_CYCLE, VALUE_UNMODIFIED);
-			rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
-			break;
-		case BUTTON_0:
-			if (get_mode_set() != MODE_OFF) {
-				system_mode_speed_set(MODE_OFF, SPEED_NONE);
-				rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
-			} else {
-				system_mode_speed_set(VALUE_UNMODIFIED, VALUE_UNMODIFIED);
-				switch (get_mode_set()) {
-				case MODE_IMMISSION:
-					rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
-					break;
-				case MODE_EMISSION:
-					rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
-					break;
-				case MODE_FIXED_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_ONESHOOT, false);
-					break;
-				case MODE_AUTOMATIC_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
-					break;
+			case BUTTON_0:
+				if (get_mode_set() != MODE_OFF) {
+					system_mode_speed_set(MODE_OFF, SPEED_NONE);
+					rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
+				} else {
+					system_mode_speed_set(VALUE_UNMODIFIED, VALUE_UNMODIFIED);
+					rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_ONESHOOT, false);
 				}
-			}
-			break;
-
-		case BUTTON_7:
-			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_NIGHT);
-			switch(get_mode_set()) {
-				case MODE_IMMISSION:
-					rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_SPEED_NIGHT, false);
-					break;
-				case MODE_EMISSION:
-					rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_SPEED_NIGHT, false);
-					break;
-				case MODE_FIXED_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_SPEED_NIGHT, false);
-					break;
-				case MODE_AUTOMATIC_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_SPEED_NIGHT, false);
-					break;
-			}
-			break;
-
-		case BUTTON_8:
-			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_LOW);
-			switch(get_mode_set()) {
-				case MODE_IMMISSION:
-					rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_SPEED_LOW, false);
-					break;
-				case MODE_EMISSION:
-					rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_SPEED_LOW, false);
-					break;
-				case MODE_FIXED_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_SPEED_LOW, false);
-					break;
-				case MODE_AUTOMATIC_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_SPEED_LOW, false);
-					break;
-			}
-			break;
-
-		case BUTTON_9:
-			break;
-
-		case BUTTON_10:
-			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_MEDIUM);
-			switch(get_mode_set()) {
-				case MODE_IMMISSION:
-					rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_SPEED_MEDIUM, false);
-					break;
-				case MODE_EMISSION:
-					rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_SPEED_MEDIUM, false);
-					break;
-				case MODE_FIXED_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_SPEED_MEDIUM, false);
-					break;
-				case MODE_AUTOMATIC_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_SPEED_MEDIUM, false);
-					break;
-			}
-			break;
-
-		case BUTTON_11:
-			system_mode_speed_set(VALUE_UNMODIFIED, SPEED_HIGH);
-			switch(get_mode_set()) {
-				case MODE_IMMISSION:
-					rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_SPEED_HIGH, false);
-					break;
-				case MODE_EMISSION:
-					rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_SPEED_HIGH, false);
-					break;
-				case MODE_FIXED_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_FIXED_CYCLE, RGB_LED_MODE_SPEED_HIGH, false);
-					break;
-				case MODE_AUTOMATIC_CYCLE:
-					rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_SPEED_HIGH, false);
-					break;
-			}
-			break;
-
-		case (BUTTON_9_LONG):
-		    user_experience_state = CONF_RH;
-			switch (get_relative_humidity_set()) {
-			case RH_THRESHOLD_SETTING_NOT_CONFIGURED:
-				rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_THR_NOT_CONF, true);
 				break;
-			case RH_THRESHOLD_SETTING_LOW:
-				rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_THR_LOW, true);
+
+			case BUTTON_7:
+				system_mode_speed_set(VALUE_UNMODIFIED, SPEED_NIGHT);
+				rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_SPEED_NIGHT, false);
 				break;
-			case RH_THRESHOLD_SETTING_MEDIUM:
-				rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_THR_MEDIUM, true);
+
+			case BUTTON_8:
+				system_mode_speed_set(VALUE_UNMODIFIED, SPEED_LOW);
+				rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_SPEED_LOW, false);
 				break;
-			case RH_THRESHOLD_SETTING_HIGH:
-				rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_THR_HIGH, true);
+
+			case BUTTON_9:
+//				rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_OFFSET + get_speed_set(), false);
 				break;
+
+			case BUTTON_10:
+				system_mode_speed_set(VALUE_UNMODIFIED, SPEED_MEDIUM);
+				rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_SPEED_MEDIUM, false);
+				break;
+
+			case BUTTON_11:
+				system_mode_speed_set(VALUE_UNMODIFIED, SPEED_HIGH);
+				rgb_led_mode(RGB_LED_COLOR_OFFSET + get_mode_set(), RGB_LED_MODE_SPEED_HIGH, false);
+				break;
+
+			case (BUTTON_9_LONG):
+				user_experience_state = RH_SETTING;
+				rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+			break;
+		}
+		break;
+
+		case RH_SETTING:
+			switch(button) {
+				case BUTTON_7:
+					set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
+					user_experience_state = VOC_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					break;
+				case BUTTON_8:
+					set_relative_humidity_set(RH_THRESHOLD_SETTING_LOW);
+					user_experience_state = VOC_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					break;
+				case BUTTON_10:
+					set_relative_humidity_set(RH_THRESHOLD_SETTING_MEDIUM);
+					user_experience_state = VOC_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					break;
+				case BUTTON_11:
+					set_relative_humidity_set(RH_THRESHOLD_SETTING_HIGH);
+					user_experience_state = VOC_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					break;
+			}
+			break;
+
+		case VOC_SETTING:
+			switch(button) {
+				case BUTTON_7:
+					set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
+					user_experience_state = LUX_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
+				case BUTTON_8:
+					set_voc_set(VOC_THRESHOLD_SETTING_LOW);
+					user_experience_state = LUX_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
+				case BUTTON_10:
+					set_voc_set(VOC_THRESHOLD_SETTING_MEDIUM);
+					user_experience_state = LUX_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
+				case BUTTON_11:
+					set_voc_set(VOC_THRESHOLD_SETTING_HIGH);
+					user_experience_state = LUX_SETTING;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
 			}
 		break;
+
+		case LUX_SETTING:
+			switch(button) {
+				case BUTTON_7:
+					set_voc_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+					break;
+				case BUTTON_8:
+					set_voc_set(LUX_THRESHOLD_SETTING_LOW);
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+					break;
+				case BUTTON_10:
+					set_voc_set(LUX_THRESHOLD_SETTING_MEDIUM);
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+					break;
+				case BUTTON_11:
+					set_voc_set(LUX_THRESHOLD_SETTING_HIGH);
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					break;
+			}
+		break;
+
+		case SETTINGS:
+			switch (button) {
+				case BUTTON_10:
+					user_experience_type = 0;
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ONESHOOT, false);
+					break;
+				case BUTTON_11:
+					user_experience_type = 1;
+					user_experience_state = OPERATIVE;
+					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_ONESHOOT, false);
+					break;
+			}
+			break;
+		}
 	}
-	break;
+	else {
+		switch (user_experience_state) {
+			case OPERATIVE:
+				switch (button) {
+					case BUTTON_0:
+						if (get_mode_set() != MODE_OFF) {
+							system_mode_speed_set(MODE_OFF, SPEED_NONE);
+							rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
+						} else {
+							system_mode_speed_set(VALUE_UNMODIFIED, VALUE_UNMODIFIED);
+							rgb_led_mode((RGB_LED_COLOR_OFFSET + get_mode_set()), RGB_LED_MODE_ONESHOOT, false);
+						}
+						break;
 
-	case CONF_RH:
-			if (button == BUTTON_7) {
-				set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
-			} else if (button == BUTTON_8) {
-				set_relative_humidity_set(RH_THRESHOLD_SETTING_LOW);
-			} else if (button == BUTTON_10) {
-				set_relative_humidity_set(RH_THRESHOLD_SETTING_MEDIUM);
-			} else if (button == BUTTON_11) {
-				set_relative_humidity_set(RH_THRESHOLD_SETTING_HIGH);
-			}
+					case BUTTON_1:
+						if (get_mode_set() != MODE_OFF) {
+							rgb_led_mode((RGB_LED_COLOR_OFFSET + get_mode_set()), (RGB_LED_MODE_OFFSET + get_speed_set()), false);
+						}
+						else {
+							rgb_led_mode(RGB_LED_COLOR_POWER_OFF, RGB_LED_MODE_DOUBLE_BLINK, false);
+						}
+						break;
 
-			if ( button == BUTTON_7 ||  button == BUTTON_8 || button == BUTTON_9 || button == BUTTON_10 || button == BUTTON_11 ){
-			user_experience_state = CONF_VOC;
-			}
-
-			if (user_experience_state == CONF_VOC) {
-				switch (get_voc_set()) {
-				case VOC_THRESHOLD_SETTING_NOT_CONFIGURED:
-					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_THR_NOT_CONF, true);
-					break;
-				case VOC_THRESHOLD_SETTING_LOW:
-					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_THR_LOW, true);
-					break;
-				case VOC_THRESHOLD_SETTING_MEDIUM:
-					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_THR_MEDIUM, true);
-					break;
-				case VOC_THRESHOLD_SETTING_HIGH:
-					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_THR_HIGH, true);
-					break;
+					case BUTTON_1_LONG:
+						user_experience_state = SETTINGS;
+						rgb_led_mode(RGB_LED_COLOR_GREEN, RGB_LED_MODE_ALWAYS_ON, false);
+						break;
+					case BUTTON_2:
+						if (get_speed_set() < SPEED_HIGH) {
+							system_mode_speed_set(VALUE_UNMODIFIED, get_speed_set() + 1);
+						}
+						rgb_led_mode((RGB_LED_COLOR_OFFSET + get_mode_set()), (RGB_LED_MODE_OFFSET + get_speed_set()), false);
+						break;
+					case BUTTON_3:
+						system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
+						rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
+						break;
+					case BUTTON_4:
+						system_mode_speed_set(MODE_AUTOMATIC_CYCLE, VALUE_UNMODIFIED);
+						rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
+						break;
+					case BUTTON_5:
+						system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
+						rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
+						break;
+					case BUTTON_6:
+						if (get_speed_set() > SPEED_NIGHT) {
+							system_mode_speed_set(VALUE_UNMODIFIED, get_speed_set() - 1);
+						}
+						rgb_led_mode((RGB_LED_COLOR_OFFSET + get_mode_set()), (RGB_LED_MODE_OFFSET + get_speed_set()), false);
+						break;
+					case BUTTON_7:
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), false);
+						break;
+					case BUTTON_7_LONG:
+						user_experience_state = RH_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+						break;
+					case BUTTON_8:
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), false);
+						break;
+					case BUTTON_8_LONG:
+						user_experience_state = VOC_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+						break;
+					case BUTTON_9:
+						break;
+					case BUTTON_10:
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), false);
+						break;
+					case BUTTON_10_LONG:
+						user_experience_state = LUX_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+						break;
+					case BUTTON_11:
+						break;
 				}
-			}
-		break;
+				break;
 
-		case CONF_VOC:
-			if (button == BUTTON_7) {
-				set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
-			} else if (button == BUTTON_8) {
-				set_voc_set(VOC_THRESHOLD_SETTING_LOW);
-			} else if (button == BUTTON_10) {
-				set_voc_set(VOC_THRESHOLD_SETTING_MEDIUM);
-			} else if (button == BUTTON_11) {
-				set_voc_set(VOC_THRESHOLD_SETTING_HIGH);
-			}
-
-			if ( button == BUTTON_7 ||  button == BUTTON_8 || button == BUTTON_9 || button == BUTTON_10 || button == BUTTON_11 ){
-			user_experience_state = CONF_LUX;
-			}
-
-			if (user_experience_state == CONF_LUX) {
-				switch (get_lux_set()) {
-				case LUX_THRESHOLD_SETTING_NOT_CONFIGURED:
-					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_THR_NOT_CONF, true);
-					break;
-				case LUX_THRESHOLD_SETTING_LOW:
-					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_THR_LOW, true);
-					break;
-				case LUX_THRESHOLD_SETTING_MEDIUM:
-					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_THR_MEDIUM, true);
-					break;
-				case LUX_THRESHOLD_SETTING_HIGH:
-					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_THR_HIGH, true);
-					break;
+			case RH_SETTING:
+				switch (button) {
+					case BUTTON_7:
+						set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_8:
+						set_relative_humidity_set(RH_THRESHOLD_SETTING_LOW);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_9:
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_10:
+						set_relative_humidity_set(RH_THRESHOLD_SETTING_MEDIUM);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_11:
+						set_relative_humidity_set(RH_THRESHOLD_SETTING_HIGH);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
 				}
-			}
-		break;
+				break;
 
-		case CONF_LUX:
-			if (button == BUTTON_7) {
-				set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
-			} else if (button == BUTTON_8) {
-				set_lux_set(LUX_THRESHOLD_SETTING_LOW);
-			} else if (button == BUTTON_10) {
-				set_lux_set(LUX_THRESHOLD_SETTING_MEDIUM);
-			} else if (button == BUTTON_11) {
-				set_lux_set(LUX_THRESHOLD_SETTING_HIGH);
-			}
+			case VOC_SETTING:
+				switch (button) {
+					case BUTTON_7:
+						set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_8:
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_9:
+						set_voc_set(VOC_THRESHOLD_SETTING_LOW);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_10:
+						set_voc_set(VOC_THRESHOLD_SETTING_MEDIUM);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_11:
+						set_voc_set(VOC_THRESHOLD_SETTING_HIGH);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+				}
+				break;
 
-			if ( button == BUTTON_7 ||  button == BUTTON_8 || button == BUTTON_9 || button == BUTTON_10 || button == BUTTON_11 ){
-			user_experience_state = OPER;
-			}
+			case LUX_SETTING:
+				switch (button) {
+					case BUTTON_7:
+						set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_8:
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_9:
+						set_lux_set(LUX_THRESHOLD_SETTING_LOW);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_10:
+						set_lux_set(LUX_THRESHOLD_SETTING_MEDIUM);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+					case BUTTON_11:
+						set_lux_set(LUX_THRESHOLD_SETTING_HIGH);
+						user_experience_state = OPERATIVE;
+						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						break;
+				}
+				break;
 
-			if (user_experience_state == OPER) {
-				rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
-			}
+				case SETTINGS:
+					switch (button) {
+						case BUTTON_10:
+							user_experience_type = 0;
+							user_experience_state = OPERATIVE;
+							rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ONESHOOT, false);
+							break;
+						case BUTTON_11:
+							user_experience_type = 1;
+							user_experience_state = OPERATIVE;
+							rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_ONESHOOT, false);
+							break;
+					}
+					break;
+		}
+	}
+}
 
-		break;
+static void controller_log(void) {
+	static const char *mode_log_str[] = { "Off", "Immission","Emission", "Fixed cycle", "Automatic cycle" };
+	static const char *speed_log_str[] = { "None", "Night", "Vel1","Vel2", "Vel3", "Boost" };
+	static const char *direction_log_str[] = { "None", "Out", "In" };
+	static uint8_t mode_log = MODE_OFF;
+	static uint8_t speed_log = SPEED_NONE;
+	static uint8_t speed_set_log = SPEED_NONE;
+	static uint8_t direction_log = DIRECTION_NONE;
+
+	if (mode_log != get_mode_state() || speed_log != get_speed_state() || speed_set_log != get_speed_set() || direction_log != get_direction_state()) {
+		mode_log = get_mode_state();
+		speed_log = get_speed_state();
+		speed_set_log = get_speed_set();
+		direction_log = get_direction_state();
+
+		printf("MODE:%s (calc dur:%s) (extra cycle:%s) - SPEED:%s [%s] (force night:%s) (force boost:%s) - DIRECTION:%s\r\n",
+			(mode_log_str[mode_log & ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION)]),
+			(mode_log & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION ? "Y" : "N"),
+			(mode_log & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE ? "Y" : "N"),
+			(speed_log_str[ADJUST_SPEED(get_speed_state())]),
+			(speed_log_str[get_speed_set()]),
+			(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT ? "Y" : "N"),
+			(get_speed_state() & SPEED_AUTOMATIC_CYCLE_FORCE_BOOST ? "Y" : "N"),
+			(direction_log_str[direction_log]));
 	}
 }
 
@@ -514,14 +611,14 @@ static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
     }
 
     // Apply the factory settings
-    if ( mode_ux != MODE_OFF ) {
-    	if ( speed_ux == SPEED_NONE ) {
+    if (mode_ux != MODE_OFF) {
+    	if (speed_ux == SPEED_NONE) {
     		speed_ux = SPEED_MEDIUM;
     	}
     }
 
-    if ( speed_ux != SPEED_NONE ) {
-    	if ( mode_ux == MODE_OFF ) {
+    if (speed_ux != SPEED_NONE) {
+    	if (mode_ux == MODE_OFF) {
     		mode_ux = MODE_AUTOMATIC_CYCLE;
     	}
     }
@@ -696,7 +793,7 @@ static void reset_automatic_cycle_count(void) {
 }
 
 static void controller_timer_expiry(TimerHandle_t xTimer) {
-	printf("Timer_Expired\n");
+//	printf("Timer_Expired\n");
 	xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL,CONTROLLER_TASK_PRIORITY, NULL);
 
 }
@@ -771,7 +868,7 @@ static void work_task(void *arg) {
 					printf("internal_Emissione = %d\n", get_internal_temperature());
 					printf("external_Imissione = %d\n", get_external_temperature());
 					printf("duration = %d\n", get_automatic_cycle_duration());
-//            			LOG_INF("Duration automatic cycle %" PRIu16 " sec - Emmission temperature %" PRId16 ".%02" PRId16 " �C - Immission temperature %" PRId16 ".%02" PRId16 " �C",
+//            			LOG_INF("Duration automatic cycle %" PRIu16 " sec - Emmission temperature %" PRId16 ".%02" PRId16 " ï¿½C - Immission temperature %" PRId16 ".%02" PRId16 " ï¿½C",
 //            					get_automatic_cycle_duration(), get_emission_temperature() / TEMPERATURE_SCALE, abs(get_emission_temperature() % TEMPERATURE_SCALE), get_immission_temperature() / TEMPERATURE_SCALE, abs(get_immission_temperature() % TEMPERATURE_SCALE));
 					duration_automatic_cycle = SECONDS_TO_MS( get_automatic_cycle_duration());
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);

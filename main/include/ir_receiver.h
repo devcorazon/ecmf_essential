@@ -27,19 +27,23 @@
 #define NEC_REPEAT_CODE_DURATION_1   2250
 
 
-#define BUTTON_0 0xE916                 // ON/OFF
-#define BUTTON_1 0xBA45
-#define BUTTON_2 0xBF40                 // Fixed Cycle
-#define BUTTON_3 0xBB44                 // Imissione
-#define BUTTON_4 0xB946                 // Get mode (Center)
-#define BUTTON_5 0xBC43                 // Espulsione
-#define BUTTON_6 0xEA15                 // Automatic Cycle
-#define BUTTON_7 0xB847                 // Not configured
-#define BUTTON_8 0xA55A                 // Low
-#define BUTTON_9 0xE619                 // Get speed
-#define BUTTON_9_LONG 0x8000E619        // Configurazione sensori
-#define BUTTON_10 0xF609                // Mid
-#define BUTTON_11 0xF807                // High
+#define BUTTON_0               0xE916         // ON/OFF
+#define BUTTON_1               0xBA45
+#define BUTTON_1_LONG	       0x8000BA45
+#define BUTTON_2               0xBF40         // Fixed Cycle
+#define BUTTON_3               0xBB44         // Imissione
+#define BUTTON_4               0xB946         // Get mode (Center)
+#define BUTTON_5               0xBC43         // Espulsione
+#define BUTTON_6               0xEA15         // Automatic Cycle
+#define BUTTON_7               0xB847         // Not configured
+#define BUTTON_7_LONG		   0x8000B847
+#define BUTTON_8               0xA55A         // Low
+#define BUTTON_8_LONG		   0x8000A55A
+#define BUTTON_9               0xE619         // Get speed
+#define BUTTON_9_LONG          0x8000E619     // Configurazione sensori
+#define BUTTON_10              0xF609         // Mid
+#define BUTTON_10_LONG		   0x8000F609
+#define BUTTON_11              0xF807         // High
 
 
 int ir_receiver_init();
