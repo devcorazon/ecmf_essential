@@ -176,7 +176,7 @@ static void controller_state_machine(void) {
 			set_mode_state(MODE_IMMISSION);
 			set_direction_state(DIRECTION_IN);
 			set_automatic_cycle_duration(0U);
-			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), 0);
 			xTimerStart(controller_timer, 0);
 			break;
 
@@ -186,7 +186,7 @@ static void controller_state_machine(void) {
 			set_mode_state(MODE_EMISSION);
 			set_direction_state(DIRECTION_OUT);
 			set_automatic_cycle_duration(0U);
-			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), 0);
 			xTimerStart(controller_timer, 0);
 			break;
 
@@ -195,7 +195,7 @@ static void controller_state_machine(void) {
 			set_mode_state(MODE_FIXED_CYCLE);
 			set_direction_state(DIRECTION_OUT);
 			set_automatic_cycle_duration(0U);
-			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), portMAX_DELAY);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), 0);
 			xTimerStart(controller_timer, 0);
 			break;
 
@@ -831,7 +831,7 @@ static void restart_automatic_cycle_timer_expiry(TimerHandle_t xTimer) {
 
 	set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 
-	xTimerChangePeriod(restart_automatic_cycle_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
+	xTimerChangePeriod(restart_automatic_cycle_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), 0);
 	xTimerStart(restart_automatic_cycle_timer, 0);
 
 	printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - RESET TIMER\n");
@@ -866,7 +866,7 @@ static void work_task(void *arg) {
 		} else if (get_direction_state() == DIRECTION_IN) {
 			set_direction_state(DIRECTION_OUT);
 		}
-		xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), portMAX_DELAY);
+		xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), 0);
 		xTimerStart(controller_timer, 0);
 		break;
 
@@ -883,13 +883,13 @@ static void work_task(void *arg) {
 				if (calculate_duration_inversions_count == 0U) {
 					calculate_duration_inversions_count++;
 					set_direction_state(DIRECTION_OUT);
-					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_OUT_MS), portMAX_DELAY);
+					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_OUT_MS), 0);
 					xTimerStart(controller_timer, 0);
 					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START\n");
 				} else if (calculate_duration_inversions_count <= CALCULATE_DURATION_INVERSIONS_MAX) {
 					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - inversione_count=%d\n", calculate_duration_inversions_count);
 					calculate_duration_inversions_count++;
-					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_IN_MS), portMAX_DELAY);
+					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_IN_MS), 0);
 					xTimerStart(controller_timer, 0);
 				} else {
 					calculate_duration_inversions_count = 0U;
@@ -911,13 +911,13 @@ static void work_task(void *arg) {
 				if (extra_cycle_inversions_count == 0U) {
 					extra_cycle_inversions_count++;
 					set_direction_state(DIRECTION_OUT);
-					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_EXTRA_CYCLE_BOOST_MS), portMAX_DELAY);
+					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_EXTRA_CYCLE_BOOST_MS), 0);
 					xTimerStart(controller_timer, 0);
 					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - START\n");
 				} else if (extra_cycle_inversions_count <= EXTRA_CYCLE_INVERSIONS_MAX) {
 					extra_cycle_inversions_count++;
 					set_speed_state( get_speed_state() & ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST);
-					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), portMAX_DELAY);
+					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), 0);
 					xTimerStart(controller_timer, 0);
 				} else {
 					extra_cycle_inversions_count = 0U;
@@ -929,7 +929,7 @@ static void work_task(void *arg) {
 
 		// Calculate duration and Extra cycle not started
 		if ((calculate_duration_inversions_count == 0U) && (extra_cycle_inversions_count == 0U)) {
-			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_automatic_cycle_duration())), portMAX_DELAY);
+			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_automatic_cycle_duration())), 0);
 			xTimerStart(controller_timer, 0);
 		}
 
