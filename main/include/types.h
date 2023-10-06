@@ -38,7 +38,7 @@
 #define LUX_RAW_TO_INT(lux)						(uint16_t) (lux / LUX_SCALE)
 #define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
 
-#if 1
+#if 0
 #define SECONDS_PER_HOUR						3600u
 
 /// Timing

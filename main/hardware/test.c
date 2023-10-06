@@ -258,8 +258,7 @@ static int cmd_test_fan_func(int argc, char **argv) {
 			direction = DIRECTION_OUT;
 			break;
 		default: // This should never happen
-			printf(
-					"Invalid index. Supported fan speeds: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
+			printf("Invalid index. Supported fan speeds: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9\n");
 			return -1;
 		}
 
