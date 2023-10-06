@@ -191,7 +191,6 @@ static void controller_state_machine(void) {
 			break;
 
 		case MODE_FIXED_CYCLE:
-
 			printf("MODE FIXED CYCLE STARTED\n");
 			set_mode_state(MODE_FIXED_CYCLE);
 			set_direction_state(DIRECTION_OUT);
@@ -210,6 +209,7 @@ static void controller_state_machine(void) {
 			break;
 		}
 	}
+
 	controller_set();
 
 	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
@@ -356,12 +356,12 @@ static void user_experience_state_machine(void) {
 		case LUX_SETTING:
 			switch(button) {
 				case BUTTON_7:
-					set_voc_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
+					set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 					break;
 				case BUTTON_8:
-					set_voc_set(LUX_THRESHOLD_SETTING_LOW);
+					set_lux_set(LUX_THRESHOLD_SETTING_LOW);
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 					break;
@@ -370,12 +370,12 @@ static void user_experience_state_machine(void) {
 					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 					break;
 				case BUTTON_10:
-					set_voc_set(LUX_THRESHOLD_SETTING_MEDIUM);
+					set_lux_set(LUX_THRESHOLD_SETTING_MEDIUM);
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 					break;
 				case BUTTON_11:
-					set_voc_set(LUX_THRESHOLD_SETTING_HIGH);
+					set_lux_set(LUX_THRESHOLD_SETTING_HIGH);
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
 					break;
@@ -585,7 +585,7 @@ static void user_experience_state_machine(void) {
 static void controller_log(void) {
 	static const char *mode_log_str[] = { "Off", "Immission","Emission", "Fixed cycle", "Automatic cycle" };
 	static const char *speed_log_str[] = { "None", "Night", "Vel1","Vel2", "Vel3", "Boost" };
-	static const char *direction_log_str[] = { "None", "Out", "In" };
+	static const char *direction_log_str[] = { "None", "In", "Out" };
 	static uint8_t mode_log = MODE_OFF;
 	static uint8_t speed_log = SPEED_NONE;
 	static uint8_t speed_set_log = SPEED_NONE;
@@ -694,9 +694,9 @@ static void controller_set(void) {
 	static uint8_t count_voc_extra_cycle = 0U;
 
 	if ((speed_state & ~(SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT)) != speed_set) {
-		speed_state &= (SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
 
-		speed_state = speed_set;
+		speed_state &= (SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
+		speed_state |= speed_set;
 
 		if ((get_mode_state() & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION) && (speed_state == SPEED_NONE)) {
 			speed_state |= SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT;
@@ -734,8 +734,6 @@ static void controller_set(void) {
 			}
 
 			if (get_relative_humidity_set() != RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
-//#warning DEBUG
-//				printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
 				if (relative_humidity > (relative_humidity_threshold + RH_DIFFERENTIAL_HIGH)) {
 					if (count_rh_extra_cycle < CONDITION_COUNT_MAX) {
 						count_rh_extra_cycle++;
@@ -752,6 +750,9 @@ static void controller_set(void) {
 			}
 
 			if (get_voc_set() != VOC_THRESHOLD_SETTING_NOT_CONFIGURED) {
+
+				printf("VOC: %u - VOC_TH: %u\r\n", voc, voc_threshold / VOC_SCALE);
+
 				if (voc > (voc_threshold + VOC_DIFFERENTIAL_HIGH)) {
 					if (count_voc_extra_cycle < CONDITION_COUNT_MAX) {
 						count_voc_extra_cycle++;
@@ -768,6 +769,7 @@ static void controller_set(void) {
 			}
 
 			if (cond_flags & (COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE)) {
+
 				if (!(get_mode_state() & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE)) {
 					if (xSemaphoreTake(extra_cycle_count_sem, 0) == pdPASS) {
 						printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - [%d]\n", EXTRA_CYCLE_COUNT_MAX - uxSemaphoreGetCount(extra_cycle_count_sem));
@@ -807,8 +809,7 @@ static void controller_set(void) {
 		count_luminosity = 0U;
 		count_rh_extra_cycle = 0U;
 		count_voc_extra_cycle = 0U;
-		speed_state &= ~(SPEED_AUTOMATIC_CYCLE_FORCE_BOOST
-				| SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
+		speed_state &= ~(SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
 	}
 
 	set_speed_state(speed_state);
@@ -833,7 +834,7 @@ static void restart_automatic_cycle_timer_expiry(TimerHandle_t xTimer) {
 	xTimerChangePeriod(restart_automatic_cycle_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), portMAX_DELAY);
 	xTimerStart(restart_automatic_cycle_timer, 0);
 
-	printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - RESET TIMER");
+	printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - RESET TIMER\n");
 }
 
 static void restart_extra_cycle_timer_expiry(TimerHandle_t xTimer) {
@@ -912,7 +913,7 @@ static void work_task(void *arg) {
 					set_direction_state(DIRECTION_OUT);
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_EXTRA_CYCLE_BOOST_MS), portMAX_DELAY);
 					xTimerStart(controller_timer, 0);
-					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - START");
+					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - START\n");
 				} else if (extra_cycle_inversions_count <= EXTRA_CYCLE_INVERSIONS_MAX) {
 					extra_cycle_inversions_count++;
 					set_speed_state( get_speed_state() & ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST);
@@ -921,14 +922,13 @@ static void work_task(void *arg) {
 				} else {
 					extra_cycle_inversions_count = 0U;
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);
-					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - STOP");
+					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - STOP\n");
 				}
 			}
 		}
 
 		// Calculate duration and Extra cycle not started
-		if ((calculate_duration_inversions_count == 0U)
-				&& (extra_cycle_inversions_count == 0U)) {
+		if ((calculate_duration_inversions_count == 0U) && (extra_cycle_inversions_count == 0U)) {
 			xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_automatic_cycle_duration())), portMAX_DELAY);
 			xTimerStart(controller_timer, 0);
 		}
@@ -948,9 +948,9 @@ int controller_init() {
 	// Create the timer
 	controller_timer = xTimerCreate("controller_timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, controller_timer_expiry);
 
-	restart_automatic_cycle_timer = xTimerCreate("restart_automatic_cycle_timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, restart_automatic_cycle_timer_expiry);
+	restart_automatic_cycle_timer = xTimerCreate("restart_automatic_cycle_timer", pdMS_TO_TICKS(DURATION_RESTART_AUTOMATIC_CYCLE_MS), pdFALSE, (void*) 0, restart_automatic_cycle_timer_expiry);
 
-	restart_extra_cycle_timer = xTimerCreate("restart_extra_cycle_timer", pdMS_TO_TICKS(1000), pdFALSE, (void*) 0, restart_extra_cycle_timer_expiry);
+	restart_extra_cycle_timer = xTimerCreate("restart_extra_cycle_timer", pdMS_TO_TICKS(DURATION_RESTART_EXTRA_CYCLE_MS), pdFALSE, (void*) 0, restart_extra_cycle_timer_expiry);
 
 	BaseType_t controller_task_created = xTaskCreate(controller_task, "Controller task ", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
 
