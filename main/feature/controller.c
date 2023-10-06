@@ -24,9 +24,9 @@
 #define	CONTROLLER_TASK_PRIORITY			        (1)
 #define	CONTROLLER_TASK_PERIOD				        (1000ul / portTICK_PERIOD_MS)
 
-#define	USER_EXPERIENCE_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
-#define	USER_EXPERIENCE_TASK_PRIORITY			        (1)
-#define	USER_EXPERIENCE_TASK_PERIOD				        (100ul / portTICK_PERIOD_MS)
+#define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
+#define	USER_EXPERIENCE_TASK_PRIORITY			    (1)
+#define	USER_EXPERIENCE_TASK_PERIOD				    (100ul / portTICK_PERIOD_MS)
 
 #define DURATION_IMMISSION_EMISSION_MS              SECONDS_TO_MS(DURATION_IMMISSION_EMISSION)
 #define DURATION_FIXED_CYCLE_MS						SECONDS_TO_MS(DURATION_FIXED_CYCLE)
@@ -49,7 +49,7 @@
 #define CONDITION_COUNT_MAX						    3U
 
 //
-static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,int16_t immission_temperature);
+static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature, int16_t immission_temperature);
 static void system_mode_speed_set(uint8_t mode, uint8_t speed);
 //
 static void controller_task(void *pvParameters);
@@ -191,6 +191,7 @@ static void controller_state_machine(void) {
 			break;
 
 		case MODE_FIXED_CYCLE:
+
 			printf("MODE FIXED CYCLE STARTED\n");
 			set_mode_state(MODE_FIXED_CYCLE);
 			set_direction_state(DIRECTION_OUT);
@@ -203,13 +204,13 @@ static void controller_state_machine(void) {
 			set_mode_state( MODE_AUTOMATIC_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 			set_automatic_cycle_duration(0U);
 			xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
+			xTimerStart(restart_automatic_cycle_timer, 0);
 			break;
 
 		default:
 			break;
 		}
 	}
-
 	controller_set();
 
 	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
@@ -694,8 +695,8 @@ static void controller_set(void) {
 	static uint8_t count_voc_extra_cycle = 0U;
 
 	if ((speed_state & ~(SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT)) != speed_set) {
-
 		speed_state &= (SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
+
 		speed_state |= speed_set;
 
 		if ((get_mode_state() & MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION) && (speed_state == SPEED_NONE)) {
@@ -708,6 +709,7 @@ static void controller_set(void) {
 		if (!(get_mode_state() & (MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION))) {
 			if (get_lux_set() != LUX_THRESHOLD_SETTING_NOT_CONFIGURED) {
 				if (luminosity > (luminosity_threshold + LUMINOSITY_DIFFERENTIAL_HIGH)) {
+					printf("LUX: %u.%3u - LUX_TH: %u\r\n", LUX_RAW_TO_INT(luminosity), LUX_RAW_TO_DEC(luminosity), luminosity_threshold / LUX_SCALE);
 					if (count_luminosity) {
 						count_luminosity--;
 					} else {
@@ -734,6 +736,7 @@ static void controller_set(void) {
 			}
 
 			if (get_relative_humidity_set() != RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
+				printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
 				if (relative_humidity > (relative_humidity_threshold + RH_DIFFERENTIAL_HIGH)) {
 					if (count_rh_extra_cycle < CONDITION_COUNT_MAX) {
 						count_rh_extra_cycle++;
@@ -750,9 +753,7 @@ static void controller_set(void) {
 			}
 
 			if (get_voc_set() != VOC_THRESHOLD_SETTING_NOT_CONFIGURED) {
-
 				printf("VOC: %u - VOC_TH: %u\r\n", voc, voc_threshold / VOC_SCALE);
-
 				if (voc > (voc_threshold + VOC_DIFFERENTIAL_HIGH)) {
 					if (count_voc_extra_cycle < CONDITION_COUNT_MAX) {
 						count_voc_extra_cycle++;
@@ -769,7 +770,6 @@ static void controller_set(void) {
 			}
 
 			if (cond_flags & (COND_RH_EXTRA_CYCLE | COND_VOC_EXTRA_CYCLE)) {
-
 				if (!(get_mode_state() & MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE)) {
 					if (xSemaphoreTake(extra_cycle_count_sem, 0) == pdPASS) {
 						printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - [%d]\n", EXTRA_CYCLE_COUNT_MAX - uxSemaphoreGetCount(extra_cycle_count_sem));
@@ -813,7 +813,6 @@ static void controller_set(void) {
 	}
 
 	set_speed_state(speed_state);
-
 }
 
 static void reset_automatic_cycle_count(void) {
@@ -831,7 +830,6 @@ static void restart_automatic_cycle_timer_expiry(TimerHandle_t xTimer) {
 
 	set_mode_state(get_mode_state() | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 
-	xTimerChangePeriod(restart_automatic_cycle_timer, pdMS_TO_TICKS(DURATION_IMMISSION_EMISSION_MS), 0);
 	xTimerStart(restart_automatic_cycle_timer, 0);
 
 	printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - RESET TIMER\n");
@@ -885,9 +883,9 @@ static void work_task(void *arg) {
 					set_direction_state(DIRECTION_OUT);
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_OUT_MS), 0);
 					xTimerStart(controller_timer, 0);
-					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START\n");
+//					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - START\n");
 				} else if (calculate_duration_inversions_count <= CALCULATE_DURATION_INVERSIONS_MAX) {
-					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - inversione_count=%d\n", calculate_duration_inversions_count);
+//					printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - inversione_count=%d\n", calculate_duration_inversions_count);
 					calculate_duration_inversions_count++;
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_AUTOMATIC_CYCLE_IN_MS), 0);
 					xTimerStart(controller_timer, 0);
@@ -899,7 +897,7 @@ static void work_task(void *arg) {
 																			get_automatic_cycle_duration());
 
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
-				    printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - STOP\n");
+//				    printf("MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION - STOP\n");
 
 				}
 			}
@@ -913,16 +911,16 @@ static void work_task(void *arg) {
 					set_direction_state(DIRECTION_OUT);
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_EXTRA_CYCLE_BOOST_MS), 0);
 					xTimerStart(controller_timer, 0);
-					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - START\n");
+//					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - START\n");
 				} else if (extra_cycle_inversions_count <= EXTRA_CYCLE_INVERSIONS_MAX) {
 					extra_cycle_inversions_count++;
-					set_speed_state( get_speed_state() & ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST);
+					set_speed_state(get_speed_state() & ~SPEED_AUTOMATIC_CYCLE_FORCE_BOOST);
 					xTimerChangePeriod(controller_timer, pdMS_TO_TICKS(DURATION_FIXED_CYCLE_MS), 0);
 					xTimerStart(controller_timer, 0);
 				} else {
 					extra_cycle_inversions_count = 0U;
 					set_mode_state( get_mode_state() & ~MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE);
-					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - STOP\n");
+//					printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - STOP\n");
 				}
 			}
 		}
