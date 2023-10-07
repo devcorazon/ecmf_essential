@@ -136,10 +136,6 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 			}
 			break;
 
-		case RGB_LED_MODE_BLANK:
-			write_register(KTD2027_REG_LED_EN, 0);
-			break;
-
 		case RGB_LED_MODE_BLINK:
 			switch(color) {
 				case RGB_LED_COLOR_GREEN:

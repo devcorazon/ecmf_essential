@@ -46,7 +46,6 @@ struct ktd2027_config {
 enum {
     RGB_LED_MODE_OFF            = 0,
     RGB_LED_MODE_ON,
-    RGB_LED_MODE_BLANK,
 
 	RGB_LED_MODE_BLINK,
 

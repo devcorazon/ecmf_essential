@@ -18,6 +18,7 @@
 #include "sht4x.h"
 #include "sgp40.h"
 #include "ltr303.h"
+#include "rgb_led.h"
 #include "test.h"
 
 ///
@@ -140,51 +141,48 @@ static void sensor_task(void *pvParameters) {
 	float t_amb;
 	float r_hum;
 	float temp;
-	float t_sens;
 	float lux;
 	uint16_t voc_idx;
+//	float t_sens;
 
 	sensor_task_time = xTaskGetTickCount();
 
 	while(true) {
+		if (!sht4x_sample(&t_amb, &r_hum)) {
+			t_amb += (float)TEMPERATURE_OFFSET_FIXED / (float)TEMPERATURE_SCALE;
+			t_amb += (float)get_temperature_offset() / (float)TEMPERATURE_SCALE;
 
-			if (!sht4x_sample(&t_amb, &r_hum)) {
-				t_amb += (float)TEMPERATURE_OFFSET_FIXED / (float)TEMPERATURE_SCALE;
-				t_amb += (float)get_temperature_offset() / (float)TEMPERATURE_SCALE;
+			r_hum += (float)RELATIVE_HUMIDITY_OFFSET_FIXED / (float)RELATIVE_HUMIDITY_SCALE;
+			r_hum += (float)get_relative_humidity_offset() / (float)RELATIVE_HUMIDITY_SCALE;
+		}
+		if (get_direction_state() != DIRECTION_IN) {
+			set_temperature(SET_VALUE_TO_TEMP_RAW(t_amb));
+			set_relative_humidity(SET_VALUE_TO_RH_RAW(r_hum));
+		}
 
-				r_hum += (float)RELATIVE_HUMIDITY_OFFSET_FIXED / (float)RELATIVE_HUMIDITY_SCALE;
-				r_hum += (float)get_relative_humidity_offset() / (float)RELATIVE_HUMIDITY_SCALE;
-			}
-			if (get_direction_state() != DIRECTION_IN){
-				set_temperature(SET_VALUE_TO_TEMP_RAW(t_amb));
-				set_relative_humidity(SET_VALUE_TO_RH_RAW(r_hum));
-			}
 
-		//	printf("t_amb: %.1f - r_hum: %.1f\r\n", t_amb, r_hum);
-
-			sgp40_sample(t_amb, r_hum, &voc_idx);
+		sgp40_sample(t_amb, r_hum, &voc_idx);
+		if (get_direction_state() != DIRECTION_IN){
 			set_voc(voc_idx);
-		//	printf("voc_idx: %u\r\n", voc_idx);
+		}
 
-			ltr303_measure_lux(&lux);
+		ltr303_measure_lux(&lux);
+		if (!rgb_led_is_on()) {
 			set_lux(SET_VALUE_TO_LUX_RAW(lux));
-		//	printf("lux: %.1f\r\n", lux);
+		}
 
-			sensor_ntc_sample(&temp);
-		//	printf("temp: %.1f\r\n", temp);
+		sensor_ntc_sample(&temp);
+		if (get_direction_state() == DIRECTION_OUT){
+			set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
+		} else if (get_direction_state() == DIRECTION_IN){
+			set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
+		}
 
-			temperature_sensor_sample_get(&t_sens);
-			add_t_sens_to_pool(t_sens);
+//		temperature_sensor_sample_get(&t_sens);
+//		add_t_sens_to_pool(t_sens);
+//		printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());
 
-			if (get_direction_state() == DIRECTION_OUT){
-				set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
-			} else if (get_direction_state() == DIRECTION_IN){
-				set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
-			}
-		//	printf("t_sens: %.1f - t_sens_avg: %.1f\r\n", t_sens, calculate_t_sens_avg());
-
-		//	printf("t_amb: %.1f - r_hum: %.1f - temp: %.1f\r\n", t_amb, r_hum, temp);
-		//	printf("t_amb: %.1f - r_hum: %.1f - voc_idx: %u - temp: %.1f - t_sens: %.1f - t_sens_avg: %.1f\r\n", t_amb, r_hum, voc_idx, temp, t_sens, calculate_t_sens_avg());
+//		printf("t_amb: %.1f - r_hum: %.1f - voc_idx: %u - temp: %.1f - lux: %.1f\r\n", t_amb, r_hum, voc_idx, temp, lux);
 
 		vTaskDelayUntil(&sensor_task_time, SENSOR_TASK_PERIOD);
 	}

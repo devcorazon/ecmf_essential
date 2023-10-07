@@ -9,22 +9,15 @@
 #define MAIN_INCLUDE_FAN_H_
 
 #include "system.h"
+#include "types.h"
 
-#if REVA
-#define FAN_SPEED_PIN    19
-#define FAN_DIRECTION_PIN 18
+#define FAN_SPEED_PIN    	7
+#define FAN_DIRECTION_PIN 	6
 
-#else
+#define FAN_PWM_PERIOD    	(USEC_PER_SEC / 10000UL)
+#define FAN_PWM_MAX    		(8191UL)
 
-#define FAN_SPEED_PIN    7
-#define FAN_DIRECTION_PIN 6
-
-#endif
-
-#define FAN_PWM_PERIOD    (USEC_PER_SEC / 10000UL)
-#define FAN_PWM_MAX    (8191UL)
-
-#define FAN_FREQUENCE 1000
+#define FAN_FREQUENCE 		1000
 
 #define FAN_PWM_PULSE_SPEED_NONE_IN    ((FAN_PWM_MAX * 0UL) / FAN_PWM_PERIOD)
 #define FAN_PWM_PULSE_SPEED_SLEEP_IN   ((FAN_PWM_MAX * 20UL) / FAN_PWM_PERIOD)
@@ -60,7 +53,18 @@ static const uint32_t fan_pwm_pulse_out[] = {
     FAN_PWM_PULSE_SPEED_BOOST_OUT
 };
 
+static inline uint8_t ADJUST_SPEED(uint8_t speed) {
+	if (speed & SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT) {
+		speed = SPEED_NIGHT;
+	}
+	else if (speed & SPEED_AUTOMATIC_CYCLE_FORCE_BOOST) {
+		speed = SPEED_BOOST;
+	}
+
+	return speed;
+}
+
 int fan_init();
-int fan_set(uint8_t direction,uint8_t speed);
+int fan_set(uint8_t direction, uint8_t speed);
 
 #endif /* MAIN_INCLUDE_FAN_H_ */

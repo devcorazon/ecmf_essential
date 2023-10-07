@@ -38,20 +38,20 @@
 #define LUX_RAW_TO_INT(lux)						(uint16_t) (lux / LUX_SCALE)
 #define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
 
-#if 1
+#if 0
 #define SECONDS_PER_HOUR						3600u
 
 /// Timing
 #define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
 #define DURATION_FIXED_CYCLE					(45U)
 #define DURATION_AUTOMATIC_CYCLE_OUT			(45U)
-#define DURATION_AUTOMATIC_CYCLE_IN				(150U))
+#define DURATION_AUTOMATIC_CYCLE_IN				(150U)
 #define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
 #define DURATION_EXTRA_CYCLE_BOOST				(200U)
 #define DURATION_RESTART_EXTRA_CYCLE			(1U * SECONDS_PER_HOUR)
 #else
 
-#define SECONDS_PER_HOUR						720U
+#define SECONDS_PER_HOUR						10u//720u
 /// Timing
 #define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
 #define DURATION_FIXED_CYCLE					(15U)
@@ -102,16 +102,21 @@
 #define OFFSET_BOUND_MAX						(500)
 
 // Filters
-#define FILTER_THRESHOLD						(1000U)
+#define FILTER_THRESHOLD						10u//(1000u)
+
+#define THRESHOLD_FILTER_WARNING				BIT(0)
 
 #define VALUE_UNMODIFIED                         0xFF
 
 // Filter coefficients
-#define COEFF_NIGHT  200
-#define COEFF_LOW    600
-#define COEFF_MEDIUM 1000
-#define COEFF_HIGH   1400
-#define COEFF_BOOST 1500
+#define COEFF_NIGHT  							(200u)
+#define COEFF_LOW								(600u)
+#define COEFF_MEDIUM							(1000u)
+#define COEFF_HIGH								(1400u)
+#define COEFF_BOOST 							(1500u)
+
+#define COEFF_SCALE								(1000u)
+
 
 // Enumerations
 
@@ -132,10 +137,10 @@ enum {
 
 // Luminosity sensor setting
 enum {
-    LUX_THRESHOLD_SETTING_NOT_CONFIGURED	= 0x00,
-	LUX_THRESHOLD_SETTING_LOW				= 0x01,
-	LUX_THRESHOLD_SETTING_MEDIUM			= 0x02,
-	LUX_THRESHOLD_SETTING_HIGH				= 0x03,
+    LUX_THRESHOLD_SETTING_NOT_CONFIGURED		= 0x00,
+	LUX_THRESHOLD_SETTING_LOW					= 0x01,
+	LUX_THRESHOLD_SETTING_MEDIUM				= 0x02,
+	LUX_THRESHOLD_SETTING_HIGH					= 0x03,
 };
 
 // VOC threshold setting
@@ -218,15 +223,5 @@ enum rgb_led_mode {
 
 	RGB_LED_MODE_TEST,
 };
-
-enum rgb_led_duration {
-    RGB_LED_DURATION_ONESHOT    = 5,
-    RGB_LED_DURATION_500MS      = 500,
-    RGB_LED_DURATION_1000MS     = 1000,
-    RGB_LED_DURATION_1500MS     = 1500,
-    RGB_LED_DURATION_2000MS     = 2000,
-    RGB_LED_DURATION_FOREVER    = 0xFF,
-};
-
 
 #endif /* SRC_INCLUDE_TYPES_H_ */

@@ -12,7 +12,7 @@
 
 void statistic_init(void);
 
-void statistic_update_handler(int speed_state);
+void statistic_update_handler(void);
 
 void statistic_reset_filter(void);
 

@@ -18,5 +18,6 @@
 int rgb_led_init(struct i2c_dev_s *i2c_dev);
 int rgb_led_set(uint8_t led_color, uint8_t led_mode);
 int rgb_led_mode(uint8_t color, uint32_t mode, bool end);
+bool rgb_led_is_on(void);
 
 #endif /* MAIN_INCLUDE_RGB_LED_H_ */

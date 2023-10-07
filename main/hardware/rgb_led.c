@@ -266,3 +266,7 @@ int rgb_led_mode(uint8_t color, uint32_t mode, bool repeated) {
 
     return 0;
 }
+
+bool rgb_led_is_on(void) {
+	return (led.mode != RGB_LED_MODE_NONE || led.color != RGB_LED_COLOR_NONE);
+}
