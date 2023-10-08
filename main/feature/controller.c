@@ -699,7 +699,7 @@ static void controller_set(void) {
 		if (!(get_mode_state() & (MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION))) {
 			if (get_lux_set() != LUX_THRESHOLD_SETTING_NOT_CONFIGURED) {
 				if ((luminosity != LUX_INVALID) && (luminosity > (luminosity_threshold + LUMINOSITY_DIFFERENTIAL_HIGH))) {
-					printf("LUX: %u.%3u - LUX_TH: %u.%3u\r\n", LUX_RAW_TO_INT(luminosity), LUX_RAW_TO_DEC(luminosity), LUX_RAW_TO_INT(luminosity_threshold), LUX_RAW_TO_DEC(luminosity_threshold));
+	//				printf("LUX: %u.%3u - LUX_TH: %u.%3u\r\n", LUX_RAW_TO_INT(luminosity), LUX_RAW_TO_DEC(luminosity), LUX_RAW_TO_INT(luminosity_threshold), LUX_RAW_TO_DEC(luminosity_threshold));
 					if (count_luminosity) {
 						count_luminosity--;
 					} else {
@@ -726,7 +726,7 @@ static void controller_set(void) {
 			}
 
 			if (get_relative_humidity_set() != RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
-				printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
+	//			printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
 				if ((relative_humidity != TEMPERATURE_INVALID) && (relative_humidity > (relative_humidity_threshold + RH_DIFFERENTIAL_HIGH))) {
 					if (count_rh_extra_cycle < CONDITION_COUNT_MAX) {
 						count_rh_extra_cycle++;
@@ -743,7 +743,7 @@ static void controller_set(void) {
 			}
 
 			if (get_voc_set() != VOC_THRESHOLD_SETTING_NOT_CONFIGURED) {
-				printf("VOC: %u - VOC_TH: %u\r\n", voc, voc_threshold / VOC_SCALE);
+	//			printf("VOC: %u - VOC_TH: %u\r\n", voc, voc_threshold / VOC_SCALE);
 				if ((voc != VOC_INVALID) && (voc > (voc_threshold + VOC_DIFFERENTIAL_HIGH))) {
 					if (count_voc_extra_cycle < CONDITION_COUNT_MAX) {
 						count_voc_extra_cycle++;

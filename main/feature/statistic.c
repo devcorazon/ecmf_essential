@@ -82,7 +82,7 @@ void statistic_update_handler(void) {
 		set_device_state(get_device_state() | THRESHOLD_FILTER_WARNING);
 	}
 
-	printf("Filter Operating Total: %ld\n", get_filter_operating() + filter_operating);
+//	printf("Filter Operating Total: %ld\n", get_filter_operating() + filter_operating);
 }
 
 void statistic_reset_filter(void) {
