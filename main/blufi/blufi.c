@@ -359,7 +359,7 @@ static int initialise_wifi_ap_mode() {
     return 0;
 }
 
-int initialise_wifi_sta_mode() {
+static int initialise_wifi_sta_mode() {
     s_wifi_event_group = xEventGroupCreate();
 
     esp_netif_init();
@@ -713,7 +713,7 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
     }
 }
 
-static void blufi_task(void *pvParameters) {
+static void blufi_ap_task(void *pvParameters) {
 	initialise_wifi_ap_mode();
     initialise_bluetooth();
 
@@ -722,8 +722,22 @@ static void blufi_task(void *pvParameters) {
     }
 }
 
-int blufi_init() {
-    BaseType_t task_created = xTaskCreate(blufi_task, "BLUFI task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+static void blufi_sta_task(void *pvParameters) {
+	initialise_wifi_sta_mode();
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(BLUFI_TASK_PERIOD));  // Sleep for 100 ms
+    }
+}
+
+int blufi_ap_init() {
+    BaseType_t task_created = xTaskCreate(blufi_ap_task, "BLUFI AP task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+
+    return task_created == pdPASS ? 0 : -1;
+}
+
+int blufi_sta_init() {
+    BaseType_t task_created = xTaskCreate(blufi_sta_task, "BLUFI STA task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;
 }

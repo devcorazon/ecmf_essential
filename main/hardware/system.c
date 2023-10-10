@@ -121,7 +121,6 @@ int system_init(void) {
 	rgb_led_init(&i2c_dev);
 	fan_init();
 	ir_receiver_init();
-//	blufi_init();
 	controller_init();
 	user_experience_init();
 
