@@ -291,6 +291,34 @@ static int cmd_test_stop_func(int argc, char **argv) {
 	return 0;
 }
 
+static int cmd_test_ota_func(int argc, char **argv) {
+	if (argc < 2) {
+			printf("Invalid arguments. Usage: test_ota <index>\n");
+			return -1;
+		}
+
+		char *endptr;
+		long index = strtol(argv[1], &endptr, 10); // Base 10 is used.
+
+		// Check for conversion errors
+		if (endptr == argv[1] || *endptr != '\0' || index < 1 || index > 2) {
+			printf( "Invalid index. ota index: 1, 2\n");
+			return -1;
+		}
+
+		switch (index) {
+				case 1:
+					initialise_wifi_sta_mode();
+					break;
+				case 2:
+					break;
+				default: // This should never happen
+					printf("Invalid OTA. Supported ota index: 1, 2\n");
+					return -1;
+		}
+	return 0;
+}
+
 ///
 int test_init(void) {
 	esp_console_register_help_command();
@@ -359,6 +387,15 @@ int test_init(void) {
 	     };
 
 	 esp_console_cmd_register(&cmd_test_stop);
+
+	 const esp_console_cmd_t cmd_test_ota = {
+	       .command = "test_ota",
+	       .help = "Test ota",
+	       .hint = NULL,
+	       .func = cmd_test_ota_func,
+	     };
+
+	 esp_console_cmd_register(&cmd_test_ota);
 
 	return 0;
 }

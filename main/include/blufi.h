@@ -20,3 +20,4 @@ int esp_blufi_host_and_cb_init(esp_blufi_callbacks_t *callbacks);
 int esp_blufi_host_deinit(void);
 int blufi_init();
 int blufi_deinit();
+int initialise_wifi_sta_mode();
