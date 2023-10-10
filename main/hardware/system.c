@@ -28,6 +28,7 @@
 #include "blufi.h"
 
 #include "../feature/controller.c"
+#include "../feature/user_experience.c"
 
 ///
 static struct i2c_dev_s i2c_dev;
@@ -122,6 +123,7 @@ int system_init(void) {
 	ir_receiver_init();
 //	blufi_init();
 	controller_init();
+	user_experience_init();
 
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d  - filter_operating: %d\r\n",
 			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset(), get_filter_operating());
