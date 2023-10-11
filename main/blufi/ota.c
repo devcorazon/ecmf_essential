@@ -13,7 +13,6 @@
 #include <inttypes.h>
 
 #include "blufi.h"
-//#include "system.h"
 
 #include "esp_event.h"
 #include "esp_ota_ops.h"
@@ -115,29 +114,13 @@ void ota_task(void *pvParameter)
 
     esp_err_t ota_finish_err = ESP_OK;
     esp_http_client_config_t config = {
-        .url = "",
-        .cert_pem = (char *)"",  // add certificate here!
+        .url = "https://fantinicosmistorage.blob.core.windows.net/test-firmware-update/ecmf_essential.bin",
+		.cert_pem = NULL,
+       // .cert_pem = (char *)"",  // add certificate here!
         .timeout_ms = 5000,
         .keep_alive_enable = true,
+		.skip_cert_common_name_check = true,
     };
-
-#ifdef CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL_FROM_STDIN
-    char url_buf[OTA_URL_SIZE];
-    if (strcmp(config.url, "FROM_STDIN") == 0) {
-        example_configure_stdin_stdout();
-        fgets(url_buf, OTA_URL_SIZE, stdin);
-        int len = strlen(url_buf);
-        url_buf[len - 1] = '\0';
-        config.url = url_buf;
-    } else {
-    	printf("Configuration mismatch: wrong firmware upgrade image url");
-        abort();
-    }
-#endif
-
-#ifdef CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK
-    config.skip_cert_common_name_check = true;
-#endif
 
     esp_https_ota_config_t ota_config = {
         .http_config = &config,
@@ -175,7 +158,7 @@ void ota_task(void *pvParameter)
         // esp_https_ota_perform returns after every read operation which gives user the ability to
         // monitor the status of OTA upgrade by calling esp_https_ota_get_image_len_read, which gives length of image
         // data read so far.
-        printf("Image bytes read: %d", esp_https_ota_get_image_len_read(https_ota_handle));
+        printf("Image bytes read: %d\n", esp_https_ota_get_image_len_read(https_ota_handle));
     }
 
     if (esp_https_ota_is_complete_data_received(https_ota_handle) != true) {
