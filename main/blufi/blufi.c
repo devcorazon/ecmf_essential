@@ -149,7 +149,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
     case IP_EVENT_STA_GOT_IP: {
         esp_blufi_extra_info_t info;
 
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+    //    xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
         esp_wifi_get_mode(&mode);
 
         memset(&info, 0, sizeof(esp_blufi_extra_info_t));
@@ -200,7 +200,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         memset(gl_sta_ssid, 0, 32);
         memset(gl_sta_bssid, 0, 6);
         gl_sta_ssid_len = 0;
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+       xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
         break;
     case WIFI_EVENT_AP_START:
         if (esp_wifi_get_mode(&mode) != ESP_OK) {
@@ -360,7 +360,7 @@ static int initialise_wifi_ap_mode() {
 }
 
 static int initialise_wifi_sta_mode() {
-    s_wifi_event_group = xEventGroupCreate();
+ //   s_wifi_event_group = xEventGroupCreate();
 
     esp_netif_init();
 
@@ -402,25 +402,25 @@ static int initialise_wifi_sta_mode() {
 
     printf("wifi_init_sta finished.");
 
-    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
-     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
-    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
-            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
-            pdFALSE,
-            pdFALSE,
-            portMAX_DELAY);
-
-    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
-     * happened. */
-    if (bits & WIFI_CONNECTED_BIT) {
-    	printf( "connected to ap SSID:%s password:%s",STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
-    } else if (bits & WIFI_FAIL_BIT) {
-    	printf("Failed to connect to SSID:%s, password:%s", STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
-    	return -1;
-    } else {
-    	printf("UNEXPECTED EVENT");
-    	return -1;
-    }
+//    /* Waiting until either the connection is established (WIFI_CONNECTED_BIT) or connection failed for the maximum
+//     * number of re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see above) */
+//    EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
+//            WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+//            pdFALSE,
+//            pdFALSE,
+//            portMAX_DELAY);
+//
+//    /* xEventGroupWaitBits() returns the bits before the call returned, hence we can test which event actually
+//     * happened. */
+//    if (bits & WIFI_CONNECTED_BIT) {
+//    	printf( "connected to ap SSID:%s password:%s",STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
+//    } else if (bits & WIFI_FAIL_BIT) {
+//    	printf("Failed to connect to SSID:%s, password:%s", STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
+//    	return -1;
+//    } else {
+//    	printf("UNEXPECTED EVENT");
+//    	return -1;
+//    }
     return 0;
 }
 
