@@ -40,23 +40,25 @@
 #define STA_ESP_WIFI_PASS     "mmmmmm99"
 #define STA_ESP_MAXIMUM_RETRY  4
 
-#define AP_ESP_WIFI_SSID      "ECMF-{serial_number}"
-#define AP_ESP_WIFI_PASS      "mypassword"
-#define AP_ESP_WIFI_CHANNEL   1
+#define ESP_WIFI_SSID      "ECMF-{serial_number}"
+#define ESP_WIFI_PASS      "mypassword"
+#define ESP_WIFI_CHANNEL   1
 
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
-#define	BLUFI_TASK_PRIORITY		     	(1)
+#define	BLUFI_TASK_PRIORITY			(1)
 #define	BLUFI_TASK_PERIOD				(100ul / portTICK_PERIOD_MS)
 
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+
+enum {
+    WIFI_STA = 1,
+    WIFI_AP = 2
+};
 
 static bool is_bt_mem_released = false;
 
 static esp_netif_t *ap_netif = NULL;
 static esp_netif_t *sta_netif = NULL;
-
-/* FreeRTOS event group to signal when we are connected*/
-static EventGroupHandle_t s_wifi_event_group;
 
 static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param);
 
@@ -73,19 +75,14 @@ static esp_blufi_callbacks_t callbacks = {
 static wifi_config_t sta_config;
 static wifi_config_t ap_config;
 
-enum wifi_state {
-    WIFI_STA = 1,
-    WIFI_AP = 2,
-};
-
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 
-/* The event group allows multiple bits for each event, but we only care about two events:
- * - we are connected to the AP with an IP
- * - we failed to connect after the maximum amount of retries */
-#define WIFI_CONNECTED_BIT BIT0
-#define WIFI_FAIL_BIT      BIT1
+/* The event group allows multiple bits for each event,
+   but we only care about one event - are we connected
+   to the AP with an IP? */
+const int CONNECTED_BIT = BIT0;
+
 static uint8_t wifi_retry = 0;
 
 /* store the station info for send back to phone */
@@ -149,7 +146,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
     case IP_EVENT_STA_GOT_IP: {
         esp_blufi_extra_info_t info;
 
-    //    xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
         esp_wifi_get_mode(&mode);
 
         memset(&info, 0, sizeof(esp_blufi_extra_info_t));
@@ -200,7 +197,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         memset(gl_sta_ssid, 0, 32);
         memset(gl_sta_bssid, 0, 6);
         gl_sta_ssid_len = 0;
-       xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         break;
     case WIFI_EVENT_AP_START:
         if (esp_wifi_get_mode(&mode) != ESP_OK) {
@@ -278,93 +275,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     }
 }
 
-static int initialise_wifi_ap_mode() {
-    esp_err_t err;
-    wifi_config_t wifi_config = { 0 };
-
-    // Creating the new SSID
-    	uint32_t serial_number = get_serial_number();
-    	char serial_number_str[9]; // 8 characters for the hexadecimal number and 1 for the null terminator
-    	sprintf(serial_number_str, "%08" PRIx32, serial_number); // Convert to hex string
-
-    	char ssid_prefix[] = "ECMF-";
-    	char ssid[32]; // SSID length must be between 8-32 characters
-
-    	snprintf(ssid, sizeof(ssid), "%s%s", ssid_prefix, serial_number_str); // Concatenate the prefix and the serial number
-
-
-        strcpy((char*)wifi_config.sta.ssid, AP_ESP_WIFI_SSID);
-        strcpy((char*)wifi_config.sta.password, AP_ESP_WIFI_PASS);
-
-    // Initialize event loop and register event handlers
-    err = esp_event_loop_create_default();
-    if (err != ESP_OK) {
-        printf("Failed to create default event loop: %s\n", esp_err_to_name(err));
-        return -1;
-    }
-
-    err = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
-    if (err != ESP_OK) {
-        printf("Failed to register WiFi event handler: %s\n", esp_err_to_name(err));
-        return -1;
-    }
-
-    err = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL);
-    if (err != ESP_OK) {
-        printf("Failed to register IP event handler: %s\n", esp_err_to_name(err));
-        return -1;
-    }
-
-    // Initialize network interface based on mode
-	sta_netif = esp_netif_create_default_wifi_sta();
-	if (!sta_netif) {
-		printf("Failed to create default WiFi STA.\n");
-		return -1;
-	}
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    err = esp_wifi_init(&cfg);
-    if (err != ESP_OK) {
-        printf("Failed to initialize WiFi: %s\n", esp_err_to_name(err));
-        return -1;
-    }
-
-    // Copy the SSID to the wifi_config
-    memcpy(wifi_config.ap.ssid, ssid, sizeof(ssid));
-    wifi_config.ap.ssid_len = strlen(ssid);
-
-    if (strlen(AP_ESP_WIFI_PASS) == 0) {
-    	    wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-    }
-
-    // Set the mode and the WiFi configuration
-    err = esp_wifi_set_mode(WIFI_AP);
-    if (err != ESP_OK) {
-        printf("Failed to set WiFi mode: %s\n", esp_err_to_name(err));
-        return -1;
-    }
-
-	err = esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config);
-	if (err != ESP_OK) {
-		printf("Failed to set WiFi Config STA: %s\n", esp_err_to_name(err));
-		return -1;
-	}
-
-    // Start WiFi
-    err = esp_wifi_start();
-    if (err != ESP_OK) {
-        printf("Failed to start WiFi: %s\n", esp_err_to_name(err));
-    }
-
-    return 0;
-}
-
 static int initialise_wifi_sta_mode() {
  //   s_wifi_event_group = xEventGroupCreate();
 
     esp_netif_init();
 
-   esp_event_loop_create_default();
+    esp_event_loop_create_default();
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -396,6 +312,7 @@ static int initialise_wifi_sta_mode() {
             .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
         },
     };
+
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     esp_wifi_start();
@@ -424,7 +341,119 @@ static int initialise_wifi_sta_mode() {
     return 0;
 }
 
-static int stop_wifi_mode() {
+static void initialise_wifi_mode(uint8_t wifi_mode) {
+
+	printf("Mode is %d",wifi_mode);
+    esp_err_t err;
+    wifi_config_t wifi_config = { 0 };
+	char ssid_prefix[] = "ECMF-";
+	char ssid[32]; // SSID length must be between 8-32 characters
+
+    if (wifi_mode == WIFI_AP) {
+    // Creating the new SSID
+    	uint32_t serial_number = get_serial_number();
+    	char serial_number_str[9]; // 8 characters for the hexadecimal number and 1 for the null terminator
+    	sprintf(serial_number_str, "%08" PRIx32, serial_number); // Convert to hex string
+    	snprintf(ssid, sizeof(ssid), "%s%s", ssid_prefix, serial_number_str); // Concatenate the prefix and the serial number
+
+		// Copy the SSID to the wifi_config
+		memcpy(wifi_config.ap.ssid, ssid, sizeof(ssid));
+		wifi_config.ap.ssid_len = strlen(ssid);
+
+		if (strlen(ESP_WIFI_PASS) == 0) {
+			wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+		}
+    }
+    else
+    {
+        wifi_config_t wifi_config = {
+            .sta = {
+                .ssid = STA_ESP_WIFI_SSID,
+                .password = STA_ESP_WIFI_PASS,
+                /* Authmode threshold resets to WPA2 as default if password matches WPA2 standards (pasword len => 8).
+                 * If you want to connect the device to deprecated WEP/WPA networks, Please set the threshold value
+                 * to WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK and set the password with length and format matching to
+    	     * WIFI_AUTH_WEP/WIFI_AUTH_WPA_PSK standards.
+                 */
+                .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+                .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+            },
+        };
+    }
+
+    esp_netif_init();
+
+    // Initialize event loop and register event handlers
+    err = esp_event_loop_create_default();
+    if (err != ESP_OK) {
+        printf("Failed to create default event loop: %s\n", esp_err_to_name(err));
+        return;
+    }
+
+    // Initialize network interface based on mode
+    if (wifi_mode == WIFI_STA && !sta_netif) {
+        sta_netif = esp_netif_create_default_wifi_sta();
+        if (!sta_netif) {
+            printf("Failed to create default WiFi STA.\n");
+            return;
+        }
+    } else if (wifi_mode == WIFI_AP && !ap_netif) {
+        ap_netif = esp_netif_create_default_wifi_ap();
+        if (!ap_netif) {
+            printf("Failed to create default WiFi AP.\n");
+            return;
+        }
+    }
+
+    err = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
+    if (err != ESP_OK) {
+        printf("Failed to register WiFi event handler: %s\n", esp_err_to_name(err));
+        return;
+    }
+
+    err = esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL);
+    if (err != ESP_OK) {
+        printf("Failed to register IP event handler: %s\n", esp_err_to_name(err));
+        return;
+    }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    err = esp_wifi_init(&cfg);
+    if (err != ESP_OK) {
+        printf("Failed to initialize WiFi: %s\n", esp_err_to_name(err));
+        return;
+    }
+
+    // Set the mode and the WiFi configuration
+    err = esp_wifi_set_mode(wifi_mode);
+    if (err != ESP_OK) {
+        printf("Failed to set WiFi mode: %s\n", esp_err_to_name(err));
+        return;
+    }
+
+	if (wifi_mode == WIFI_STA) {
+		err = esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config);
+		if (err != ESP_OK) {
+			printf("Failed to set WiFi Config STA: %s\n", esp_err_to_name(err));
+			return;
+		}
+	} else if (wifi_mode == WIFI_AP) {
+		err = esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config);
+		if (err != ESP_OK) {
+			printf("Failed to set WiFi Config AP: %s\n", esp_err_to_name(err));
+			return;
+		}
+	}
+
+    // Start WiFi
+    err = esp_wifi_start();
+    if (err != ESP_OK) {
+        printf("Failed to start WiFi: %s\n", esp_err_to_name(err));
+    }
+}
+
+
+static void stop_wifi_mode() {
     esp_err_t err;
 
     printf("Stopping WiFi access point...");
@@ -432,31 +461,31 @@ static int stop_wifi_mode() {
     err = esp_wifi_set_mode(WIFI_MODE_NULL);
     if (err != ESP_OK) {
         printf("Failed to set WiFi mode to NULL: %s\n", esp_err_to_name(err));
-        return -1;
+        return;
     }
 
     err = esp_wifi_stop();
     if (err != ESP_OK) {
         printf("Failed to stop WiFi: %s\n", esp_err_to_name(err));
-        return -1;
+        return;
     }
 
     err = esp_wifi_deinit();
     if (err != ESP_OK) {
         printf("Failed to deinitialize WiFi: %s\n", esp_err_to_name(err));
-        return -1;
+        return;
     }
 
     err = esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
     if (err != ESP_OK) {
         printf("Failed to unregister WiFi event handler: %s\n", esp_err_to_name(err));
-        return -1;
+        return;
     }
 
     err = esp_event_loop_delete_default();
     if (err != ESP_OK) {
         printf("Failed to delete default event loop: %s\n", esp_err_to_name(err));
-        return -1;
+        return;
     }
 
     if (ap_netif) {
@@ -467,10 +496,8 @@ static int stop_wifi_mode() {
         esp_netif_destroy(sta_netif);
         sta_netif = NULL;
     }
-
-    return 0;
 }
-static int initialise_bluetooth() {
+static void initialise_bluetooth() {
     esp_err_t ret;
 
     // Creating the new BT device name
@@ -487,7 +514,7 @@ static int initialise_bluetooth() {
         ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
         if (ret != ESP_OK) {
             printf("%s release BT classic memory failed: %s\n", __func__, esp_err_to_name(ret));
-            return -1;
+            return;
         }
         is_bt_mem_released = true;
     }
@@ -498,7 +525,7 @@ static int initialise_bluetooth() {
         ret = esp_bt_controller_init(&bt_cfg);
         if (ret != ESP_OK) {
             printf("%s initialize controller failed: %s\n", __func__, esp_err_to_name(ret));
-            return -1;
+            return;
         }
     }
 
@@ -506,7 +533,7 @@ static int initialise_bluetooth() {
         ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
         if (ret != ESP_OK) {
             printf("%s enable controller failed: %s\n", __func__, esp_err_to_name(ret));
-            return -1;
+            return;
         }
     }
 
@@ -514,35 +541,32 @@ static int initialise_bluetooth() {
     ret = esp_blufi_host_and_cb_init(&callbacks);
     if (ret != ESP_OK) {
         printf("%s BLUFI initialise failed: %s\n", __func__, esp_err_to_name(ret));
-        return -1;
+        return;
     }
 
     // Set the custom Bluetooth device name
     ret = esp_ble_gap_set_device_name(bt_device_name);
     if (ret != ESP_OK) {
         printf("%s set device name failed: %s\n", __func__, esp_err_to_name(ret));
-        return -1;
+        return;
     }
 
     // Now, start BLUFi advertising
     esp_blufi_adv_start();
 
     printf("BT_INIT: BLUFI VERSION %04x\n", esp_blufi_get_version());
-
-    return 0;
 }
 
 
-static int stop_bluetooth(void) {
+static void stop_bluetooth(void) {
     esp_err_t ret;
 
     ret = esp_blufi_host_deinit();
 
     if (ret != ESP_OK) {
     		printf("BT_INIT", "BLUFI de-initialise failed: %s",esp_err_to_name(ret));
-    		return -1;
+    		return;
     }
-    return 0;
 }
 
 static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
@@ -713,31 +737,35 @@ static void event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *par
     }
 }
 
-static void blufi_ap_task(void *pvParameters) {
-	initialise_wifi_ap_mode();
-    initialise_bluetooth();
+static void blufi_task(void *pvParameters) {
+    uint8_t mode = *((uint8_t*)pvParameters);
+    free(pvParameters);  // Free the dynamically allocated memory for mode
+
+  //  initialise_wifi_mode(mode);
+    initialise_wifi_sta_mode();
+
+    if (mode != WIFI_STA){
+        initialise_bluetooth();
+    }
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(BLUFI_TASK_PERIOD));  // Sleep for 100 ms
     }
 }
 
-static void blufi_sta_task(void *pvParameters) {
-	initialise_wifi_sta_mode();
-
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(BLUFI_TASK_PERIOD));  // Sleep for 100 ms
+int blufi_init(uint8_t mode) {
+    uint8_t* mode_ptr = malloc(sizeof(uint8_t));
+    if (mode_ptr == NULL) {
+        printf("Failed to allocate memory for mode\n");
+        return -1;
     }
-}
 
-int blufi_ap_init() {
-    BaseType_t task_created = xTaskCreate(blufi_ap_task, "BLUFI AP task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+    *mode_ptr = mode;
 
-    return task_created == pdPASS ? 0 : -1;
-}
-
-int blufi_sta_init() {
-    BaseType_t task_created = xTaskCreate(blufi_sta_task, "BLUFI STA task ", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+    BaseType_t task_created = xTaskCreate(blufi_task, "BLUFI task ", BLUFI_TASK_STACK_SIZE, mode_ptr, BLUFI_TASK_PRIORITY, NULL);
+    if(task_created != pdPASS) {
+        free(mode_ptr);  // Free memory if task creation failed to avoid memory leak
+    }
 
     return task_created == pdPASS ? 0 : -1;
 }

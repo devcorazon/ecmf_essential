@@ -268,7 +268,7 @@ static int cmd_test_start_func(int argc, char **argv) {
 		printf("Run test_stop and start again! \n");
 	} else {
 		test_in_progress_set();
-		blufi_ap_init();
+		blufi_init(2);
 	}
 	return 0;
 }
@@ -306,7 +306,7 @@ static int cmd_test_ota_func(int argc, char **argv) {
 
 		switch (index) {
 				case 1:
-					blufi_sta_init();
+					blufi_init(1);
 					break;
 				case 2:
 					ota_init();
