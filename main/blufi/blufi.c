@@ -742,7 +742,13 @@ static void blufi_task(void *pvParameters) {
     free(pvParameters);  // Free the dynamically allocated memory for mode
 
   //  initialise_wifi_mode(mode);
+    if (mode == 1){
     initialise_wifi_sta_mode();
+    }
+    else
+    {
+    	initialise_wifi_mode(mode);
+    }
 
     if (mode != WIFI_STA){
         initialise_bluetooth();
