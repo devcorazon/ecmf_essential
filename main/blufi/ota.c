@@ -28,42 +28,6 @@
 
 #define OTA_URL_SIZE 256
 
-/* Event handler for catching system events */
-static void event_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data)
-{
-    if (event_base == ESP_HTTPS_OTA_EVENT) {
-        switch (event_id) {
-            case ESP_HTTPS_OTA_START:
-                printf("OTA started");
-                break;
-            case ESP_HTTPS_OTA_CONNECTED:
-            	printf("Connected to server");
-                break;
-            case ESP_HTTPS_OTA_GET_IMG_DESC:
-            	printf("Reading Image Description");
-                break;
-            case ESP_HTTPS_OTA_VERIFY_CHIP_ID:
-            	printf("Verifying chip id of new image: %d", *(esp_chip_id_t *)event_data);
-                break;
-            case ESP_HTTPS_OTA_DECRYPT_CB:
-            	printf("Callback to decrypt function");
-                break;
-            case ESP_HTTPS_OTA_WRITE_FLASH:
-            	printf("Writing to flash: %d written", *(int *)event_data);
-                break;
-            case ESP_HTTPS_OTA_UPDATE_BOOT_PARTITION:
-            	printf("Boot partition updated. Next Partition: %d", *(esp_partition_subtype_t *)event_data);
-                break;
-            case ESP_HTTPS_OTA_FINISH:
-                printf("OTA finish");
-                break;
-            case ESP_HTTPS_OTA_ABORT:
-            	printf("OTA abort");
-                break;
-        }
-    }
-}
 
 static int validate_image_header(esp_app_desc_t *new_app_info)
 {
