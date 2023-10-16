@@ -39,13 +39,4 @@ static inline uint32_t crc(const void *data, size_t size) {
 	return 0;
 }
 
-int16_t get_internal_temperature(void);
-int set_internal_temperature(int16_t temperature);
-
-int16_t get_external_temperature(void);
-int set_external_temperature(int16_t temperature);
-
-uint16_t get_lux(void);
-int set_lux(int16_t lux);
-
 #endif /* MAIN_INCLUDE_STORAGE_INTERNAL_H_ */

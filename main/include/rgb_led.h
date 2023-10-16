@@ -10,10 +10,10 @@
 
 #include "system.h"
 
-#define RGB_LED_COLOR_OFFSET		8
+#define RGB_LED_COLOR_OFFSET		RGB_LED_COLOR_IMMISSION - 1
 
-#define RGB_LED_MODE_OFFSET			3
-#define RGB_LED_MODE_CONF_OFFSET	8
+#define RGB_LED_MODE_OFFSET			RGB_LED_MODE_SPEED_NIGHT - 1
+#define RGB_LED_MODE_CONF_OFFSET	RGB_LED_MODE_THR_NOT_CONF
 
 int rgb_led_init(struct i2c_dev_s *i2c_dev);
 int rgb_led_set(uint8_t led_color, uint8_t led_mode);

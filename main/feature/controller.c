@@ -119,6 +119,7 @@ static void controller_state_machine(void) {
 
 		switch (mode_set) {
 		case MODE_OFF:
+			printf("MODE OFF\n");
 			set_mode_state(MODE_OFF);
 			set_direction_state(DIRECTION_NONE);
 			set_speed_state(SPEED_NONE);
@@ -156,6 +157,7 @@ static void controller_state_machine(void) {
 			break;
 
 		case MODE_AUTOMATIC_CYCLE:
+			printf("MODE AUTOMATIC CYCLE STARTED\n");
 			set_mode_state( MODE_AUTOMATIC_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
 			set_automatic_cycle_duration(0U);
 			xTaskCreate(work_task, "work task", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
@@ -170,7 +172,7 @@ static void controller_state_machine(void) {
 
 	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
 
-//	controller_log();
+	controller_log();
 }
 
 static void controller_log(void) {
@@ -264,8 +266,8 @@ static void controller_set(void) {
 
 		if (!(get_mode_state() & (MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION))) {
 			if (get_lux_set() != LUX_THRESHOLD_SETTING_NOT_CONFIGURED) {
+				printf("LUX: %u - LUX_TH: %u\r\n", luminosity / LUX_SCALE, luminosity_threshold / LUX_SCALE);
 				if ((luminosity != LUX_INVALID) && (luminosity > (luminosity_threshold + LUMINOSITY_DIFFERENTIAL_HIGH))) {
-	//				printf("LUX: %u.%3u - LUX_TH: %u.%3u\r\n", LUX_RAW_TO_INT(luminosity), LUX_RAW_TO_DEC(luminosity), LUX_RAW_TO_INT(luminosity_threshold), LUX_RAW_TO_DEC(luminosity_threshold));
 					if (count_luminosity) {
 						count_luminosity--;
 					} else {
@@ -292,7 +294,7 @@ static void controller_set(void) {
 			}
 
 			if (get_relative_humidity_set() != RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
-	//			printf("RH: %u.%1u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
+				printf("RH: %u.%01u - RH_TH: %u\r\n", RH_RAW_TO_INT(relative_humidity), RH_RAW_TO_DEC(relative_humidity), relative_humidity_threshold / RELATIVE_HUMIDITY_SCALE);
 				if ((relative_humidity != TEMPERATURE_INVALID) && (relative_humidity > (relative_humidity_threshold + RH_DIFFERENTIAL_HIGH))) {
 					if (count_rh_extra_cycle < CONDITION_COUNT_MAX) {
 						count_rh_extra_cycle++;
@@ -309,7 +311,7 @@ static void controller_set(void) {
 			}
 
 			if (get_voc_set() != VOC_THRESHOLD_SETTING_NOT_CONFIGURED) {
-	//			printf("VOC: %u - VOC_TH: %u\r\n", voc, voc_threshold / VOC_SCALE);
+				printf("VOC: %u - VOC_TH: %u\r\n", voc / VOC_SCALE, voc_threshold / VOC_SCALE);
 				if ((voc != VOC_INVALID) && (voc > (voc_threshold + VOC_DIFFERENTIAL_HIGH))) {
 					if (count_voc_extra_cycle < CONDITION_COUNT_MAX) {
 						count_voc_extra_cycle++;

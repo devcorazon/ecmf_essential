@@ -35,7 +35,7 @@ enum ux_s {
 };
 
 static uint8_t user_experience_state = OPERATIVE;
-static uint8_t user_experience_type = 0;
+static uint8_t user_experience_type = 1;
 
 static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
 	static uint8_t mode_ux = MODE_AUTOMATIC_CYCLE;
@@ -300,16 +300,21 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode((RGB_LED_COLOR_OFFSET + get_mode_set()), (RGB_LED_MODE_OFFSET + get_speed_set()), false);
 						break;
 					case BUTTON_3:
-						system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
-						rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
+//						system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
+//						rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
+						system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
+						rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
 						break;
 					case BUTTON_4:
 						system_mode_speed_set(MODE_AUTOMATIC_CYCLE, VALUE_UNMODIFIED);
-						rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
+//						rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_ONESHOOT, false);
+						rgb_led_mode(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_SINGLE_BLINK, false);
 						break;
 					case BUTTON_5:
-						system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
-						rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
+//						system_mode_speed_set(MODE_EMISSION, VALUE_UNMODIFIED);
+//						rgb_led_mode(RGB_LED_COLOR_EMISSION, RGB_LED_MODE_ONESHOOT, false);
+						system_mode_speed_set(MODE_IMMISSION, VALUE_UNMODIFIED);
+						rgb_led_mode(RGB_LED_COLOR_IMMISSION, RGB_LED_MODE_ONESHOOT, false);
 						break;
 					case BUTTON_6:
 						if (get_speed_set() > SPEED_NIGHT) {
@@ -332,6 +337,7 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
 						break;
 					case BUTTON_9:
+
 						break;
 					case BUTTON_10:
 						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), false);
@@ -342,10 +348,14 @@ static void user_experience_state_machine(void) {
 						break;
 					case BUTTON_11:
 						break;
+					case BUTTON_11_LONG:
+						rgb_led_mode(RGB_LED_COLOR_WHITE, RGB_LED_MODE_DOUBLE_BLINK, false);
+						break;
 				}
 				break;
 
 			case RH_SETTING:
+#if 0
 				switch (button) {
 					case BUTTON_7:
 						set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
@@ -372,9 +382,57 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 				}
+#else
+				switch (button) {
+//					case BUTTON_2:
+//						if (get_relative_humidity_set() < RH_THRESHOLD_SETTING_HIGH) {
+//							set_relative_humidity_set(get_relative_humidity_set() + 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+//						break;
+//					case BUTTON_6:
+//						if (get_relative_humidity_set() > RH_THRESHOLD_SETTING_NOT_CONFIGURED) {
+//							set_relative_humidity_set(get_relative_humidity_set() - 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+//						break;
+					case BUTTON_7:
+						if (get_relative_humidity_set() < RH_THRESHOLD_SETTING_HIGH) {
+							set_relative_humidity_set(get_relative_humidity_set() + 1);
+						}
+						else {
+							set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
+						}
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+						break;
+					case BUTTON_8_LONG:
+						user_experience_state = VOC_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+						break;
+					case BUTTON_10_LONG:
+						user_experience_state = LUX_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+						break;
+
+					case BUTTON_2:
+					case BUTTON_3:
+					case BUTTON_4:
+					case BUTTON_5:
+					case BUTTON_6:
+					case BUTTON_8:
+					case BUTTON_9:
+					case BUTTON_10:
+					case BUTTON_11:
+						user_experience_state = OPERATIVE;
+//						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ONESHOOT, false);
+						break;
+				}
+#endif
 				break;
 
 			case VOC_SETTING:
+#if 0
 				switch (button) {
 					case BUTTON_7:
 						set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
@@ -401,9 +459,57 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 				}
+#else
+				switch (button) {
+//					case BUTTON_2:
+//						if (get_voc_set() < VOC_THRESHOLD_SETTING_HIGH) {
+//							set_voc_set(get_voc_set() + 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+//						break;
+//					case BUTTON_6:
+//						if (get_voc_set() > VOC_THRESHOLD_SETTING_NOT_CONFIGURED) {
+//							set_voc_set(get_voc_set() - 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+//						break;
+					case BUTTON_8:
+						if (get_voc_set() < VOC_THRESHOLD_SETTING_HIGH) {
+							set_voc_set(get_voc_set() + 1);
+						}
+						else {
+							set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
+						}
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+						break;
+					case BUTTON_7_LONG:
+						user_experience_state = RH_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+						break;
+					case BUTTON_10_LONG:
+						user_experience_state = LUX_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+						break;
+
+					case BUTTON_2:
+					case BUTTON_3:
+					case BUTTON_4:
+					case BUTTON_5:
+					case BUTTON_6:
+					case BUTTON_7:
+					case BUTTON_9:
+					case BUTTON_10:
+					case BUTTON_11:
+						user_experience_state = OPERATIVE;
+//						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_ONESHOOT, false);
+						break;
+				}
+#endif
 				break;
 
 			case LUX_SETTING:
+#if 0
 				switch (button) {
 					case BUTTON_7:
 						set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
@@ -430,6 +536,53 @@ static void user_experience_state_machine(void) {
 						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
 						break;
 				}
+#else
+				switch (button) {
+//					case BUTTON_2:
+//						if (get_lux_set() < LUX_THRESHOLD_SETTING_HIGH) {
+//							set_lux_set(get_lux_set() + 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+//						break;
+//					case BUTTON_6:
+//						if (get_lux_set() > LUX_THRESHOLD_SETTING_NOT_CONFIGURED) {
+//							set_lux_set(get_lux_set() - 1);
+//						}
+//						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+//						break;
+					case BUTTON_10:
+						if (get_lux_set() < LUX_THRESHOLD_SETTING_HIGH) {
+							set_lux_set(get_lux_set() + 1);
+						}
+						else {
+							set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
+						}
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+						break;
+					case BUTTON_7_LONG:
+						user_experience_state = RH_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+						break;
+					case BUTTON_8_LONG:
+						user_experience_state = VOC_SETTING;
+						rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+						break;
+
+					case BUTTON_2:
+					case BUTTON_3:
+					case BUTTON_4:
+					case BUTTON_5:
+					case BUTTON_6:
+					case BUTTON_7:
+					case BUTTON_8:
+					case BUTTON_9:
+					case BUTTON_11:
+						user_experience_state = OPERATIVE;
+//						rgb_led_mode(RGB_LED_COLOR_NONE, RGB_LED_MODE_NONE, false);
+						rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_ONESHOOT, false);
+						break;
+				}
+#endif
 				break;
 
 				case SETTINGS:

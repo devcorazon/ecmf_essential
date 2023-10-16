@@ -32,10 +32,6 @@
     #define printf(...) (void)0
 #endif
 
-//#define FW_VERSION_MAJOR 				0
-//#define FW_VERSION_MINOR 				0
-//#define FW_VERSION_PATCH 				2
-
 #define FIRMWARE_VERSION				(FW_VERSION_MAJOR << 12) + (FW_VERSION_MINOR << 6) + FW_VERSION_PATCH
 
 #define POWER_MAIN_12V
@@ -57,23 +53,37 @@
 #define LUX_F_INVALID                   65535.f
 #define GAS_U_INVALID					65535u
 
+#define THR_NOT_CONF_PERIOD_MS			1536
 #define PRE_FLASH_PERIOD_MS				1024
-#define FLASH_PERIOD					8
-#define POST_FLASH_PERIOD_MS			2048
+#define FLASH_PERIOD					8 - 4
+#define POST_FLASH_PERIOD_MS			1536
 
-#define FLASH_FALL						6
-#define FLASH_PWM_WITH_FALL				4
+#define THR_CONFIRM_PERIOD				10
+
+
+#define FLASH_FALL						6 - 6
+#define FLASH_PWM_WITH_FALL				4 + 4
 
 #define FLASH_PWM_NO_FALL				31
 #define FLASH_PWM_MAX					255
+#define FLASH_PWM_MIN					0
 
-#define FLASH_PERIOD_POWER_ON			4
-#define FLASH_PERIOD_POWER_OFF			6
+#define FLASH_PERIOD_AUTOMATIC_CYCLE_BLINK		14
+#define FLASH_PWM_AUTOMATIC_CYCLE_BLINK			63
 
-#define FLASH_PERIOD_SPEED_NIGHT		14
-#define FLASH_PERIOD_SPEED_BLINK		4
-#define FLASH_PWM_SPEED_BLINK			59
+#define FLASH_PERIOD_POWER_ON			2
+#define FLASH_PERIOD_POWER_OFF			1
+#define FLASH_PERIOD_CLEAR_WARNING		4
 
+#define FLASH_PERIOD_SPEED_NIGHT		18
+#define FLASH_PWM_SPEED_NIGHT			63
+#define FLASH_PERIOD_SPEED_BLINK		4 - 2
+#define FLASH_PWM_SPEED_BLINK			63
+#define PRE_ON_PERIOD_SPEED_AUTO_MS		256
+#define POST_PERIOD_SPEED_AUTO_MS		768
+
+#define FLASH_PERIOD_SPEED_BLINK_AUTO	4
+#define FLASH_PWM_SPEED_BLINK_AUTO		63
 
 struct i2c_dev_s {
 	i2c_port_t i2c_num;

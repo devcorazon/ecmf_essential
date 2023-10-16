@@ -44,6 +44,7 @@
 #define BUTTON_10              0xF609         // Mid
 #define BUTTON_10_LONG		   0x8000F609
 #define BUTTON_11              0xF807         // High
+#define BUTTON_11_LONG         0x8000F807
 
 
 int ir_receiver_init();

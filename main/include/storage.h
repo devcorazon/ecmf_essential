@@ -40,7 +40,7 @@ uint16_t get_voc(void);
 int set_voc(uint16_t voc);
 
 uint16_t get_lux(void);
-int set_lux(int16_t lux);
+int set_lux(uint16_t lux);
 
 int16_t get_internal_temperature(void);
 int set_internal_temperature(int16_t temperature);

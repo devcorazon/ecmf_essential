@@ -163,7 +163,7 @@ static void sensor_task(void *pvParameters) {
 
 		sgp40_sample(t_amb, r_hum, &voc_idx);
 		if (get_direction_state() != DIRECTION_IN){
-			set_voc(voc_idx);
+			set_voc(SET_VALUE_TO_VOC_RAW(voc_idx));
 		}
 
 		ltr303_measure_lux(&lux);

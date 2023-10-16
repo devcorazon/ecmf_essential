@@ -225,7 +225,7 @@ uint16_t get_lux(void) {
 	return application_data.runtime_data.lux;
 }
 
-int set_lux(int16_t lux) {
+int set_lux(uint16_t lux) {
 	application_data.runtime_data.lux = lux;
 
 	return 0;
