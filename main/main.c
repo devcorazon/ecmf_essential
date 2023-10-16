@@ -13,6 +13,6 @@
 
 ///
 void app_main(void) {
-	printf("my version number is 1\n");
+	printf("Starting v%u.%u.%u firmware\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
 	system_init();
 }

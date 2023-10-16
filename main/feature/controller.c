@@ -215,40 +215,6 @@ static void controller_log(void) {
 	}
 }
 
-static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
-	static uint8_t mode_ux = MODE_AUTOMATIC_CYCLE;
-	static uint8_t speed_ux = SPEED_MEDIUM;
-
-	// Apply the new settings
-    if (mode != VALUE_UNMODIFIED && mode != MODE_OFF) {
-    	mode_ux = mode;
-    }
-    if (speed != VALUE_UNMODIFIED && speed != SPEED_NONE) {
-    	speed_ux = speed;
-    }
-
-    // Apply the factory settings
-    if (mode_ux != MODE_OFF) {
-    	if (speed_ux == SPEED_NONE) {
-    		speed_ux = SPEED_MEDIUM;
-    	}
-    }
-
-    if (speed_ux != SPEED_NONE) {
-    	if (mode_ux == MODE_OFF) {
-    		mode_ux = MODE_AUTOMATIC_CYCLE;
-    	}
-    }
-
-	if (mode != MODE_OFF && speed != SPEED_NONE) {
-		set_mode_set(mode_ux);
-		set_speed_set(speed_ux);
-	} else {
-		set_mode_set(MODE_OFF);
-		set_speed_set(SPEED_NONE);
-	}
-}
-
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature,int16_t immission_temperature) {
 	int16_t delta = emission_temperature - immission_temperature;
 	size_t i;

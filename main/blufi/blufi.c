@@ -376,7 +376,9 @@ static void initialise_wifi_mode(uint8_t wifi_mode) {
         return;
     }
 
+    if (wifi_mode == WIFI_STA) {
     esp_netif_create_default_wifi_sta();
+    }
 
     err = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
     if (err != ESP_OK) {

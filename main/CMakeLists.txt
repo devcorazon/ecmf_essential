@@ -28,3 +28,9 @@ idf_component_register(
                     	"driver/ltr303/"
                     	"driver/ktd2027/"
 )
+
+target_compile_definitions(${COMPONENT_TARGET} PRIVATE
+    FW_VERSION_MAJOR=${ecmf_essential_PROJECT_VER_MAJOR}
+    FW_VERSION_MINOR=${ecmf_essential_PROJECT_VER_MINOR}
+    FW_VERSION_PATCH=${ecmf_essential_PROJECT_VER_PATCH}
+ )

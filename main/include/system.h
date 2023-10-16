@@ -32,9 +32,9 @@
     #define printf(...) (void)0
 #endif
 
-#define FW_VERSION_MAJOR 				0
-#define FW_VERSION_MINOR 				0
-#define FW_VERSION_PATCH 				1
+//#define FW_VERSION_MAJOR 				0
+//#define FW_VERSION_MINOR 				0
+//#define FW_VERSION_PATCH 				2
 
 #define FIRMWARE_VERSION				(FW_VERSION_MAJOR << 12) + (FW_VERSION_MINOR << 6) + FW_VERSION_PATCH
 
