@@ -120,6 +120,10 @@
 
 #define RGB_LED_MODE_FOREVER					(UINT8_MAX)
 
+#define SSID_SIZE                               32
+#define PASSWORD_SIZE                           64
+#define SERVER_SIZE                             32
+#define PORT_SIZE                                5
 
 // Enumerations
 

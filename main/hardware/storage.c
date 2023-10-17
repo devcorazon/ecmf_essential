@@ -43,18 +43,24 @@ static int storage_save_all_entry(void);
 static struct application_data_s application_data;
 
 static struct storage_entry_s storage_entry_poll[] = {
-		{ MODE_SET_KEY,		    &application_data.configuration_settings.mode_set,						DATA_TYPE_UINT8, 	1 },
-		{ SPEED_SET_KEY,		&application_data.configuration_settings.speed_set,						DATA_TYPE_UINT8, 	1 },
+		{ MODE_SET_KEY,		    &application_data.configuration_settings.mode_set,						DATA_TYPE_UINT8, 	0 },
+		{ SPEED_SET_KEY,		&application_data.configuration_settings.speed_set,						DATA_TYPE_UINT8, 	0 },
 
-		{ R_HUM_SET_KEY,		&application_data.configuration_settings.relative_humidity_set,			DATA_TYPE_UINT8, 	1 },
-		{ LUX_SET_KEY,		    &application_data.configuration_settings.lux_set,						DATA_TYPE_UINT8, 	1 },
-		{ VOC_SET_KEY,		    &application_data.configuration_settings.voc_set,						DATA_TYPE_UINT8, 	1 },
+		{ R_HUM_SET_KEY,		&application_data.configuration_settings.relative_humidity_set,			DATA_TYPE_UINT8, 	0 },
+		{ LUX_SET_KEY,		    &application_data.configuration_settings.lux_set,						DATA_TYPE_UINT8, 	0 },
+		{ VOC_SET_KEY,		    &application_data.configuration_settings.voc_set,						DATA_TYPE_UINT8, 	0 },
 
-		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
-		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
+		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	0 },
+		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	0 },
 
- 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
- 		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
+ 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    0 },
+ 		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   0 },
+
+		{SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,  32 },
+		{PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,  64 },
+//		{ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    0 },
+//		{SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,  64 },
+//		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   5 }
 };
 
 
@@ -375,6 +381,71 @@ int set_filter_operating(uint32_t filter_operating) {
     return 0;
 }
 
+
+void get_ssid(uint8_t *ssid){
+	memcpy(ssid, application_data.wifi_configuration_settings.ssid, sizeof(application_data.wifi_configuration_settings.ssid));
+}
+
+int set_ssid(const uint8_t *ssid) {
+	memset(application_data.wifi_configuration_settings.ssid, 0, sizeof(application_data.wifi_configuration_settings.ssid));
+	strcpy((char *)application_data.wifi_configuration_settings.ssid, (char *) ssid);
+
+	storage_save_entry_with_key(SSID_KEY);
+
+	return 0;
+}
+
+void get_password(uint8_t *password){
+	memcpy(password, application_data.wifi_configuration_settings.password, sizeof(application_data.wifi_configuration_settings.password));
+}
+
+int set_password(const uint8_t *password) {
+	memset(application_data.wifi_configuration_settings.password, 0, sizeof(application_data.wifi_configuration_settings.password));
+	strcpy((char *)application_data.wifi_configuration_settings.password, (char *) password);
+
+	storage_save_entry_with_key(PASSWORD_KEY);
+
+	return 0;
+}
+
+void get_server(uint8_t *server){
+	memcpy(server, application_data.wifi_configuration_settings.server, sizeof(application_data.wifi_configuration_settings.server));
+}
+
+int set_server(const uint8_t *server) {
+	memset(application_data.wifi_configuration_settings.server, 0, sizeof(application_data.wifi_configuration_settings.server));
+	strcpy((char *)application_data.wifi_configuration_settings.server, (char *) server);
+
+	storage_save_entry_with_key(SERVER_KEY);
+
+	return 0;
+}
+
+void get_port(uint8_t *port){
+	memcpy(port, application_data.wifi_configuration_settings.port, sizeof(application_data.wifi_configuration_settings.port));
+}
+
+int set_port(const uint8_t *port) {
+	memset(application_data.wifi_configuration_settings.port, 0, sizeof(application_data.wifi_configuration_settings.port));
+	strcpy((char *)application_data.wifi_configuration_settings.port, (char *) port);
+
+//	storage_save_entry_with_key(PORT_KEY);
+
+	return 0;
+}
+
+uint8_t get_wifi_active(void) {
+	return application_data.wifi_configuration_settings.active;
+}
+
+int set_wifi_active(uint8_t active) {
+	application_data.wifi_configuration_settings.active = active;
+
+//	storage_save_entry_with_key(ACTIVE_KEY);
+
+	return 0;
+}
+
 static int storage_serial_number_obtain(void) {
     uint8_t serial_number_byte[4];
     size_t start_bit = 28 * 8;
@@ -436,8 +507,9 @@ static int storage_read_entry_with_idx(size_t i) {
 //        	printf("storage_save_entry_with_key - nvs_get_i64 - index: %u - ret: %04x\r\n", i, ret);
             break;
         case DATA_TYPE_STRING:
-        	nvs_get_str(storage_handle, storage_entry_poll[i].key, (char *)storage_entry_poll[i].data, NULL);
-//        	ret = nvs_get_str(storage_handle, storage_entry_poll[i].key, (char *)storage_entry_poll[i].data, NULL);
+        	size_t size = storage_entry_poll[i].size;
+        	nvs_get_str(storage_handle, storage_entry_poll[i].key, (char *)storage_entry_poll[i].data, &size);
+//        	ret = nvs_get_str(storage_handle, storage_entry_poll[i].key, (char *)storage_entry_poll[i].data, &size);
 //        	printf("storage_save_entry_with_key - nvs_get_str - index: %u - ret: %04x\r\n", i, ret);
             break;
     }
@@ -446,8 +518,8 @@ static int storage_read_entry_with_idx(size_t i) {
 }
 
 static int storage_save_entry_with_key(const char* key) {
-	size_t i;
 //	esp_err_t ret;
+	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(storage_entry_poll); i++ ) {
 		if (!strcmp(key, storage_entry_poll[i].key)) {

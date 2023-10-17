@@ -128,5 +128,12 @@ int system_init(void) {
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d  - filter_operating: %d\r\n",
 			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset(), get_filter_operating());
 
+	uint8_t ssid[32];
+	get_ssid(ssid);
+	printf("SSID: %s\n", ssid);
+
+	uint8_t pw[64];
+	get_password(pw);
+	printf("PW: %s\n", pw);
 	return 0;
 }

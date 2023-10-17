@@ -518,12 +518,14 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         sta_config.sta.ssid[param->sta_ssid.ssid_len] = '\0';
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA SSID %s\n", sta_config.sta.ssid);
+        set_ssid(sta_config.sta.ssid);
         break;
 	case ESP_BLUFI_EVENT_RECV_STA_PASSWD:
         strncpy((char *)sta_config.sta.password, (char *)param->sta_passwd.passwd, param->sta_passwd.passwd_len);
         sta_config.sta.password[param->sta_passwd.passwd_len] = '\0';
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA PASSWORD %s\n", sta_config.sta.password);
+        set_password(sta_config.sta.password);
         break;
 	case ESP_BLUFI_EVENT_RECV_SOFTAP_SSID:
         strncpy((char *)ap_config.ap.ssid, (char *)param->softap_ssid.ssid, param->softap_ssid.ssid_len);

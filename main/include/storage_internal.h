@@ -20,7 +20,6 @@ enum data_type_e {
     DATA_TYPE_UINT64,
     DATA_TYPE_INT64,
     DATA_TYPE_STRING,
-
 	//
 	DATA_TYPE_COUNT,
 };

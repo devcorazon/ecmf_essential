@@ -46,11 +46,11 @@ struct configuration_settings_s {
 
 ////
 struct wifi_configuration_settings_s {
-	uint8_t		ssid[32];
-	uint8_t		password[64];
-	uint8_t     isActif;
-	uint8_t     server[32];
-	uint8_t     port[5];
+	uint8_t		ssid[SSID_SIZE + 1];
+	uint8_t		password[PASSWORD_SIZE + 1];
+	uint8_t     active;
+	uint8_t     server[SERVER_SIZE + 1];
+	uint8_t     port[PORT_SIZE + 1];
 };
 
 struct application_data_s {
@@ -58,6 +58,7 @@ struct application_data_s {
 	uint32_t							crc_noinit_data;
 	struct runtime_data_s				runtime_data;
 	struct configuration_settings_s		configuration_settings;
+	struct wifi_configuration_settings_s wifi_configuration_settings;
 };
 
 #endif /* SRC_INCLUDE_STRUCTS_H_ */
