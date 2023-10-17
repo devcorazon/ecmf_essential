@@ -28,6 +28,6 @@ int blufi_adv_stop(void);
 int blufi_ap_start(void);
 int blufi_ap_stop(void);
 
-int wifi_connect(void);
+int wifi_start(void);
 
 int blufi_ota_start();

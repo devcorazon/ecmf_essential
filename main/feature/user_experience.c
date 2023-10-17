@@ -14,6 +14,7 @@
 #include "ir_receiver.h"
 #include "test.h"
 #include "rgb_led.h"
+#include "blufi.h"
 
 
 #define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
@@ -162,6 +163,10 @@ static void user_experience_state_machine(void) {
 					break;
 
 				case BUTTON_9:
+					break;
+
+				case BUTTON_9_LONG:
+					blufi_adv_start();
 					break;
 
 				case BUTTON_10:

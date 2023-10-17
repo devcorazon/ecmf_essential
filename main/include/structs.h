@@ -44,6 +44,15 @@ struct configuration_settings_s {
 	uint16_t    automatic_cycle_duration;
 };
 
+////
+struct wifi_configuration_settings_s {
+	uint8_t		ssid[32];
+	uint8_t		password[64];
+	uint8_t     isActif;
+	uint8_t     server[32];
+	uint8_t     port[5];
+};
+
 struct application_data_s {
 	struct noinit_data_s				noinit_data;
 	uint32_t							crc_noinit_data;

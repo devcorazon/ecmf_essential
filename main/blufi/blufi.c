@@ -40,10 +40,6 @@
 #define INVALID_REASON                255
 #define INVALID_RSSI                  -128
 
-#define STA_ESP_WIFI_SSID     "Redmi"
-#define STA_ESP_WIFI_PASS     "mmmmmm99"
-#define STA_ESP_MAXIMUM_RETRY  4
-
 #define ESP_WIFI_SSID      "ECMF-{serial_number}"
 #define ESP_WIFI_PASS      "mypassword"
 #define ESP_WIFI_CHANNEL   1
@@ -98,18 +94,7 @@ static esp_blufi_extra_info_t gl_sta_conn_info;
 
 static int wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 
-    if (mode == WIFI_MODE_STA) {
-        memcpy(wifi_config->sta.ssid, STA_ESP_WIFI_SSID, sizeof(STA_ESP_WIFI_SSID) - 1);
-        memcpy(wifi_config->sta.password, STA_ESP_WIFI_PASS, sizeof(STA_ESP_WIFI_PASS) - 1);
-        wifi_config->sta.threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD;
-        wifi_config->sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
-
-        if (esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config) != ESP_OK) {
-            printf("Failed to set WiFi Config STA: %s\n");
-            return -1;
-        }
-    }
-    else if (mode == WIFI_MODE_AP) {
+    if (mode == WIFI_MODE_AP) {
         uint32_t serial_number = get_serial_number();
         char ssid_prefix[] = "ECMF-";
         char ssid[32];
@@ -152,13 +137,13 @@ static void record_wifi_conn_info(int rssi, uint8_t reason) {
     }
 }
 
-static void blufi_connect(void) {
+static void wifi_connect(void) {
     wifi_retry = 0;
     gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
 }
 
-static bool blufi_reconnect(void) {
+static bool wifi_reconnect(void) {
     bool ret;
     if (gl_sta_is_connecting && wifi_retry++ < WIFI_CONNECTION_MAXIMUM_RETRY) {
     	printf("BLUFI WiFi starts reconnection\n");
@@ -218,7 +203,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-        blufi_connect();
+        wifi_connect();
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -229,7 +214,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         gl_sta_ssid_len = event->ssid_len;
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-        if (!gl_sta_connected && !blufi_reconnect()) {
+        if (!gl_sta_connected && !wifi_reconnect()) {
             gl_sta_is_connecting = false;
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
@@ -354,9 +339,8 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-int wifi_connect(void){
+int wifi_start(void){
 	esp_err_t err;
-	wifi_config_t wifi_config = { 0 };
 	wifi_event_group = xEventGroupCreate();
 
 	err = esp_wifi_set_mode(WIFI_MODE_STA);
@@ -365,37 +349,9 @@ int wifi_connect(void){
 		return -1;
 	}
 
-	err = wifi_configure(WIFI_MODE_STA, &wifi_config);
-	if (err != ESP_OK) {
-		return -1;
-	}
-
 	err = esp_wifi_start();
 
-	if (err != ESP_OK) {
-		printf("Failed to start WiFi: %s\n", esp_err_to_name(err));
-	}
-		/* Waiting until either the connection is established (WIFI_CONNECTED_BIT)
-		 * or connection failed for the maximum number of re-tries (WIFI_FAIL_BIT).
-		 * The bits are set by event_handler() (see above) */
-		EventBits_t bits = xEventGroupWaitBits(wifi_event_group,
-				CONNECTED_BIT | FAIL_BIT,
-				pdFALSE,
-				pdFALSE,
-				portMAX_DELAY);
-
-		/* xEventGroupWaitBits() returns the bits before the call returned,
-		 * hence we can test which event actually happened. */
-		if (bits & CONNECTED_BIT) {
-			printf("Connected to AP SSID:%s password:%s", STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
-		} else if (bits & FAIL_BIT) {
-			printf("Failed to connect to SSID:%s, password:%s", STA_ESP_WIFI_SSID, STA_ESP_WIFI_PASS);
-			// -1 here signifies an error. If your function is supposed to return a value, ensure to handle this situation.
-		} else {
-			printf("UNEXPECTED EVENT");
-			// Also handle this situation as you see fit for your application.
-		}
-		return 0;
+	return 0;
 }
 
 int blufi_ap_start(void) {
@@ -420,8 +376,6 @@ int blufi_ap_start(void) {
 
 	return 0;
 }
-
-
 
 int blufi_ap_stop(void) {
     esp_err_t err;
@@ -509,11 +463,12 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         break;
     case ESP_BLUFI_EVENT_REQ_CONNECT_TO_AP:
         printf("BLUFI requset wifi connect to AP\n");
+        wifi_start();
         /* there is no wifi callback when the device has already connected to this wifi
         so disconnect wifi before connection.
         */
         esp_wifi_disconnect();
-        blufi_connect();
+        wifi_connect();
         break;
     case ESP_BLUFI_EVENT_REQ_DISCONNECT_FROM_AP:
         printf("BLUFI requset wifi disconnect from AP\n");

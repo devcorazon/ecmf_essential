@@ -24,6 +24,12 @@
 #define R_HUM_OFFSET_KEY     "r_hum_offset"
 #define DEVICE_STATE_KEY     "device_state"
 #define FILTER_OPERATING_KEY "filter"
+#define SSID_KEY             "ssid"
+#define PASSWORD_KEY         "password"
+#define ACTIVE_KEY           "active"
+#define SERVER_KEY           "server"
+#define PORT_KEY             "port"
+
 
 static nvs_handle_t storage_handle;
 

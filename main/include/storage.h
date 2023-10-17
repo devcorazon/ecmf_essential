@@ -76,6 +76,12 @@ int set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
 uint32_t get_filter_operating(void);
 int set_filter_operating(uint32_t filter_operating);
 
+//const uint8_t* get_wifi_ssid(void);
+//int set_wifi_ssid(const uint8_t *new_ssid);
+//
+//const uint8_t* get_wifi_password(void);
+//int set_wifi_password(const uint8_t *new_password);
+
 
 
 #endif /* MAIN_INCLUDE_STORAGE_H_ */
