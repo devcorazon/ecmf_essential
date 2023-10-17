@@ -15,7 +15,7 @@ idf_component_register(
                     	"blufi/blufi.c"
                     	"blufi/blufi_init.c"
                     	"blufi/blufi_security.c"
-                    	"blufi/ota.c"
+                    	"blufi/blufi_ota.c"
                     	"feature/controller.c"
                     	"feature/user_experience.c"
                     	"feature/statistic.c"

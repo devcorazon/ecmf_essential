@@ -28,7 +28,6 @@
 
 #define OTA_URL_SIZE 256
 
-
 static int validate_image_header(esp_app_desc_t *new_app_info)
 {
     if (new_app_info == NULL) {
@@ -149,7 +148,7 @@ ota_end:
     vTaskDelete(NULL);
 }
 
-int ota_init(){
+int blufi_ota_start(){
     BaseType_t task_created = xTaskCreate(ota_task, "OTA task ", OTA_TASK_STACK_SIZE, NULL, OTA_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;

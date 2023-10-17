@@ -25,8 +25,6 @@
 #include "sgp40.h"
 #include "ltr303.h"
 
-#include "../blufi/ota.c"
-
 ///
 static esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
 static esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
@@ -268,7 +266,8 @@ static int cmd_test_start_func(int argc, char **argv) {
 		printf("Run test_stop and start again! \n");
 	} else {
 		test_in_progress_set();
-		blufi_init(2);
+		blufi_adv_start();
+		blufi_ap_start();
 	}
 	return 0;
 }
@@ -281,7 +280,8 @@ static int cmd_test_stop_func(int argc, char **argv) {
 		set_speed_set(0);  //reset speed
 		fan_set(0,0);      //reset fan
 		rgb_led_set(0,0);  // reset led
-		blufi_deinit();    // reset blufi
+		blufi_adv_stop();  // blufi Access point stop
+		blufi_ap_stop();  // blufi adv point start
 		test_in_progress_reset();
 	}
 	return 0;
@@ -306,10 +306,10 @@ static int cmd_test_ota_func(int argc, char **argv) {
 
 		switch (index) {
 				case 1:
-					blufi_init(1);
+					wifi_connect();
 					break;
 				case 2:
-					ota_init();
+					blufi_ota_start();
 					break;
 				default: // This should never happen
 					printf("Invalid OTA. Supported ota index: 1, 2\n");

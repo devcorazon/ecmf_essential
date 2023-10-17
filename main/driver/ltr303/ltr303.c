@@ -169,7 +169,7 @@ int ltr303_measure_lux(float *lux) {
 		*lux = 0.f;
 	}
 
-	printf("CH0_data_raw: %u - CH1_data_raw: %u - lux: %.3f\n", CH0_data_raw, CH1_data_raw, *lux);
+//	printf("CH0_data_raw: %u - CH1_data_raw: %u - lux: %.3f\n", CH0_data_raw, CH1_data_raw, *lux);
 	*lux = CH0_data_raw;
 
 	return 0;

@@ -18,8 +18,16 @@ int esp_blufi_gap_register_callback(void);
 int esp_blufi_host_init(void);
 int esp_blufi_host_and_cb_init(esp_blufi_callbacks_t *callbacks);
 int esp_blufi_host_deinit(void);
-//int blufi_ap_init();
-//int blufi_sta_init();
-int blufi_init(uint8_t mode);
-int blufi_deinit();
 
+int blufi_init(void);
+int blufi_deinit(void);
+
+int blufi_adv_start(void);
+int blufi_adv_stop(void);
+
+int blufi_ap_start(void);
+int blufi_ap_stop(void);
+
+int wifi_connect(void);
+
+int blufi_ota_start();
