@@ -44,6 +44,9 @@
 #define ESP_WIFI_PASS      "mypassword"
 #define ESP_WIFI_CHANNEL   1
 
+#define BLUFI_CMD_OTA   	"OTA"
+#define BLUFI_CMD_VER   	"VER"
+
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	BLUFI_TASK_PRIORITY				(1)
 #define	BLUFI_TASK_PERIOD				(100ul / portTICK_PERIOD_MS)
@@ -54,6 +57,21 @@ static bool is_bt_mem_released = false;
 
 static esp_netif_t *ap_netif = NULL;
 static esp_netif_t *sta_netif = NULL;
+
+typedef void (*command_callback_t) (char *pnt_data, size_t length);
+
+struct custom_command_s {
+	const char				*command;
+	command_callback_t		command_callback;
+};
+
+static void ota_callback(char *pnt_data, size_t length);
+static void ver_callback(char *pnt_data, size_t length);
+
+static const struct custom_command_s custom_commands_table[] = {
+	{ 	BLUFI_CMD_OTA,	ota_callback	},
+	{ 	BLUFI_CMD_VER,	ver_callback	},
+};
 
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param);
 
@@ -91,6 +109,20 @@ static int gl_sta_ssid_len;
 static wifi_sta_list_t gl_sta_list;
 static bool gl_sta_is_connecting = false;
 static esp_blufi_extra_info_t gl_sta_conn_info;
+
+static void ota_callback(char *pnt_data, size_t length) {
+	blufi_ota_start();
+}
+
+static void ver_callback(char *pnt_data, size_t length) {
+	esp_err_t ret;
+
+//	uint8_t fw_ver[] = { FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH };
+	uint8_t fw_ver[] = { FW_VERSION_MAJOR + 0x30, FW_VERSION_MINOR + 0x30, FW_VERSION_PATCH + 0x30 };
+
+	ret = esp_blufi_send_custom_data(fw_ver, sizeof(fw_ver));
+	printf("ver_callback - %d\n", ret);
+}
 
 static int wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 
@@ -334,6 +366,7 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base,
                 break;
             case ESP_HTTPS_OTA_ABORT:
             	printf("OTA abort");
+            	blufi_ota_start();
                 break;
         }
     }
@@ -580,6 +613,25 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
     case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA:
         printf("Recv Custom Data %" PRIu32 "\n", param->custom_data.data_len);
         esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
+#if 1
+//        char *pnt = strstr((char *) param->custom_data.data, BLUFI_CMD_OTA);
+//        if (pnt != NULL) {
+//        	pnt++;		// :
+//        	blufi_ota_start();
+//        }
+        for (size_t i = 0; i < ARRAY_SIZE(custom_commands_table); i++) {
+        	char *ptr = strstr((char *) param->custom_data.data, custom_commands_table[i].command);
+        	size_t len = param->custom_data.data_len;
+        	if (ptr != NULL) {
+        		len -= strlen(custom_commands_table[i].command);
+        		len--;
+        		ptr += strlen(custom_commands_table[i].command);
+        		ptr++;
+        		custom_commands_table[i].command_callback(ptr, len);
+        		break;
+        	}
+        }
+#endif
         break;
 	case ESP_BLUFI_EVENT_RECV_USERNAME:
         /* Not handle currently */

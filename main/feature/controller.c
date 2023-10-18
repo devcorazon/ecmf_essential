@@ -41,6 +41,7 @@
 #define CALCULATE_DURATION_INVERSIONS_MAX		    1U
 
 #define CONDITION_COUNT_MAX						    3U
+#define CONDITION_COUNT_RETURN_LUX				    300U
 
 //
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature, int16_t immission_temperature);
@@ -248,7 +249,7 @@ static void controller_set(void) {
 	uint16_t relative_humidity_threshold = relative_humidity_threshold_convert[get_relative_humidity_set()];
 	uint16_t voc_threshold = voc_threshold_convert[get_voc_set()];
 	static uint8_t cond_flags = 0U;
-	static uint8_t count_luminosity = 0U;
+	static uint16_t count_luminosity = 0U;
 	static uint8_t count_rh_extra_cycle = 0U;
 	static uint8_t count_voc_extra_cycle = 0U;
 
@@ -279,7 +280,10 @@ static void controller_set(void) {
 					if (count_luminosity < CONDITION_COUNT_MAX) {
 						count_luminosity++;
 					} else {
-						cond_flags |= COND_LUMINOSITY;
+						if (!(cond_flags & COND_LUMINOSITY)) {
+							cond_flags |= COND_LUMINOSITY;
+							count_luminosity = CONDITION_COUNT_RETURN_LUX;
+						}
 					}
 				}
 			} else {
