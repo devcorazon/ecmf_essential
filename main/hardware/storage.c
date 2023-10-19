@@ -43,24 +43,24 @@ static int storage_save_all_entry(void);
 static struct application_data_s application_data;
 
 static struct storage_entry_s storage_entry_poll[] = {
-		{ MODE_SET_KEY,		    &application_data.configuration_settings.mode_set,						DATA_TYPE_UINT8, 	0 },
-		{ SPEED_SET_KEY,		&application_data.configuration_settings.speed_set,						DATA_TYPE_UINT8, 	0 },
+		{ MODE_SET_KEY,		    &application_data.configuration_settings.mode_set,						DATA_TYPE_UINT8, 	1 },
+		{ SPEED_SET_KEY,		&application_data.configuration_settings.speed_set,						DATA_TYPE_UINT8, 	1 },
 
-		{ R_HUM_SET_KEY,		&application_data.configuration_settings.relative_humidity_set,			DATA_TYPE_UINT8, 	0 },
-		{ LUX_SET_KEY,		    &application_data.configuration_settings.lux_set,						DATA_TYPE_UINT8, 	0 },
-		{ VOC_SET_KEY,		    &application_data.configuration_settings.voc_set,						DATA_TYPE_UINT8, 	0 },
+		{ R_HUM_SET_KEY,		&application_data.configuration_settings.relative_humidity_set,			DATA_TYPE_UINT8, 	1 },
+		{ LUX_SET_KEY,		    &application_data.configuration_settings.lux_set,						DATA_TYPE_UINT8, 	1 },
+		{ VOC_SET_KEY,		    &application_data.configuration_settings.voc_set,						DATA_TYPE_UINT8, 	1 },
 
-		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	0 },
-		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	0 },
+		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
+		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
 
- 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    0 },
- 		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   0 },
+ 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
+ 		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
 
-		{SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,  32 },
-		{PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,  64 },
-//		{ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    0 },
-//		{SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,  64 },
-//		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   5 }
+		{SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE },
+		{PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE },
+		{ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
+		{SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE },
+		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE }
 };
 
 
