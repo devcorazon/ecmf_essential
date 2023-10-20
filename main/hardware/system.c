@@ -135,5 +135,14 @@ int system_init(void) {
 	uint8_t pw[64];
 	get_password(pw);
 	printf("PW: %s\n", pw);
+
+	uint8_t server[32];
+	get_server(server);
+	printf("SR: %s\n", server);
+
+	uint8_t port[5];
+	get_port(port);
+	printf("PT: %s\n", port);
 	return 0;
+
 }

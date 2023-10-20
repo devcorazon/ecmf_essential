@@ -31,6 +31,7 @@
 
 #include "blufi.h"
 #include "storage.h"
+#include "structs.h"
 
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
@@ -45,9 +46,9 @@
 #define ESP_WIFI_CHANNEL   1
 
 #define BLUFI_CMD_OTA   	"OTA"
-#define BLUFI_CMD_VERSION   "VER"
-#define BLUFI_CMD_SERVER    "SER"
-#define BLUFI_CMD_PORT      "PRT"
+#define BLUFI_CMD_VERSION   "VERSION"
+#define BLUFI_CMD_SERVER    "SERVER"
+#define BLUFI_CMD_PORT      "PORT"
 
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	BLUFI_TASK_PRIORITY				(1)
@@ -133,7 +134,11 @@ static void analyse_received_data(const uint8_t *data, uint32_t data_len) {
 }
 
 static void ota_callback(char *pnt_data, size_t length) {
-	blufi_ota_start();
+	int ota_value = atoi(pnt_data);
+    if (ota_value != -1) {
+        printf("Received OTA value: %d\n", ota_value);
+    }
+    blufi_ota_start();
 }
 
 static void version_callback(char *pnt_data, size_t length) {
@@ -147,11 +152,19 @@ static void version_callback(char *pnt_data, size_t length) {
 }
 
 static void server_callback(char *pnt_data, size_t length) {
-
+    if (length < SERVER_SIZE) {
+        set_server((const uint8_t *)pnt_data);
+    } else {
+        printf("Received server data exceeds the storage limit.\n");
+    }
 }
 
 static void port_callback(char *pnt_data, size_t length) {
-
+	if (length < PORT_SIZE) {
+		set_port((const uint8_t*) pnt_data);
+	} else {
+		printf("Received port data exceeds the storage limit.\n");
+	}
 }
 
 static int wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
@@ -650,13 +663,6 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         printf("Recv Custom Data %" PRIu32 "\n", param->custom_data.data_len);
         esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
         analyse_received_data(param->custom_data.data, param->custom_data.data_len);
-#if 1
-//        char *pnt = strstr((char *) param->custom_data.data, BLUFI_CMD_OTA);
-//        if (pnt != NULL) {
-//        	pnt++;		// :
-//        	blufi_ota_start();
-//        }
-#endif
         break;
 	case ESP_BLUFI_EVENT_RECV_USERNAME:
         /* Not handle currently */

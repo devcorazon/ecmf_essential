@@ -417,7 +417,7 @@ int set_server(const uint8_t *server) {
 	strcpy((char *)application_data.wifi_configuration_settings.server, (char *) server);
 
 	storage_save_entry_with_key(SERVER_KEY);
-
+    printf("saved server\n");
 	return 0;
 }
 
@@ -429,7 +429,8 @@ int set_port(const uint8_t *port) {
 	memset(application_data.wifi_configuration_settings.port, 0, sizeof(application_data.wifi_configuration_settings.port));
 	strcpy((char *)application_data.wifi_configuration_settings.port, (char *) port);
 
-//	storage_save_entry_with_key(PORT_KEY);
+	storage_save_entry_with_key(PORT_KEY);
+	printf("saved port\n");
 
 	return 0;
 }
@@ -441,7 +442,7 @@ uint8_t get_wifi_active(void) {
 int set_wifi_active(uint8_t active) {
 	application_data.wifi_configuration_settings.active = active;
 
-//	storage_save_entry_with_key(ACTIVE_KEY);
+	storage_save_entry_with_key(ACTIVE_KEY);
 
 	return 0;
 }
