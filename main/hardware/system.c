@@ -112,12 +112,12 @@ static int pwm_init(void) {
 int system_init(void) {
 	storage_init();
 
-	adc_init();
+//	adc_init();
 	i2c_init();
 	pwm_init();
 
 	test_init();
-	sensor_init(&i2c_dev, &adc_dev);
+//	sensor_init(&i2c_dev, &adc_dev);
 	rgb_led_init(&i2c_dev);
 	fan_init();
 	ir_receiver_init();

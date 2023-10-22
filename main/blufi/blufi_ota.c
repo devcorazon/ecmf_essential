@@ -13,15 +13,13 @@
 #include <inttypes.h>
 
 #include "blufi.h"
+#include "blufi_internal.h"
 
 #include "esp_event.h"
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 
-#define OTA_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
-#define	OTA_TASK_PRIORITY		    (1)
-#define	OTA_TASK_PERIOD				(100ul / portTICK_PERIOD_MS)
 
 //const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 //const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
