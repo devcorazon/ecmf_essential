@@ -123,7 +123,7 @@ int system_init(void) {
 	ir_receiver_init();
 	controller_init();
 	user_experience_init();
-	blufi_init();
+	blufi_wifi_init();
 
 	uint8_t ssid[32];
 	get_ssid(ssid);

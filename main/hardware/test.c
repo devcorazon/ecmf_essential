@@ -265,6 +265,7 @@ static int cmd_test_start_func(int argc, char **argv) {
 	if (test_in_progress() == true) {
 		printf("Run test_stop and start again! \n");
 	} else {
+		blufi_ble_init();
 		test_in_progress_set();
 		blufi_adv_start();
 		blufi_ap_start();
@@ -276,6 +277,7 @@ static int cmd_test_stop_func(int argc, char **argv) {
 	if (test_in_progress() == false) {
 		printf("test already in stop! \n");
 	} else {
+		blufi_ble_deinit();
 		set_mode_set(0);   // reset mode
 		set_speed_set(0);  //reset speed
 		fan_set(0,0);      //reset fan

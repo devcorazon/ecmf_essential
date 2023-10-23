@@ -19,8 +19,12 @@ int esp_blufi_host_init(void);
 int esp_blufi_host_and_cb_init(esp_blufi_callbacks_t *callbacks);
 int esp_blufi_host_deinit(void);
 
-int blufi_init(void);
-int blufi_deinit(void);
+
+int blufi_ble_init(void);
+int blufi_ble_deinit(void);
+
+int blufi_wifi_init(void);
+int blufi_wifi_denit(void);
 
 int blufi_adv_start(void);
 int blufi_adv_stop(void);
@@ -28,6 +32,6 @@ int blufi_adv_stop(void);
 int blufi_ap_start(void);
 int blufi_ap_stop(void);
 
-int wifi_start(void);
+int blufi_wifi_start(void);
 
 int blufi_ota_start();

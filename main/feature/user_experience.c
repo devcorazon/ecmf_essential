@@ -166,6 +166,7 @@ static void user_experience_state_machine(void) {
 					break;
 
 				case BUTTON_9_LONG:
+					blufi_ble_init();
 					blufi_adv_start();
 					break;
 
