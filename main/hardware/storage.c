@@ -460,7 +460,7 @@ static int storage_serial_number_obtain(void) {
 }
 
 static int storage_read_entry_with_idx(size_t i) {
-	esp_err_t ret;
+//	esp_err_t ret;
 
 //	printf("storage_read_entry_with_idx: %u - %s - %02x - %u\r\n", i, storage_entry_poll[i].key, storage_entry_poll[i].type, storage_entry_poll[i].size);
 

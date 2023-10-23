@@ -487,7 +487,6 @@ int blufi_adv_start(void) {
     esp_blufi_adv_start();
 
     printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
-    printf("ECMF VERSION :  %d\n", get_serial_number());
 
     return 0;
 }
@@ -632,6 +631,8 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         printf("Recv SOFTAP CHANNEL %d\n", ap_config.ap.channel);
         break;
     case ESP_BLUFI_EVENT_GET_WIFI_LIST:
+    	printf("asked_for_scan\n");
+    	wifi_start();
         wifi_scan_config_t scanConf = {
             .ssid = NULL,
             .bssid = NULL,
