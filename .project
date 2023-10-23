@@ -2074,6 +2074,16 @@
 			<location>C:/Users/youcef.benakmoume/esp-idf-v5.0.1/components/bootloader_support/src/idf/bootloader_sha.c</location>
 		</link>
 		<link>
+			<name>build/ide/esp_idf_components/bootloader_support/src/secure_boot_v2/secure_boot_rsa_signature.c</name>
+			<type>1</type>
+			<location>C:/Users/youcef.benakmoume/esp-idf-v5.0.1/components/bootloader_support/src/secure_boot_v2/secure_boot_rsa_signature.c</location>
+		</link>
+		<link>
+			<name>build/ide/esp_idf_components/bootloader_support/src/secure_boot_v2/secure_boot_signatures_app.c</name>
+			<type>1</type>
+			<location>C:/Users/youcef.benakmoume/esp-idf-v5.0.1/components/bootloader_support/src/secure_boot_v2/secure_boot_signatures_app.c</location>
+		</link>
+		<link>
 			<name>build/ide/esp_idf_components/bt/common/api/esp_blufi_api.c</name>
 			<type>1</type>
 			<location>C:/Users/youcef.benakmoume/esp-idf-v5.0.1/components/bt/common/api/esp_blufi_api.c</location>

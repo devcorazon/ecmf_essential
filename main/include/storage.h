@@ -91,9 +91,5 @@ int set_port(const uint8_t *port);
 uint8_t get_wifi_active(void);
 int set_wifi_active(uint8_t active);
 
-//const uint8_t* get_password(uint8_t password);
-//int set_password(const uint8_t *password);
-
-
 
 #endif /* MAIN_INCLUDE_STORAGE_H_ */

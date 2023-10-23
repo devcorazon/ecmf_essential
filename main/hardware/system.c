@@ -112,12 +112,12 @@ static int pwm_init(void) {
 int system_init(void) {
 	storage_init();
 
-//	adc_init();
+	adc_init();
 	i2c_init();
 	pwm_init();
 
 	test_init();
-//	sensor_init(&i2c_dev, &adc_dev);
+	sensor_init(&i2c_dev, &adc_dev);
 	rgb_led_init(&i2c_dev);
 	fan_init();
 	ir_receiver_init();
@@ -125,24 +125,33 @@ int system_init(void) {
 	user_experience_init();
 	blufi_init();
 
-	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d  - filter_operating: %d\r\n",
-			get_mode_set(), get_speed_set(), get_relative_humidity_set(), get_lux_set(), get_voc_set(), get_temperature_offset(), get_relative_humidity_offset(), get_filter_operating());
-
 	uint8_t ssid[32];
 	get_ssid(ssid);
-	printf("SSID: %s\n", ssid);
 
 	uint8_t pw[64];
 	get_password(pw);
-	printf("PW: %s\n", pw);
 
-	uint8_t server[32];
+	uint8_t server[32] = {0};
 	get_server(server);
-	printf("SR: %s\n", server);
 
-	uint8_t port[5];
+	uint8_t port[5] = {0};
 	get_port(port);
-	printf("PT: %s\n", port);
+
+	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d - SSID: %s - PW: %s - SR: %s - PT: %s\r\n",
+	    get_mode_set(),
+	    get_speed_set(),
+	    get_relative_humidity_set(),
+	    get_lux_set(),
+	    get_voc_set(),
+	    get_temperature_offset(),
+	    get_relative_humidity_offset(),
+	    get_filter_operating(),
+	    ssid,
+	    pw,
+	    server,
+	    port
+	);
+
 	return 0;
 
 }

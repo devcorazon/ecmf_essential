@@ -134,18 +134,22 @@ static void version_callback(char *pnt_data, size_t length) {
 
 static void server_callback(char *pnt_data, size_t length) {
     if (length < SERVER_SIZE) {
-        set_server((const uint8_t *)pnt_data);
-    } else {
+        pnt_data[length] = '\0';
+        set_server((const uint8_t*) pnt_data);
+    }
+    else {
         printf("Received server data exceeds the storage limit.\n");
     }
 }
 
 static void port_callback(char *pnt_data, size_t length) {
-	if (length < PORT_SIZE) {
-		set_port((const uint8_t*) pnt_data);
-	} else {
-		printf("Received port data exceeds the storage limit.\n");
-	}
+    if (length < PORT_SIZE) {  // Less than, to account for null terminator
+        pnt_data[length] = '\0';  // Ensure the data is null-terminated
+        set_port((const uint8_t*) pnt_data);
+    }
+    else {
+        printf("Received port data exceeds the storage limit.\n");
+    }
 }
 
 static int wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {

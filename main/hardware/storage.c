@@ -417,7 +417,6 @@ int set_server(const uint8_t *server) {
 	strcpy((char *)application_data.wifi_configuration_settings.server, (char *) server);
 
 	storage_save_entry_with_key(SERVER_KEY);
-    printf("saved server\n");
 	return 0;
 }
 
@@ -426,14 +425,13 @@ void get_port(uint8_t *port){
 }
 
 int set_port(const uint8_t *port) {
-	memset(application_data.wifi_configuration_settings.port, 0, sizeof(application_data.wifi_configuration_settings.port));
-	strcpy((char *)application_data.wifi_configuration_settings.port, (char *) port);
+    memset(application_data.wifi_configuration_settings.port, 0, sizeof(application_data.wifi_configuration_settings.port));
+    strcpy((char *)application_data.wifi_configuration_settings.port , (char *) port);
 
-	storage_save_entry_with_key(PORT_KEY);
-	printf("saved port\n");
-
-	return 0;
+    storage_save_entry_with_key(PORT_KEY);
+    return 0;
 }
+
 
 uint8_t get_wifi_active(void) {
 	return application_data.wifi_configuration_settings.active;
@@ -462,7 +460,7 @@ static int storage_serial_number_obtain(void) {
 }
 
 static int storage_read_entry_with_idx(size_t i) {
-//	esp_err_t ret;
+	esp_err_t ret;
 
 //	printf("storage_read_entry_with_idx: %u - %s - %02x - %u\r\n", i, storage_entry_poll[i].key, storage_entry_poll[i].type, storage_entry_poll[i].size);
 
@@ -579,7 +577,7 @@ static int storage_save_entry_with_key(const char* key) {
         case DATA_TYPE_STRING:
         	nvs_set_str(storage_handle, storage_entry_poll[i].key, (const char *)(storage_entry_poll[i].data));
 //        	ret = nvs_set_str(storage_handle, storage_entry_poll[i].key, (const char *)(storage_entry_poll[i].data));
-//        	printf("storage_save_entry_with_key - nvs_set_str - index:  %u - ret: %04x\r\n", i, ret);
+//       	printf("storage_save_entry_with_key - nvs_set_str - index:  %u - ret: %04x\r\n", i, ret);
             break;
     }
 
