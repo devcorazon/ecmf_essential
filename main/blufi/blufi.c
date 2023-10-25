@@ -21,6 +21,7 @@
 #include "esp_system.h"
 #include "esp_mac.h"
 #include "esp_wifi.h"
+
 #include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
@@ -28,6 +29,9 @@
 #include "esp_blufi_api.h"
 #include "esp_blufi.h"
 #include "esp_err.h" // for error handling
+
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
 
 #include "blufi.h"
 #include "blufi_internal.h"
@@ -38,6 +42,9 @@
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
+
+#define SERVER_IP_MAX_LENGTH 32
+#define PORT_MAX_LENGTH 5
 
 static bool is_bt_mem_released = false;
 
@@ -152,7 +159,7 @@ static void port_callback(char *pnt_data, size_t length) {
     }
 }
 
-static int wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
+static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 
     if (mode == WIFI_MODE_AP) {
         uint32_t serial_number = get_serial_number();
@@ -197,13 +204,14 @@ static void record_wifi_conn_info(int rssi, uint8_t reason) {
     }
 }
 
-static void wifi_connect(void) {
+static int blufi_wifi_connect(void) {
     wifi_retry = 0;
     gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
+    return 0;
 }
 
-static bool wifi_reconnect(void) {
+static bool blufi_wifi_reconnect(void) {
     bool ret;
     if (gl_sta_is_connecting && wifi_retry++ < WIFI_CONNECTION_MAXIMUM_RETRY) {
     	printf("BLUFI WiFi starts reconnection\n");
@@ -214,6 +222,56 @@ static bool wifi_reconnect(void) {
         ret = false;
     }
     return ret;
+}
+
+int wifi_connect_to_server_tcp(void)
+{
+	uint8_t server_ip[SERVER_IP_MAX_LENGTH + 1] = {0};
+	uint8_t port_str[PORT_MAX_LENGTH + 1] = {0};
+	uint16_t port = 0;
+
+	get_server(server_ip);
+	get_port(port_str);
+
+	// Ensure they're null-terminated after copying
+	server_ip[SERVER_IP_MAX_LENGTH] = '\0';
+	port_str[PORT_MAX_LENGTH] = '\0';
+
+	int int_val = atoi((char *)port_str);
+
+	if (int_val < 0 || int_val > UINT16_MAX) {
+	    // handle invalid port number
+	} else
+	{
+	    port = (uint16_t)int_val;
+	}
+
+    printf("Connecting to %s:%d\n", server_ip, port);
+
+    struct sockaddr_in server_addr;
+    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (sock < 0) {
+    	printf("Unable to create socket: errno %d\n", errno);
+        return -1;
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    inet_pton(AF_INET, (const char *)server_ip, &server_addr.sin_addr);
+
+
+    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
+    	printf("Socket unable to connect: errno %d\n", errno);
+        close(sock);
+        return -1;
+    }
+
+    printf("Successfully connected to the server");
+
+    // we can use this fucntion close socket after opening it
+    // close(sock);
+
+    return 0;
 }
 
 static int softap_get_current_connection_number(void) {
@@ -244,7 +302,6 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
         gl_sta_got_ip = true;
         if (ble_is_connected == true) {
             esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, softap_get_current_connection_number(), &info);
-            set_wifi_active(true);
         } else {
         	printf("BLUFI BLE is not connected yet\n");
         }
@@ -264,7 +321,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-        wifi_connect();
+        blufi_wifi_connect();
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -273,9 +330,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         memcpy(gl_sta_bssid, event->bssid, 6);
         memcpy(gl_sta_ssid, event->ssid, event->ssid_len);
         gl_sta_ssid_len = event->ssid_len;
+        printf("setting_active\n");
+        if (!get_wifi_active()){
+        set_wifi_active(true);
+        }
+        wifi_connect_to_server_tcp();                         // connect to server TCP
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-        if (!gl_sta_connected && !wifi_reconnect()) {
+        if (!gl_sta_connected && !blufi_wifi_reconnect()) {
             gl_sta_is_connecting = false;
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
@@ -364,8 +426,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 }
 
 /* Event handler for catching system events */
-static void ota_event_handler(void* arg, esp_event_base_t event_base,
-                          int32_t event_id, void* event_data)
+static void ota_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_base == ESP_HTTPS_OTA_EVENT) {
         switch (event_id) {
@@ -426,7 +487,7 @@ int blufi_ap_start(void) {
 		return -1;
 	}
 
-	ret = wifi_configure(WIFI_MODE_AP, &wifi_config);
+	ret = blufi_wifi_configure(WIFI_MODE_AP, &wifi_config);
 	if (ret != ESP_OK) {
 		return -1;
 	}
@@ -535,7 +596,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         so disconnect wifi before connection.
         */
         esp_wifi_disconnect();
-        wifi_connect();
+        blufi_wifi_connect();
         break;
     case ESP_BLUFI_EVENT_REQ_DISCONNECT_FROM_AP:
         printf("BLUFI requset wifi disconnect from AP\n");

@@ -146,7 +146,7 @@ ota_end:
     vTaskDelete(NULL);
 }
 
-int blufi_ota_start(){
+int blufi_ota_start(void){
     BaseType_t task_created = xTaskCreate(ota_task, "OTA task ", OTA_TASK_STACK_SIZE, NULL, OTA_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;

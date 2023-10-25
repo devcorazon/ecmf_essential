@@ -125,19 +125,29 @@ int system_init(void) {
 	user_experience_init();
 	blufi_wifi_init();
 
-	uint8_t ssid[32];
-	get_ssid(ssid);
+	if ( get_wifi_active() == true )
+	{
+        blufi_wifi_start();
+		wifi_connect_to_server_tcp();
+	}
 
-	uint8_t pw[64];
+	uint8_t ssid[32] = {0};
+	get_ssid(ssid);
+	printf("SSID: %s\n", ssid);
+
+	uint8_t pw[64] = {0};
 	get_password(pw);
+	printf("PW: %s\n", pw);
 
 	uint8_t server[32] = {0};
 	get_server(server);
+	printf("Server: %s\n", server);
 
 	uint8_t port[5] = {0};
 	get_port(port);
+	printf("Port: %s\n", port);
 
-	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d - SSID: %s - PW: %s - SR: %s - PT: %s\r\n",
+	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
 	    get_mode_set(),
 	    get_speed_set(),
 	    get_relative_humidity_set(),
@@ -145,12 +155,8 @@ int system_init(void) {
 	    get_voc_set(),
 	    get_temperature_offset(),
 	    get_relative_humidity_offset(),
-	    get_filter_operating(),
-	    ssid,
-	    pw,
-	    server,
-	    port
-	);
+	    get_filter_operating()
+		);
 
 	return 0;
 
