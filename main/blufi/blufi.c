@@ -440,7 +440,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
         }
-        printf("STA DISCONNECTION",gl_sta_connected);
+        printf("STA DISCONNECTION\n");
         gl_sta_connected = false;
         gl_sta_got_ip = false;
         memset(gl_sta_ssid, 0, 32);
