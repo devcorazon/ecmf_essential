@@ -28,6 +28,7 @@
 #include "esp_bt.h"
 #include "esp_blufi_api.h"
 #include "esp_blufi.h"
+#include "esp_wps.h"
 #include "esp_err.h" // for error handling
 
 #include "lwip/sockets.h"
@@ -45,6 +46,8 @@
 
 #define SERVER_IP_MAX_LENGTH 32
 #define PORT_MAX_LENGTH 5
+
+#define WPS_MODE WPS_TYPE_PBC
 
 static bool is_bt_mem_released = false;
 static bool wifi_scan_on = false;
@@ -64,6 +67,7 @@ static void version_callback(char *pnt_data, size_t length);
 static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
 static void wifi_active_callback(char *pnt_data, size_t length);
+static void wifi_wps_callback(char *pnt_data, size_t length);
 
 static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_OTA,			ota_callback	    	},
@@ -71,6 +75,7 @@ static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_SERVER,		server_callback			},
 	{ 	BLUFI_CMD_PORT,			port_callback	    	},
 	{	BLUFI_CMD_WIFI_ACTIVE,	wifi_active_callback	},
+	{   BLUFI_CMD_WIFI_WPS,     wifi_wps_callback       },
 };
 
 static uint8_t blufi_service_uuid128[32] = {
@@ -109,6 +114,10 @@ static esp_blufi_callbacks_t callbacks = {
 static wifi_config_t sta_config;
 static wifi_config_t ap_config;
 
+ /* Wps Config */
+static esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
+static wifi_config_t wps_ap_creds[MAX_WPS_AP_CRED];
+
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 
@@ -118,7 +127,8 @@ static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 const int FAIL_BIT = BIT1;
 
-static uint8_t wifi_retry = 0;
+static int s_ap_creds_num = 0;
+static int s_retry_num = 0;
 
 /* store the station info for send back to phone */
 static bool gl_sta_connected = false;
@@ -241,6 +251,24 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
     }
 }
 
+static void wifi_wps_callback(char *pnt_data, size_t length) {
+	int ret;
+
+	printf("Im in WPS CALLBACK\n");
+
+	ret = esp_wifi_wps_enable(&config);
+	if (ret != ESP_OK) {
+		printf("Failed esp_wifi_wps_enable\n");
+		return;
+	}
+
+	ret = esp_wifi_wps_start(0);
+	if (ret != ESP_OK) {
+		printf("Failed esp_wifi_wps_start\n");
+		return;
+	}
+}
+
 static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 
     if (mode == WIFI_MODE_AP) {
@@ -302,7 +330,6 @@ static void record_wifi_conn_info(int rssi, uint8_t reason) {
 }
 
 static int blufi_wifi_connect(void) {
-    wifi_retry = 0;
     gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
     return 0;
@@ -407,7 +434,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
     default:
         break;
     }
-    return;
+    return ;
 }
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) {
@@ -504,17 +531,88 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         free(blufi_ap_list);
         break;
     }
-    case WIFI_EVENT_AP_STACONNECTED: {
-        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
-        printf("station "MACSTR" join, AID=%d\n", MAC2STR(event->mac), event->aid);
-        break;
-    }
-    case WIFI_EVENT_AP_STADISCONNECTED: {
-        wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
-        printf("station "MACSTR" leave, AID=%d\n", MAC2STR(event->mac), event->aid);
-        break;
-    }
+    case WIFI_EVENT_STA_WPS_ER_SUCCESS:
+#if 0
+        printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
+        {
+            wifi_event_sta_wps_er_success_t *evt =
+                (wifi_event_sta_wps_er_success_t *)event_data;
+            int i;
 
+            if (evt) {
+                s_ap_creds_num = evt->ap_cred_cnt;
+                for (i = 0; i < s_ap_creds_num; i++) {
+                    memcpy(wps_ap_creds[i].sta.ssid, evt->ap_cred[i].ssid,
+                           sizeof(evt->ap_cred[i].ssid));
+                    memcpy(wps_ap_creds[i].sta.password, evt->ap_cred[i].passphrase,
+                           sizeof(evt->ap_cred[i].passphrase));
+                }
+                /* If multiple AP credentials are received from WPS, connect with first one */
+                printf("Connecting to SSID: %s, Passphrase: %s\n",
+                         wps_ap_creds[0].sta.ssid, wps_ap_creds[0].sta.password);
+                esp_wifi_set_config(WIFI_IF_STA, &wps_ap_creds[0]);
+
+//                set_ssid(wps_ap_creds[0].sta.ssid);
+//                set_password(wps_ap_creds[0].sta.password);
+            }
+            /*
+             * If only one AP credential is received from WPS, there will be no event data and
+             * esp_wifi_set_config() is already called by WPS modules for backward compatibility
+             * with legacy apps. So directly attempt connection here.
+             */
+            ESP_ERROR_CHECK(esp_wifi_wps_disable());
+            esp_wifi_connect();
+        }
+#else
+        {
+			wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
+			uint8_t ssid[SSID_SIZE + 1] = { 0 };
+			uint8_t psw[PASSWORD_SIZE + 1] = { 0 };
+
+			printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
+
+			if (evt) {
+				wifi_config_t wifi_config = { 0 };
+
+				printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
+
+				memcpy(ssid, evt->ap_cred[0].ssid, sizeof(evt->ap_cred[0].ssid));
+				memcpy(psw, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
+
+				set_ssid((const uint8_t *) ssid);
+				set_password((const uint8_t *) psw);
+
+				blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+			}
+
+			if (gl_sta_connected) {
+				esp_wifi_disconnect();
+			}
+
+			esp_wifi_wps_disable();
+			blufi_wifi_connect();
+        }
+
+#endif
+        break;
+    case WIFI_EVENT_STA_WPS_ER_FAILED:
+    	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
+        esp_wifi_wps_disable();
+        esp_wifi_wps_enable(&config);
+        esp_wifi_wps_start(0);
+        break;
+    case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
+    	printf("WIFI_EVENT_STA_WPS_ER_TIMEOUT\n");
+        esp_wifi_wps_disable();
+        esp_wifi_wps_enable(&config);
+        esp_wifi_wps_start(0);
+        break;
+    case WIFI_EVENT_STA_WPS_ER_PIN:
+    	 printf("WIFI_EVENT_STA_WPS_ER_PIN\n");
+        /* display the PIN code */
+        wifi_event_sta_wps_er_pin_t* event = (wifi_event_sta_wps_er_pin_t*) event_data;
+  //      printf("WPS_PIN = \n" PINSTR, PIN2STR(event->pin_code));
+        break;
     default:
         break;
     }
@@ -671,7 +769,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         /* there is no wifi callback when the device has already connected to this wifi
         so disconnect wifi before connection.
         */
-		if ( gl_sta_connected ) {
+		if (gl_sta_connected) {
 			esp_wifi_disconnect();
 		}
 		blufi_wifi_connect();
@@ -853,7 +951,6 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
-#if 1
 	wifi_config_t wifi_config = { 0 };
 	wifi_event_group = xEventGroupCreate();
 
@@ -874,7 +971,6 @@ int blufi_wifi_init(void) {
 		printf("Failed esp_wifi_start\n");
 		return -1;
 	}
-#endif
 
 	return 0;
 }
