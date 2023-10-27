@@ -335,6 +335,7 @@ static int blufi_wifi_connect(void) {
     return 0;
 }
 
+#if 0
 static bool blufi_wifi_reconnect(void) {
 	printf("BLUFI WiFi starts reconnection\n");
 	if (!gl_sta_is_connecting) {
@@ -344,6 +345,7 @@ static bool blufi_wifi_reconnect(void) {
 
     return true;
 }
+#endif
 
 int wifi_connect_to_server_tcp(void) {
 	uint8_t server_ip[SERVER_IP_MAX_LENGTH + 1] = {0};
