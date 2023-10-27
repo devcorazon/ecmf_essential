@@ -225,22 +225,13 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 					wifi_connect_to_server_tcp();
 				}
 				else {
-					printf("\rWARNING!!!!!\r");
-#if 0
-					blufi_wifi_start();
-#else
 					blufi_wifi_connect();
-#endif
 				}
 			}
 			else {
 				if (gl_sta_connected == true) {
-#if 0
-					blufi_ap_stop();
-#else
 #warning chiudere sock tcp
 					esp_wifi_disconnect();
-#endif
 				}
 			}
 		}
@@ -431,15 +422,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     switch (event_id) {
     case WIFI_EVENT_STA_START:
     	printf("Connecting to AP...\n");
-#if 0
-		if (!wifi_scan_on) {
-			blufi_wifi_connect();
-		}
-#else
-	if ( get_wifi_active() == 1 ) {
-		blufi_wifi_connect();
-	}
-#endif
+	    if ( get_wifi_active() == 1 ) {
+		    blufi_wifi_connect();
+	    }
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -455,6 +440,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
         }
+        printf("STA DISCONNECTION",gl_sta_connected);
         gl_sta_connected = false;
         gl_sta_got_ip = false;
         memset(gl_sta_ssid, 0, 32);
@@ -481,9 +467,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         break;
     case WIFI_EVENT_SCAN_DONE: {
         uint16_t apCount = 0;
-
         wifi_scan_on = false;
-
         if (esp_wifi_scan_get_ap_num(&apCount) != ESP_OK || apCount == 0) {
             printf("Nothing AP found");
             status = -1;
@@ -578,34 +562,6 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base, int32_t ev
     }
 }
 
-int blufi_wifi_start(void){
-#if 0
-	esp_err_t ret;
-	wifi_config_t wifi_config = { 0 };
-	wifi_event_group = xEventGroupCreate();
-
-	ret = esp_wifi_set_mode(WIFI_MODE_STA);
-	if (ret != ESP_OK) {
-		printf("Failed to set WiFi mode: %s\n", esp_err_to_name(ret));
-		return -1;
-	}
-
-	ret = blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
-	if (ret != ESP_OK) {
-		printf("Failed blufi_wifi_configure\n");
-		return -1;
-	}
-
-	ret = esp_wifi_start();
-	if (ret != ESP_OK) {
-		printf("Failed esp_wifi_start\n");
-		return -1;
-	}
-#endif
-
-	return 0;
-}
-
 int blufi_ap_start(void) {
 	esp_err_t ret;
 	wifi_config_t wifi_config = { 0 };
@@ -633,14 +589,6 @@ int blufi_ap_stop(void) {
     esp_err_t ret;
 
     printf("Stopping WiFi access point...");
-
-#if 0
-    ret = esp_wifi_set_mode(WIFI_MODE_NULL);
-    if (ret != ESP_OK) {
-        printf("Failed to set WiFi mode to NULL: %s\n", esp_err_to_name(ret));
-        return -1;
-    }
-#endif
 
     ret = esp_wifi_stop();
     if (ret != ESP_OK) {
@@ -725,15 +673,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         so disconnect wifi before connection.
         */
 		if ( gl_sta_connected ) {
-			printf("Disconnecting...\n");
 			esp_wifi_disconnect();
 		}
-#if 0
-		esp_wifi_stop();
-		blufi_wifi_start();
-#else
 		blufi_wifi_connect();
-#endif
         break;
     case ESP_BLUFI_EVENT_REQ_DISCONNECT_FROM_AP:
         printf("BLUFI requset wifi disconnect from AP\n");
@@ -831,8 +773,6 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         break;
     case ESP_BLUFI_EVENT_GET_WIFI_LIST:
     	printf("Scan started\n");
-//    	wifi_scan_on = true;
-//    	blufi_wifi_start();
         wifi_scan_config_t scanConf = {
             .ssid = NULL,
             .bssid = NULL,

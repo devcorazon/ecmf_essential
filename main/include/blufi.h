@@ -32,8 +32,6 @@ int blufi_adv_stop(void);
 int blufi_ap_start(void);
 int blufi_ap_stop(void);
 
-int blufi_wifi_start(void);
-
 int blufi_ota_start(void);
 
 int wifi_connect_to_server_tcp(void);
