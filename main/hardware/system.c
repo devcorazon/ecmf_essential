@@ -124,11 +124,7 @@ int system_init(void) {
 	controller_init();
 	user_experience_init();
 	blufi_wifi_init();
-#if 0
-	if ( get_wifi_active() == 1 ) {
-        blufi_wifi_start();
-	}
-#endif
+
 	uint8_t ssid[SSID_SIZE + 1] = {0};
 	get_ssid(ssid);
 	printf("SSID: %s\n", ssid);

@@ -310,7 +310,7 @@ static int blufi_wifi_connect(void) {
 
 static bool blufi_wifi_reconnect(void) {
     bool ret;
-    if (gl_sta_is_connecting && wifi_retry++ < WIFI_CONNECTION_MAXIMUM_RETRY) {
+    if (gl_sta_is_connecting) {
     	printf("BLUFI WiFi starts reconnection\n");
         gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
         record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
@@ -435,12 +435,13 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         gl_sta_ssid_len = event->ssid_len;
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-        if (!gl_sta_connected && !blufi_wifi_reconnect()) {
+
+        if ( !gl_sta_connected && !blufi_wifi_reconnect() ) {
             gl_sta_is_connecting = false;
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
         }
-        printf("STA DISCONNECTION\n");
+        printf("STA disconnected\n");
         gl_sta_connected = false;
         gl_sta_got_ip = false;
         memset(gl_sta_ssid, 0, 32);
