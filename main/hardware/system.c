@@ -124,28 +124,28 @@ int system_init(void) {
 	controller_init();
 	user_experience_init();
 	blufi_wifi_init();
-
-	if ( get_wifi_active() == true )
-	{
+#if 0
+	if ( get_wifi_active() == 1 ) {
         blufi_wifi_start();
-		wifi_connect_to_server_tcp();
 	}
-
-	uint8_t ssid[32] = {0};
+#endif
+	uint8_t ssid[SSID_SIZE + 1] = {0};
 	get_ssid(ssid);
 	printf("SSID: %s\n", ssid);
 
-	uint8_t pw[64] = {0};
+	uint8_t pw[PASSWORD_SIZE + 1] = {0};
 	get_password(pw);
 	printf("PW: %s\n", pw);
 
-	uint8_t server[32] = {0};
+	uint8_t server[SERVER_SIZE + 1] = {0};
 	get_server(server);
 	printf("Server: %s\n", server);
 
-	uint8_t port[5] = {0};
+	uint8_t port[PORT_SIZE + 1] = {0};
 	get_port(port);
 	printf("Port: %s\n", port);
+
+	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
 	    get_mode_set(),

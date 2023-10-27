@@ -18,10 +18,11 @@
 #define ESP_WIFI_PASS      "mypassword"
 #define ESP_WIFI_CHANNEL   1
 
-#define BLUFI_CMD_OTA   	"OTA"
-#define BLUFI_CMD_VERSION   "VERSION"
-#define BLUFI_CMD_SERVER    "SERVER"
-#define BLUFI_CMD_PORT      "PORT"
+#define BLUFI_CMD_OTA   		"OTA"
+#define BLUFI_CMD_VERSION   	"VERSION"
+#define BLUFI_CMD_SERVER    	"SERVER"
+#define BLUFI_CMD_PORT      	"PORT"
+#define BLUFI_CMD_WIFI_ACTIVE	"WIFIACT"
 
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	BLUFI_TASK_PRIORITY				(1)
@@ -34,7 +35,6 @@
 #define WIFI_LIST_NUM   10
 
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
-
 
 
 #endif /* MAIN_INCLUDE_BLUFI_INTERNAL_H_ */

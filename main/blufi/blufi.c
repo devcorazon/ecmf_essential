@@ -47,6 +47,7 @@
 #define PORT_MAX_LENGTH 5
 
 static bool is_bt_mem_released = false;
+static bool wifi_scan_on = false;
 
 static esp_netif_t *ap_netif = NULL;
 static esp_netif_t *sta_netif = NULL;
@@ -62,15 +63,39 @@ static void ota_callback(char *pnt_data, size_t length);
 static void version_callback(char *pnt_data, size_t length);
 static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
-
+static void wifi_active_callback(char *pnt_data, size_t length);
 
 static const struct custom_command_s custom_commands_table[] = {
-	{ 	BLUFI_CMD_OTA     ,	  ota_callback	    },
-	{ 	BLUFI_CMD_VERSION ,	  version_callback	},
-	{ 	BLUFI_CMD_SERVER  ,   server_callback	},
-	{ 	BLUFI_CMD_PORT    ,   port_callback	    },
+	{ 	BLUFI_CMD_OTA,			ota_callback	    	},
+	{ 	BLUFI_CMD_VERSION,		version_callback		},
+	{ 	BLUFI_CMD_SERVER,		server_callback			},
+	{ 	BLUFI_CMD_PORT,			port_callback	    	},
+	{	BLUFI_CMD_WIFI_ACTIVE,	wifi_active_callback	},
 };
 
+static uint8_t blufi_service_uuid128[32] = {
+    /* LSB <--------------------------------------------------------------------------------> MSB */
+    //first uuid, 16bit, [12],[13] is the value
+    0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+};
+
+static esp_ble_adv_data_t blufi_adv_data = {
+    .set_scan_rsp = false,
+    .include_name = true,
+    .include_txpower = true,
+    .min_interval = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
+    .max_interval = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
+    .appearance = 0x00,
+    .manufacturer_len = 0,
+    .p_manufacturer_data =  NULL,
+    .service_data_len = 0,
+    .p_service_data = NULL,
+    .service_uuid_len = 16,
+    .p_service_uuid = blufi_service_uuid128,
+    .flag = 0x6,
+};
+
+static int blufi_wifi_connect(void);
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param);
 
 static esp_blufi_callbacks_t callbacks = {
@@ -140,9 +165,11 @@ static void version_callback(char *pnt_data, size_t length) {
 }
 
 static void server_callback(char *pnt_data, size_t length) {
-    if (length < SERVER_SIZE) {
-        pnt_data[length] = '\0';
-        set_server((const uint8_t*) pnt_data);
+	uint8_t server[SERVER_SIZE + 1] = { 0 };
+
+    if (length <= SERVER_SIZE) {
+    	memcpy(server, pnt_data, length);
+        set_server((const uint8_t *) server);
     }
     else {
         printf("Received server data exceeds the storage limit.\n");
@@ -150,12 +177,76 @@ static void server_callback(char *pnt_data, size_t length) {
 }
 
 static void port_callback(char *pnt_data, size_t length) {
-    if (length < PORT_SIZE) {  // Less than, to account for null terminator
-        pnt_data[length] = '\0';  // Ensure the data is null-terminated
-        set_port((const uint8_t*) pnt_data);
+	uint8_t port[PORT_SIZE + 1] = { 0 };
+
+    if (length <= PORT_SIZE) {           // Less than, to account for null terminator
+    	memcpy(port, pnt_data, length);
+        set_port((const uint8_t *) port);
     }
     else {
         printf("Received port data exceeds the storage limit.\n");
+    }
+}
+
+static void wifi_active_callback(char *pnt_data, size_t length) {
+	uint8_t wifi_active = (uint8_t) (pnt_data[0]);
+
+#warning VALUE_NOT_BINARY
+#if 1
+	if ((wifi_active != 0x30) && (wifi_active != 0x31)) {
+		wifi_active = 0x31;
+	}
+	wifi_active -= 0x30;
+#endif
+
+	if (length == 1) {
+		if (get_wifi_active() != wifi_active) {
+			if (wifi_active) {
+				char ssid[SSID_SIZE + 1] = { 0 };
+				char pw[PASSWORD_SIZE + 1] = { 0 };
+				char server[SERVER_SIZE + 1] = { 0 };
+				char port[PORT_SIZE + 1] = { 0 };
+
+				get_ssid((uint8_t *) ssid);
+				get_password((uint8_t *) pw);
+				get_server((uint8_t *) server);
+				get_port((uint8_t *) port);
+
+				if (!strlen(ssid) || !strlen(pw) || !strlen(server) || !strlen(port)) {
+					printf("SSID, PSK, SERVER and PORT missing\n");
+					return;
+				}
+			}
+
+			set_wifi_active(wifi_active);
+
+			if (get_wifi_active()) {
+				if (gl_sta_connected == true) {
+					wifi_connect_to_server_tcp();
+				}
+				else {
+					printf("\rWARNING!!!!!\r");
+#if 0
+					blufi_wifi_start();
+#else
+					blufi_wifi_connect();
+#endif
+				}
+			}
+			else {
+				if (gl_sta_connected == true) {
+#if 0
+					blufi_ap_stop();
+#else
+#warning chiudere sock tcp
+					esp_wifi_disconnect();
+#endif
+				}
+			}
+		}
+	}
+    else {
+        printf("Received wifi_active data exceeds the storage limit.\n");
     }
 }
 
@@ -164,7 +255,7 @@ static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
     if (mode == WIFI_MODE_AP) {
         uint32_t serial_number = get_serial_number();
         char ssid_prefix[] = "ECMF-";
-        char ssid[32];
+        char ssid[SSID_SIZE];
         char serial_number_str[9];
 
         sprintf(serial_number_str, "%08" PRIx32, serial_number);
@@ -179,7 +270,22 @@ static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
         }
 
         if (esp_wifi_set_config(ESP_IF_WIFI_AP, wifi_config) != ESP_OK) {
-            printf("Failed to set WiFi Config AP: %s\n");
+            printf("Failed to set WiFi Config AP.\n");
+            return -1;
+        }
+    }
+    else if (mode == WIFI_MODE_STA) {
+    	uint8_t ssid[SSID_SIZE] = {0};
+    	uint8_t pw[PASSWORD_SIZE] = {0};
+
+    	get_ssid(ssid);
+    	get_password(pw);
+
+    	memcpy(wifi_config->sta.ssid, ssid, sizeof(ssid));
+    	memcpy(wifi_config->sta.password, pw, sizeof(pw));
+
+        if (esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config) != ESP_OK) {
+            printf("Failed to set WiFi Config STA.\n");
             return -1;
         }
     }
@@ -224,8 +330,7 @@ static bool blufi_wifi_reconnect(void) {
     return ret;
 }
 
-int wifi_connect_to_server_tcp(void)
-{
+int wifi_connect_to_server_tcp(void) {
 	uint8_t server_ip[SERVER_IP_MAX_LENGTH + 1] = {0};
 	uint8_t port_str[PORT_MAX_LENGTH + 1] = {0};
 	uint16_t port = 0;
@@ -305,6 +410,10 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
         } else {
         	printf("BLUFI BLE is not connected yet\n");
         }
+
+        if (get_wifi_active()){
+            wifi_connect_to_server_tcp();                         // connect to server TCP
+        }
         break;
     }
     default:
@@ -321,7 +430,16 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-        blufi_wifi_connect();
+    	printf("Connecting to AP...\n");
+#if 0
+		if (!wifi_scan_on) {
+			blufi_wifi_connect();
+		}
+#else
+	if ( get_wifi_active() == 1 ) {
+		blufi_wifi_connect();
+	}
+#endif
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -330,11 +448,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         memcpy(gl_sta_bssid, event->bssid, 6);
         memcpy(gl_sta_ssid, event->ssid, event->ssid_len);
         gl_sta_ssid_len = event->ssid_len;
-        printf("setting_active\n");
-        if (!get_wifi_active()){
-        set_wifi_active(true);
-        }
-        wifi_connect_to_server_tcp();                         // connect to server TCP
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
         if (!gl_sta_connected && !blufi_wifi_reconnect()) {
@@ -368,6 +481,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         break;
     case WIFI_EVENT_SCAN_DONE: {
         uint16_t apCount = 0;
+
+        wifi_scan_on = false;
+
         if (esp_wifi_scan_get_ap_num(&apCount) != ESP_OK || apCount == 0) {
             printf("Nothing AP found");
             status = -1;
@@ -407,12 +523,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     }
     case WIFI_EVENT_AP_STACONNECTED: {
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
-        printf("station "MACSTR" join, AID=%d", MAC2STR(event->mac), event->aid);
+        printf("station "MACSTR" join, AID=%d\n", MAC2STR(event->mac), event->aid);
         break;
     }
     case WIFI_EVENT_AP_STADISCONNECTED: {
         wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
-        printf("station "MACSTR" leave, AID=%d", MAC2STR(event->mac), event->aid);
+        printf("station "MACSTR" leave, AID=%d\n", MAC2STR(event->mac), event->aid);
         break;
     }
 
@@ -463,7 +579,9 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base, int32_t ev
 }
 
 int blufi_wifi_start(void){
+#if 0
 	esp_err_t ret;
+	wifi_config_t wifi_config = { 0 };
 	wifi_event_group = xEventGroupCreate();
 
 	ret = esp_wifi_set_mode(WIFI_MODE_STA);
@@ -472,7 +590,18 @@ int blufi_wifi_start(void){
 		return -1;
 	}
 
+	ret = blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+	if (ret != ESP_OK) {
+		printf("Failed blufi_wifi_configure\n");
+		return -1;
+	}
+
 	ret = esp_wifi_start();
+	if (ret != ESP_OK) {
+		printf("Failed esp_wifi_start\n");
+		return -1;
+	}
+#endif
 
 	return 0;
 }
@@ -505,11 +634,13 @@ int blufi_ap_stop(void) {
 
     printf("Stopping WiFi access point...");
 
+#if 0
     ret = esp_wifi_set_mode(WIFI_MODE_NULL);
     if (ret != ESP_OK) {
         printf("Failed to set WiFi mode to NULL: %s\n", esp_err_to_name(ret));
         return -1;
     }
+#endif
 
     ret = esp_wifi_stop();
     if (ret != ESP_OK) {
@@ -546,7 +677,7 @@ int blufi_adv_start(void) {
     }
 
     // Now, start BLUFi advertising
-    esp_blufi_adv_start();
+    esp_ble_gap_config_adv_data(&blufi_adv_data);
 
     printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
 
@@ -567,8 +698,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
     switch (event) {
     case ESP_BLUFI_EVENT_INIT_FINISH:
     	printf("BLUFI init finish\n");
-
-        esp_blufi_adv_start();
+   	    esp_ble_gap_config_adv_data(&blufi_adv_data);
         break;
     case ESP_BLUFI_EVENT_DEINIT_FINISH:
     	printf("BLUFI deinit finish\n");
@@ -583,7 +713,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         printf("BLUFI ble disconnect\n");
         ble_is_connected = false;
         blufi_security_deinit();
-        esp_blufi_adv_start();
+   	    esp_ble_gap_config_adv_data(&blufi_adv_data);
         break;
     case ESP_BLUFI_EVENT_SET_WIFI_OPMODE:
         printf("BLUFI Set WIFI opmode %d\n", param->wifi_mode.op_mode);
@@ -591,12 +721,19 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         break;
     case ESP_BLUFI_EVENT_REQ_CONNECT_TO_AP:
         printf("BLUFI requset wifi connect to AP\n");
-        blufi_wifi_start();
         /* there is no wifi callback when the device has already connected to this wifi
         so disconnect wifi before connection.
         */
-        esp_wifi_disconnect();
-        blufi_wifi_connect();
+		if ( gl_sta_connected ) {
+			printf("Disconnecting...\n");
+			esp_wifi_disconnect();
+		}
+#if 0
+		esp_wifi_stop();
+		blufi_wifi_start();
+#else
+		blufi_wifi_connect();
+#endif
         break;
     case ESP_BLUFI_EVENT_REQ_DISCONNECT_FROM_AP:
         printf("BLUFI requset wifi disconnect from AP\n");
@@ -693,7 +830,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         printf("Recv SOFTAP CHANNEL %d\n", ap_config.ap.channel);
         break;
     case ESP_BLUFI_EVENT_GET_WIFI_LIST:
-    	blufi_wifi_start();
+    	printf("Scan started\n");
+//    	wifi_scan_on = true;
+//    	blufi_wifi_start();
         wifi_scan_config_t scanConf = {
             .ssid = NULL,
             .bssid = NULL,
@@ -748,6 +887,8 @@ int blufi_wifi_init(void) {
 
 	esp_netif_create_default_wifi_sta();
 
+	esp_netif_create_default_wifi_ap();
+
 	ret = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
 	if (ret != ESP_OK) {
 		printf("Failed to register WiFi event handler: %s\n", esp_err_to_name(ret));
@@ -772,6 +913,30 @@ int blufi_wifi_init(void) {
 		printf("Failed to initialize WiFi: %s\n", esp_err_to_name(ret));
 		return -1;
 	}
+
+#if 1
+	wifi_config_t wifi_config = { 0 };
+	wifi_event_group = xEventGroupCreate();
+
+	ret = esp_wifi_set_mode(WIFI_MODE_STA);
+	if (ret != ESP_OK) {
+		printf("Failed to set WiFi mode: %s\n", esp_err_to_name(ret));
+		return -1;
+	}
+
+	ret = blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+	if (ret != ESP_OK) {
+		printf("Failed blufi_wifi_configure\n");
+		return -1;
+	}
+
+	ret = esp_wifi_start();
+	if (ret != ESP_OK) {
+		printf("Failed esp_wifi_start\n");
+		return -1;
+	}
+#endif
+
 	return 0;
 }
 
