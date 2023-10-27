@@ -309,16 +309,13 @@ static int blufi_wifi_connect(void) {
 }
 
 static bool blufi_wifi_reconnect(void) {
-    bool ret;
-    if (gl_sta_is_connecting) {
-    	printf("BLUFI WiFi starts reconnection\n");
-        gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
-        record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
-        ret = true;
-    } else {
-        ret = false;
-    }
-    return ret;
+	printf("BLUFI WiFi starts reconnection\n");
+	if (!gl_sta_is_connecting) {
+	    gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
+	    record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
+	}
+
+    return true;
 }
 
 int wifi_connect_to_server_tcp(void) {
@@ -421,8 +418,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-    	printf("Connecting to AP...\n");
-	    if ( get_wifi_active() == 1 ) {
+	    if (get_wifi_active() == 1) {
 		    blufi_wifi_connect();
 	    }
         break;
@@ -435,13 +431,15 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         gl_sta_ssid_len = event->ssid_len;
         break;
     case WIFI_EVENT_STA_DISCONNECTED:
-
-        if ( !gl_sta_connected && !blufi_wifi_reconnect() ) {
+#if 0
+    	if (!blufi_wifi_reconnect()) {
             gl_sta_is_connecting = false;
             disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
         }
-        printf("STA disconnected\n");
+#else
+    	blufi_wifi_connect();
+#endif
         gl_sta_connected = false;
         gl_sta_got_ip = false;
         memset(gl_sta_ssid, 0, 32);
