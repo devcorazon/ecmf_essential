@@ -97,6 +97,8 @@ static esp_ble_adv_data_t blufi_adv_data = {
     .flag = 0x6,
 };
 
+static void tcp_received_data_handler(const uint8_t *data);
+
 static int blufi_wifi_connect(void);
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param);
 static int ble_connection_count = 0;
@@ -376,6 +378,8 @@ int wifi_connect_to_server_tcp(void) {
 	uint8_t server_ip[SERVER_SIZE + 1] = {0};
 	uint8_t port_str[PORT_SIZE + 1] = {0};
 	uint16_t port = 0;
+    char recv_buf[128]; // Buffer to store incoming messages
+    int len; // Length of the received message
 
 	get_server(server_ip);
 	get_port(port_str);
@@ -415,9 +419,27 @@ int wifi_connect_to_server_tcp(void) {
 
     printf("Successfully connected to the server");
 
-    // we can use this fucntion close socket after opening it
-    // close(sock);
+    // Infinite loop to listen to messages from the server
+    while(1) {
+        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
+        if (len < 0) {
+            printf("Error occurred during receiving\n");
+            break; // Exit the loop on error
+        }
+        else if (len == 0) {
+            printf("Server disconnected\n");
+            break; // Exit the loop if server closes the connection
+        }
+        else {
+            recv_buf[len] = 0; // Null-terminate the received string
 
+            // Pass the received data to the handler
+            tcp_received_data_handler((const uint8_t *)recv_buf);
+
+        }
+    }
+
+    close(sock);
     return 0;
 }
 
@@ -646,6 +668,22 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     if (status == -1) {
         printf("Error occurred in wifi_event_handler for event_id: %d.\n", event_id);
+    }
+}
+
+static void tcp_received_data_handler(const uint8_t *data) {
+    const char *prefix = "SSID:";
+
+    // Check if the received data starts with "SSID:"
+    if (strncmp((const char *)data, prefix, strlen(prefix)) == 0) {
+        // Extract SSID value
+        const uint8_t *ssid_value = data + strlen(prefix);
+
+        // Set the extracted SSID
+        set_ssid(ssid_value);
+    } else {
+        // Handle other types of messages if necessary
+        printf("Received unrecognized data: %s\n", (const char *)data);
     }
 }
 
@@ -977,7 +1015,8 @@ int blufi_get_wifi_connection_state(void) {
     wifi_ap_record_t wifidata;
     if (esp_wifi_sta_get_ap_info(&wifidata) == ESP_OK) {
         return WIFI_CONNECTED;
-    } else {
+    }
+    else {
         return WIFI_DISCONNECTED;
     }
 }

@@ -141,6 +141,10 @@ int system_init(void) {
 	get_port(port);
 	printf("Port: %s\n", port);
 
+	uint8_t ota_url[OTA_URL_SIZE + 1] = {0};
+	get_port(ota_url);
+	printf("OTA URL: %s\n", ota_url);
+
 	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 
 	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
