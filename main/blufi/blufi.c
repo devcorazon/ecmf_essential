@@ -433,9 +433,8 @@ int wifi_connect_to_server_tcp(void) {
         else {
             recv_buf[len] = 0; // Null-terminate the received string
 
-            // Pass the received data to the handler
-            tcp_received_data_handler((const uint8_t *)recv_buf);
-
+            // Pass the received data to the analysis function
+            analyse_received_data((const uint8_t *)recv_buf, len);
         }
     }
 
@@ -668,22 +667,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     if (status == -1) {
         printf("Error occurred in wifi_event_handler for event_id: %d.\n", event_id);
-    }
-}
-
-static void tcp_received_data_handler(const uint8_t *data) {
-    const char *prefix = "SSID:";
-
-    // Check if the received data starts with "SSID:"
-    if (strncmp((const char *)data, prefix, strlen(prefix)) == 0) {
-        // Extract SSID value
-        const uint8_t *ssid_value = data + strlen(prefix);
-
-        // Set the extracted SSID
-        set_ssid(ssid_value);
-    } else {
-        // Handle other types of messages if necessary
-        printf("Received unrecognized data: %s\n", (const char *)data);
     }
 }
 
