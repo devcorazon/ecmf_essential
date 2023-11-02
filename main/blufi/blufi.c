@@ -18,6 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/timers.h"
 #include "esp_system.h"
 #include "esp_mac.h"
 #include "esp_wifi.h"
@@ -44,10 +45,6 @@
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 
-#define SERVER_IP_MAX_LENGTH 32
-#define PORT_MAX_LENGTH 5
-
-#define WPS_MODE WPS_TYPE_PBC
 
 static bool is_bt_mem_released = false;
 static bool wifi_scan_on = false;
@@ -102,6 +99,9 @@ static esp_ble_adv_data_t blufi_adv_data = {
 
 static int blufi_wifi_connect(void);
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param);
+static int ble_connection_count = 0;
+
+static TimerHandle_t blufi_adv_expiry_timer = NULL;
 
 static esp_blufi_callbacks_t callbacks = {
     .event_cb = ble_event_callback,
@@ -113,6 +113,7 @@ static esp_blufi_callbacks_t callbacks = {
 
 static wifi_config_t sta_config;
 static wifi_config_t ap_config;
+
 
  /* Wps Config */
 static esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
@@ -128,7 +129,6 @@ const int CONNECTED_BIT = BIT0;
 const int FAIL_BIT = BIT1;
 
 static int s_ap_creds_num = 0;
-static int s_retry_num = 0;
 
 /* store the station info for send back to phone */
 static bool gl_sta_connected = false;
@@ -140,6 +140,18 @@ static int gl_sta_ssid_len;
 static wifi_sta_list_t gl_sta_list;
 static bool gl_sta_is_connecting = false;
 static esp_blufi_extra_info_t gl_sta_conn_info;
+
+enum wifi_connection_state {
+    WIFI_DISCONNECTED = 0,
+    WIFI_CONNECTED
+};
+
+enum ble_connection_state {
+    BLE_DISCONNECTED,
+    BLE_CONNECTED
+};
+
+static enum ble_connection_state current_ble_state = BLE_DISCONNECTED;
 
 static void analyse_received_data(const uint8_t *data, uint32_t data_len) {
     for (size_t i = 0; i < ARRAY_SIZE(custom_commands_table); i++) {
@@ -154,14 +166,6 @@ static void analyse_received_data(const uint8_t *data, uint32_t data_len) {
             break;
         }
     }
-}
-
-static void ota_callback(char *pnt_data, size_t length) {
-	int ota_value = atoi(pnt_data);
-    if (ota_value != -1) {
-        printf("Received OTA value: %d\n", ota_value);
-    }
-    blufi_ota_start();
 }
 
 static void version_callback(char *pnt_data, size_t length) {
@@ -187,11 +191,32 @@ static void server_callback(char *pnt_data, size_t length) {
 }
 
 static void port_callback(char *pnt_data, size_t length) {
-	uint8_t port[PORT_SIZE + 1] = { 0 };
+    uint8_t port[PORT_SIZE + 1] = { 0 };
+    char *endptr;
 
-    if (length <= PORT_SIZE) {           // Less than, to account for null terminator
-    	memcpy(port, pnt_data, length);
-        set_port((const uint8_t *) port);
+    if (length <= PORT_SIZE) {
+        memcpy(port, pnt_data, length);
+        long port_value = strtol((char *)port, &endptr, 10);
+
+        // Validate conversion and port range
+        if (*endptr != '\0' || port_value < 0 || port_value > MAX_PORT_VALUE) {
+            printf("Received invalid port number.\n");
+        } else {
+            set_port((const uint8_t *) port);
+        }
+    }
+    else {
+        printf("Received port data exceeds the storage limit.\n");
+    }
+}
+
+static void ota_callback(char *pnt_data, size_t length) {
+    uint8_t ota_url[OTA_URL_SIZE + 1] = { 0 };
+
+    if (length <= OTA_URL_SIZE) {
+        memcpy(ota_url, pnt_data, length);
+        set_ota_url(ota_url);
+        blufi_ota_start();
     }
     else {
         printf("Received port data exceeds the storage limit.\n");
@@ -348,16 +373,16 @@ static bool blufi_wifi_reconnect(void) {
 #endif
 
 int wifi_connect_to_server_tcp(void) {
-	uint8_t server_ip[SERVER_IP_MAX_LENGTH + 1] = {0};
-	uint8_t port_str[PORT_MAX_LENGTH + 1] = {0};
+	uint8_t server_ip[SERVER_SIZE + 1] = {0};
+	uint8_t port_str[PORT_SIZE + 1] = {0};
 	uint16_t port = 0;
 
 	get_server(server_ip);
 	get_port(port_str);
 
 	// Ensure they're null-terminated after copying
-	server_ip[SERVER_IP_MAX_LENGTH] = '\0';
-	port_str[PORT_MAX_LENGTH] = '\0';
+	server_ip[SERVER_SIZE] = '\0';
+	port_str[PORT_SIZE] = '\0';
 
 	int int_val = atoi((char *)port_str);
 
@@ -697,6 +722,10 @@ int blufi_ap_stop(void) {
     return 0;
 }
 
+static void blufi_adv_expiry_timer_cb(TimerHandle_t xTimer) {
+    blufi_ap_stop();
+}
+
 int blufi_adv_start(void) {
     esp_err_t ret;
 
@@ -728,6 +757,16 @@ int blufi_adv_start(void) {
 
     printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
 
+    // Create the timer if not already done
+    if (!blufi_adv_expiry_timer) {
+    	blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
+    }
+
+    // Start the timer
+    if (blufi_adv_expiry_timer) {
+        xTimerStart(blufi_adv_expiry_timer, 0);
+    }
+
     return 0;
 }
 
@@ -755,12 +794,16 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         ble_is_connected = true;
         esp_blufi_adv_stop();
         blufi_security_init();
+        current_ble_state = BLE_CONNECTED;
+        ble_connection_count++;
         break;
     case ESP_BLUFI_EVENT_BLE_DISCONNECT:
         printf("BLUFI ble disconnect\n");
         ble_is_connected = false;
         blufi_security_deinit();
    	    esp_ble_gap_config_adv_data(&blufi_adv_data);
+   	    current_ble_state = BLE_DISCONNECTED;
+   	    ble_connection_count--;
         break;
     case ESP_BLUFI_EVENT_SET_WIFI_OPMODE:
         printf("BLUFI Set WIFI opmode %d\n", param->wifi_mode.op_mode);
@@ -775,6 +818,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
 			esp_wifi_disconnect();
 		}
 		blufi_wifi_connect();
+
         break;
     case ESP_BLUFI_EVENT_REQ_DISCONNECT_FROM_AP:
         printf("BLUFI requset wifi disconnect from AP\n");
@@ -910,6 +954,40 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
     default:
         break;
     }
+}
+
+
+void blufi_get_ble_address(uint8_t* addr) {
+    esp_read_mac(addr, ESP_MAC_BT);
+}
+
+int blufi_get_ble_connection_state(void) {
+    return current_ble_state;
+}
+
+int blufi_get_ble_connection_number(void) {
+    return ble_connection_count;
+}
+
+void blufi_get_wifi_address(uint8_t* addr) {
+    esp_wifi_get_mac(WIFI_IF_STA, addr);
+}
+
+int blufi_get_wifi_connection_state(void) {
+    wifi_ap_record_t wifidata;
+    if (esp_wifi_sta_get_ap_info(&wifidata) == ESP_OK) {
+        return WIFI_CONNECTED;
+    } else {
+        return WIFI_DISCONNECTED;
+    }
+}
+
+int blufi_get_wifi_active(void) {
+    wifi_mode_t mode;
+    if (esp_wifi_get_mode(&mode) == ESP_OK) {
+        return mode == WIFI_MODE_STA || mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA;
+    }
+    return 0;
 }
 
 int blufi_wifi_init(void) {

@@ -8,6 +8,8 @@
 #ifndef SRC_INCLUDE_TYPES_H_
 #define SRC_INCLUDE_TYPES_H_
 
+#include "blufi_internal.h"
+
 #define TEMPERATURE_INVALID						INT16_MAX
 #define RELATIVE_HUMIDITY_INVALID				UINT16_MAX
 #define VOC_INVALID								UINT16_MAX
@@ -119,11 +121,6 @@
 #define COEFF_SCALE								(1000u)
 
 #define RGB_LED_MODE_FOREVER					(UINT8_MAX)
-
-#define SSID_SIZE                               32
-#define PASSWORD_SIZE                           64
-#define SERVER_SIZE                             32
-#define PORT_SIZE                                5
 
 // Enumerations
 

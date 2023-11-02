@@ -14,6 +14,7 @@
 
 #include "blufi.h"
 #include "blufi_internal.h"
+#include "storage.h"
 
 #include "esp_event.h"
 #include "esp_ota_ops.h"
@@ -23,8 +24,6 @@
 
 //const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 //const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
-
-#define OTA_URL_SIZE 256
 
 static int validate_image_header(esp_app_desc_t *new_app_info)
 {
@@ -73,9 +72,12 @@ void ota_task(void *pvParameter)
 {
 	printf("Starting OTA ");
 
+	uint8_t ota_url[OTA_URL_SIZE + 1] = { 0 };  // Assuming you have a define for OTA_URL_MAX_SIZE
+	get_ota_url(ota_url);
+
     esp_err_t ota_finish_err = ESP_OK;
     esp_http_client_config_t config = {
-        .url = "https://fantinicosmistorage.blob.core.windows.net/test-firmware-update/ecmf_essential.bin",
+        .url = (char *)ota_url,
 		.cert_pem = NULL,
        // .cert_pem = (char *)"",  // add certificate here!
         .timeout_ms = 5000,

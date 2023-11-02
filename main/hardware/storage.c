@@ -29,6 +29,7 @@
 #define ACTIVE_KEY           "active"
 #define SERVER_KEY           "server"
 #define PORT_KEY             "port"
+#define OTA_URL_KEY          "ota"
 
 
 static nvs_handle_t storage_handle;
@@ -60,7 +61,8 @@ static struct storage_entry_s storage_entry_poll[] = {
 		{PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE },
 		{ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
 		{SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE },
-		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE }
+		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE },
+		{OTA_URL_KEY,            &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE }
 };
 
 
@@ -429,6 +431,18 @@ int set_port(const uint8_t *port) {
     strcpy((char *)application_data.wifi_configuration_settings.port , (char *) port);
 
     storage_save_entry_with_key(PORT_KEY);
+    return 0;
+}
+
+void get_ota_url(uint8_t *ota_url) {
+	memcpy(ota_url, application_data.wifi_configuration_settings.ota_url, sizeof(application_data.wifi_configuration_settings.ota_url));
+}
+
+int set_ota_url(const uint8_t *ota_url) {
+    memset(application_data.wifi_configuration_settings.ota_url, 0, sizeof(application_data.wifi_configuration_settings.ota_url));
+    strcpy((char *)application_data.wifi_configuration_settings.ota_url , (char *) ota_url);
+
+    storage_save_entry_with_key(OTA_URL_KEY);
     return 0;
 }
 

@@ -88,6 +88,9 @@ int set_server(const uint8_t *server);
 void get_port(uint8_t *port);
 int set_port(const uint8_t *port);
 
+void get_ota_url(uint8_t *ota_url);
+int set_ota_url(const uint8_t *ota_url);
+
 uint8_t get_wifi_active(void);
 int set_wifi_active(uint8_t active);
 

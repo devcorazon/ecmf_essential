@@ -25,6 +25,9 @@
 #define BLUFI_CMD_WIFI_ACTIVE	"WIFIACT"
 #define BLUFI_CMD_WIFI_WPS	    "WPS"
 
+#define WIFI_ADDRESS_LEN        20
+#define BT_ADDRESS_LEN          20
+
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	BLUFI_TASK_PRIORITY				(1)
 #define	BLUFI_TASK_PERIOD				(100ul / portTICK_PERIOD_MS)
@@ -34,8 +37,19 @@
 #define	OTA_TASK_PERIOD				(100ul / portTICK_PERIOD_MS)
 
 #define WIFI_LIST_NUM   10
+#define WPS_MODE WPS_TYPE_PBC
 
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
 
+#define SSID_SIZE                               32
+#define PASSWORD_SIZE                           64
+#define SERVER_SIZE                             32
+#define PORT_SIZE                                5
+
+#define OTA_URL_SIZE 256
+
+#define MAX_PORT_VALUE 65535
+
+#define BLE_ADV_EXPIRY_TIME                      5  //( in min )
 
 #endif /* MAIN_INCLUDE_BLUFI_INTERNAL_H_ */

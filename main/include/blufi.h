@@ -19,6 +19,13 @@ int esp_blufi_host_init(void);
 int esp_blufi_host_and_cb_init(esp_blufi_callbacks_t *callbacks);
 int esp_blufi_host_deinit(void);
 
+void blufi_get_ble_address(uint8_t* addr);
+int blufi_get_ble_connection_state(void);
+int blufi_get_ble_connection_number(void);
+
+void blufi_get_wifi_address(uint8_t* addr);
+int blufi_get_wifi_connection_state(void);
+int blufi_get_wifi_active(void);
 
 int blufi_ble_init(void);
 int blufi_ble_deinit(void);

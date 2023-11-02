@@ -70,6 +70,7 @@ static int cmd_set_mode_speed_func(int argc, char **argv) {
 
 static int cmd_set_factory_settings_func(int argc, char** argv) {
 	storage_set_default();
+	esp_restart();
 
 	return 0;
 }
@@ -289,6 +290,61 @@ static int cmd_test_stop_func(int argc, char **argv) {
 	return 0;
 }
 
+static int cmd_info_func(int argc, char **argv) {
+	if (test_in_progress() == false) {
+		printf("test already in stop! \n");
+	} else {
+
+    uint8_t bt_addr[BT_ADDRESS_LEN];
+    uint8_t wifi_addr[WIFI_ADDRESS_LEN];
+
+    static const char* threshold_str[] = { "Not configured", "Low", "Medium", "High" };
+    static const char* mode_str[] = { "Off", "Immission", "Emission", "Fixed cycle", "Automatic cycle" };
+    static const char* speed_str[] = { "None", "Night", "Vel1", "Vel2", "Vel3", "Boost" };
+    static const char* direction_str[] = { "None", "Out", "In" };
+    static const char* bt_connection_state_str[] = { "Disconnected", "Connected"  };
+    static const char* wifi_connection_state_str[] = { "Disconnected", "Connected" };
+
+    printf("Firmware version: %d.%d.%d\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
+//    printf("ESP version: %d.%d.%d\n", KERNEL_VERSION_MAJOR, KERNEL_VERSION_MINOR, KERNEL_PATCHLEVEL);
+//    printf("Device serial number: " DEVICE_NAME_FMT "\n", *DEVICE_SERIAL_NUMBER_ADDR);
+
+    blufi_get_ble_address(bt_addr);
+    printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", bt_addr[5], bt_addr[4], bt_addr[3], bt_addr[2], bt_addr[1], bt_addr[0]);
+    printf("BT Connection Number: %d - Connection State: %s\n", blufi_get_ble_connection_number(), bt_connection_state_str[blufi_get_ble_connection_state()]);
+
+    blufi_get_wifi_address(wifi_addr);
+    printf("WIFI address: %02X:%02X:%02X:%02X:%02X:%02X\n", wifi_addr[5], wifi_addr[4], wifi_addr[3], wifi_addr[2], wifi_addr[1], wifi_addr[0]);
+    printf("WIFI Active: %s - Connection State: %s\n", (get_wifi_active() == 0 ? "No" : "Yes"), wifi_connection_state_str[blufi_get_wifi_connection_state()]);
+
+    printf("Relative Humidity threshold: %s - Advanced Control: %s\n", threshold_str[get_relative_humidity_set() & 0x7f], get_relative_humidity_set() & 0x80 ? "Enabled" : "Disabled");
+    printf("Luminosity threshold: %s\n", threshold_str[get_lux_set()]);
+    printf("VOC threshold: %s - Advanced Control: %s\n", threshold_str[get_voc_set() & 0x7f], get_voc_set() & 0x80 ? "Enabled" : "Disabled");
+
+    printf("Temperature Offset: %d - Humidity Offset: %d\n", get_temperature_offset(), get_relative_humidity_offset());
+
+//    for (size_t idx = 0U; idx < BT_DEVICE_MAX; idx++) {
+//        get_address_device_paired(bt_addr, idx);
+//        if (memcmp(bt_addr, BT_ADDRESS_ANY, BT_ADDRESS_LEN)) {
+//            printf("Device ECMF2 paired %d: %02X:%02X:%02X:%02X:%02X:%02X\n", idx, bt_addr[5], bt_addr[4], bt_addr[3], bt_addr[2], bt_addr[1], bt_addr[0]);
+//        }
+//    }
+
+    printf("Setting Mode: %s - Setting Speed: %s\n", mode_str[get_mode_set()], speed_str[get_speed_set()]);
+    printf("Mode: %s [calculate duration: %s]  [extra cycle: %s]  [slave self driving: %s]  [free cooling: %s]\n", mode_str[get_mode_state() & 0x1f], get_mode_state() & 0x80 ? "Yes" : "No", get_mode_state() & 0x40 ? "Yes" : "No", get_mode_state() & 0x20 ? "Yes" : "No", get_mode_state() & 0x10 ? "Yes" : "No");
+
+    printf("Speed: %s - Direction: %s\n", speed_str[ADJUST_SPEED(get_speed_state())], direction_str[get_direction_state()]);
+
+    printf("Temperature: %d [%.2f]\n", get_temperature(), get_temperature() * 0.1);
+    printf("Humidity: %d [%.2f]\n", get_relative_humidity(), get_relative_humidity() * 0.1);
+    printf("VOC: %d\n", get_voc());
+    printf("Luminosity: %d\n", get_lux());
+
+	}
+
+	return 0;
+}
+
 ///
 int test_init(void) {
 	esp_console_register_help_command();
@@ -357,6 +413,16 @@ int test_init(void) {
 	     };
 
 	 esp_console_cmd_register(&cmd_test_stop);
+
+	 const esp_console_cmd_t cmd_info = {
+	       .command = "info",
+	       .help = "info",
+	       .hint = NULL,
+	       .func = cmd_info_func,
+	     };
+
+	 esp_console_cmd_register(&cmd_info);
+
 
 	 return 0;
 }
