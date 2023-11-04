@@ -19,6 +19,7 @@ idf_component_register(
                     	"feature/controller.c"
                     	"feature/user_experience.c"
                     	"feature/statistic.c"
+                    	"feature/messaging.c"
      	
 
                     INCLUDE_DIRS 

@@ -7,6 +7,8 @@
 #include "system.h"
 #include "esp_blufi_api.h"
 
+#include "blufi_internal.h"
+
 void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free);
 int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len);
 int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len);
@@ -23,6 +25,7 @@ void blufi_get_ble_address(uint8_t* addr);
 int blufi_get_ble_connection_state(void);
 int blufi_get_ble_connection_number(void);
 
+int blufi_wifi_connect(void);
 void blufi_get_wifi_address(uint8_t* addr);
 int blufi_get_wifi_connection_state(void);
 int blufi_get_wifi_active(void);

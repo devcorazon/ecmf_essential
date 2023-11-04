@@ -8,8 +8,6 @@
 #ifndef MAIN_INCLUDE_BLUFI_INTERNAL_H_
 #define MAIN_INCLUDE_BLUFI_INTERNAL_H_
 
-#include "blufi.h"
-
 #define WIFI_CONNECTION_MAXIMUM_RETRY 4
 #define INVALID_REASON                255
 #define INVALID_RSSI                  -128
