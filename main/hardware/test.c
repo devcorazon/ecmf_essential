@@ -63,8 +63,8 @@ static int cmd_set_mode_speed_func(int argc, char **argv) {
 		return -1;
 	}
 
-		set_mode_set(mode_set);
-		set_speed_set(speed_set);
+	set_mode_set(mode_set);
+	set_speed_set(speed_set);
 
 	return 0;
 }
