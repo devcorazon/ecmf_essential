@@ -35,6 +35,7 @@ static int testing_in_progress = false;
 static int test_in_progress_set() {
 	return testing_in_progress = true;
 }
+
 static int test_in_progress_reset() {
 	return testing_in_progress = false;
 }
@@ -99,7 +100,8 @@ static int cmd_test_led_func(int argc, char** argv) {
 
 	if ( test_in_progress() == false){
 		printf("Make sure to run test_start \n");
-	} else {
+	}
+	else {
 		switch (index)
 		{
 		case 0:
@@ -135,7 +137,8 @@ static int cmd_test_all_func(int argc, char **argv) {
 
 	if (test_in_progress() == false) {
 		printf("Make sure to run test_start \n");
-	} else {
+	}
+	else {
 
 		uint32_t serial_number = get_serial_number();
 
@@ -146,14 +149,16 @@ static int cmd_test_all_func(int argc, char **argv) {
 		int16_t temp = get_temperature();
 		if (temp == TEMPERATURE_INVALID) {
 			printf("Temperature reading error\n");
-		} else {
+		}
+		else {
 			printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 		}
 
 		uint16_t rh = get_relative_humidity();
 		if (rh == RELATIVE_HUMIDITY_INVALID) {
 			printf("Relative humidity reading error\n");
-		} else {
+		}
+		else {
 			printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
 		}
 
@@ -161,7 +166,8 @@ static int cmd_test_all_func(int argc, char **argv) {
 	    if (voc == VOC_INVALID)
 	    {
 	        printf("VOC Index reading error\n");
-	    } else {
+	    }
+	    else {
 	        printf("VOC Index =  %u4 \n", voc);
 	    }
 
@@ -170,7 +176,8 @@ static int cmd_test_all_func(int argc, char **argv) {
 
 		if (u16_lux == LUX_INVALID) {
 			printf("LUX reading error\n");
-		} else {
+		}
+		else {
 			printf("LUX =  %u.%01u %%\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
 		}
 
@@ -179,7 +186,8 @@ static int cmd_test_all_func(int argc, char **argv) {
 
 		if (i16_ntc_temp == TEMPERATURE_INVALID) {
 			printf("NTC Temperature reading error\n");
-		} else {
+		}
+		else {
 			printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 		}
 	}
@@ -293,7 +301,8 @@ static int cmd_test_stop_func(int argc, char **argv) {
 static int cmd_info_func(int argc, char **argv) {
 	if (test_in_progress() == false) {
 		printf("test already in stop! \n");
-	} else {
+	}
+	else {
 
     uint8_t bt_addr[BT_ADDRESS_LEN];
     uint8_t wifi_addr[WIFI_ADDRESS_LEN];
@@ -317,9 +326,9 @@ static int cmd_info_func(int argc, char **argv) {
     printf("WIFI address: %02X:%02X:%02X:%02X:%02X:%02X\n", wifi_addr[5], wifi_addr[4], wifi_addr[3], wifi_addr[2], wifi_addr[1], wifi_addr[0]);
     printf("WIFI Active: %s - Connection State: %s\n", (get_wifi_active() == 0 ? "No" : "Yes"), wifi_connection_state_str[blufi_get_wifi_connection_state()]);
 
-    printf("Relative Humidity threshold: %s - Advanced Control: %s\n", threshold_str[get_relative_humidity_set() & 0x7f], get_relative_humidity_set() & 0x80 ? "Enabled" : "Disabled");
+    printf("Relative Humidity threshold: %s\n", threshold_str[get_relative_humidity_set() & 0x7f]);
     printf("Luminosity threshold: %s\n", threshold_str[get_lux_set()]);
-    printf("VOC threshold: %s - Advanced Control: %s\n", threshold_str[get_voc_set() & 0x7f], get_voc_set() & 0x80 ? "Enabled" : "Disabled");
+    printf("VOC threshold: %s\n", threshold_str[get_voc_set() & 0x7f]);
 
     printf("Temperature Offset: %d - Humidity Offset: %d\n", get_temperature_offset(), get_relative_humidity_offset());
 
@@ -331,7 +340,7 @@ static int cmd_info_func(int argc, char **argv) {
 //    }
 
     printf("Setting Mode: %s - Setting Speed: %s\n", mode_str[get_mode_set()], speed_str[get_speed_set()]);
-    printf("Mode: %s [calculate duration: %s]  [extra cycle: %s]  [slave self driving: %s]  [free cooling: %s]\n", mode_str[get_mode_state() & 0x1f], get_mode_state() & 0x80 ? "Yes" : "No", get_mode_state() & 0x40 ? "Yes" : "No", get_mode_state() & 0x20 ? "Yes" : "No", get_mode_state() & 0x10 ? "Yes" : "No");
+    printf("Mode: %s [calculate duration: %s]  [extra cycle: %s]  \n", mode_str[get_mode_state() & 0x1f], get_mode_state() & 0x80 ? "Yes" : "No", get_mode_state() & 0x40 ? "Yes" : "No");
 
     printf("Speed: %s - Direction: %s\n", speed_str[ADJUST_SPEED(get_speed_state())], direction_str[get_direction_state()]);
 
@@ -339,7 +348,6 @@ static int cmd_info_func(int argc, char **argv) {
     printf("Humidity: %d [%.2f]\n", get_relative_humidity(), get_relative_humidity() * 0.1);
     printf("VOC: %d\n", get_voc());
     printf("Luminosity: %d\n", get_lux());
-
 	}
 
 	return 0;

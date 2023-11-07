@@ -39,6 +39,7 @@
 
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
 
+#define BSSID_SIZE                               6
 #define SSID_SIZE                               32
 #define PASSWORD_SIZE                           64
 #define SERVER_SIZE                             32
@@ -48,6 +49,7 @@
 
 #define MAX_PORT_VALUE                        65535
 
-#define BLE_ADV_EXPIRY_TIME                      5  //( in min )
+#define BLE_ADV_EXPIRY_TIME                      1     // ( in min )
+#define WIFI_RECONNECTING_DELAY               1000     // (in msec )
 
 #endif /* MAIN_INCLUDE_BLUFI_INTERNAL_H_ */

@@ -12,10 +12,12 @@ idf_component_register(
                     	"driver/sgp40/sgp40.c" "driver/sgp40/sensirion_gas_index_algorithm.c"
                     	"driver/ltr303/ltr303.c"
                     	"driver/ktd2027/ktd2027.c"
-                    	"blufi/blufi.c"
+                    	"blufi/blufi_wifi.c"
+                    	"blufi/blufi_ble.c"
                     	"blufi/blufi_init.c"
                     	"blufi/blufi_security.c"
                     	"blufi/blufi_ota.c"
+
                     	"feature/controller.c"
                     	"feature/user_experience.c"
                     	"feature/statistic.c"

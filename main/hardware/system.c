@@ -142,7 +142,7 @@ int system_init(void) {
 	printf("Port: %s\n", port);
 
 	uint8_t ota_url[OTA_URL_SIZE + 1] = {0};
-	get_port(ota_url);
+	get_ota_url(ota_url);
 	printf("OTA URL: %s\n", ota_url);
 
 	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");

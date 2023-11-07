@@ -146,20 +146,20 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 			set_wifi_active(wifi_active);
 
 			if (get_wifi_active()) {
-		//		if (gl_sta_connected == true) {
+				if (gl_sta_connected == true) {
 					wifi_connect_to_server_tcp();
-		//		}
-		//		else {
-		//			blufi_wifi_connect();
+				}
+				else {
+					blufi_wifi_connect();
 				}
 			}
 			else {
-//				if (gl_sta_connected == true) {
+				if (gl_sta_connected == true) {
 #warning chiudere sock tcp
 					esp_wifi_disconnect();
-//				}
+				}
 			}
-	//	}
+		}
 	}
     else {
         printf("Received wifi_active data exceeds the storage limit.\n");

@@ -40,7 +40,7 @@
 #define BUTTON_8               0xA55A
 #define BUTTON_8_LONG		   0x8000A55A
 #define BUTTON_9               0xE619
-#define BUTTON_9_LONG          0x8000E619
+#define BUTTON_9_LONG          0x7F80//0x8000E619
 #define BUTTON_10              0xF609
 #define BUTTON_10_LONG		   0x8000F609
 #define BUTTON_11              0xF807
