@@ -49,7 +49,8 @@
 
 #define MAX_PORT_VALUE                        65535
 
-#define BLE_ADV_EXPIRY_TIME                      1     // ( in min )
-#define WIFI_RECONNECTING_DELAY               1000     // (in msec )
+#define BLE_ADV_EXPIRY_TIME                       1     // ( in min )
+#define TCP_CONN_RECONNECTING_DELAY            1000     // ( in msec )
+#define WIFI_RECONNECTING_DELAY                1000     // (in msec )
 
 #endif /* MAIN_INCLUDE_BLUFI_INTERNAL_H_ */

@@ -51,6 +51,9 @@ int blufi_wifi_connect(void);
 wifi_config_t sta_config = {0};
 wifi_config_t ap_config = {0};
 
+static TimerHandle_t tcp_reconnect_timer = NULL;
+static int sock = -1; // Global socket descriptor
+
  /* Wps Config */
 static esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
 static wifi_config_t wps_ap_creds[MAX_WPS_AP_CRED];
@@ -81,6 +84,11 @@ enum wifi_connection_state {
     WIFI_DISCONNECTED = 0,
     WIFI_CONNECTED
 };
+
+void tcp_reconnect_timer_callback(TimerHandle_t xTimer) {
+    printf("TCP expiry, retrying connection...\n");
+    wifi_connect_to_server_tcp();
+}
 
 static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 
@@ -161,69 +169,95 @@ static bool blufi_wifi_reconnect(void) {
 #endif
 
 int wifi_connect_to_server_tcp(void) {
-	uint8_t server_ip[SERVER_SIZE + 1] = {0};
-	uint8_t port_str[PORT_SIZE + 1] = {0};
-	uint16_t port = 0;
-    char recv_buf[128]; // Buffer to store incoming messages
-    int len; // Length of the received message
+    uint8_t server_ip[SERVER_SIZE + 1] = {0};
+    uint8_t port_str[PORT_SIZE + 1] = {0};
+    uint16_t port = 0;
+    char recv_buf[128];
+    int len;
 
-	get_server(server_ip);
-	get_port(port_str);
+    get_server(server_ip);
+    get_port(port_str);
 
-	// Ensure they're null-terminated after copying
-	server_ip[SERVER_SIZE] = '\0';
-	port_str[PORT_SIZE] = '\0';
+    server_ip[SERVER_SIZE] = '\0';
+    port_str[PORT_SIZE] = '\0';
 
-	int int_val = atoi((char *)port_str);
-
-	if (int_val < 0 || int_val > UINT16_MAX) {
-	    // handle invalid port number
-	}
-	else {
-	    port = (uint16_t)int_val;
-	}
-
-    printf("Connecting to %s:%d\n", server_ip, port);
+    int int_val = atoi((char *)port_str);
+    if (int_val < 0 || int_val > UINT16_MAX) {
+        // Handle invalid port number
+        return -1;
+    } else {
+        port = (uint16_t)int_val;
+    }
 
     struct sockaddr_in server_addr;
-    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
-    	printf("Unable to create socket: errno %d\n", errno);
+        printf("Unable to create socket: errno %d\n", errno);
         return -1;
+    }
+
+    struct addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET; // Use IPv4
+    hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
+    hints.ai_protocol = IPPROTO_TCP; // TCP protocol
+
+    // Validate IP address format or resolve hostname
+    if (inet_pton(AF_INET, (const char *)server_ip, &server_addr.sin_addr) != 1) {
+        // If the server_ip is not a valid IP address, resolve the hostname
+        if (getaddrinfo((const char *)server_ip, NULL, &hints, &res) != 0) {
+            printf("DNS resolution failed for %s: errno %d\n", server_ip, errno);
+            close(sock);
+            sock = -1;
+            return -1;
+        }
+        // Copy the resolved IP address to server_addr
+        memcpy(&server_addr.sin_addr, &((struct sockaddr_in *)(res->ai_addr))->sin_addr, sizeof(struct in_addr));
+        freeaddrinfo(res); // Free the address info struct
     }
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
-    inet_pton(AF_INET, (const char *)server_ip, &server_addr.sin_addr);
+
+    printf("Connecting to %s:%d\n", inet_ntoa(server_addr.sin_addr), port);
+
+    // Create the reconnect timer if it hasn't been created yet
+    if (tcp_reconnect_timer == NULL) {
+        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_CONN_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+    }
 
     if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-    	printf("Socket unable to connect: errno %d\n", errno);
+        printf("Socket unable to connect: errno %d\n", errno);
         close(sock);
+        sock = -1;
+        // Start the reconnect timer to retry after a delay
+        xTimerStart(tcp_reconnect_timer, 0);
         return -1;
     }
 
-    printf("Successfully connected to the server");
+    printf("Successfully connected to the server\n");
+    // Connection established, stop the reconnect timer if it is running
+    xTimerStop(tcp_reconnect_timer, 0);
 
-    // Infinite loop to listen to messages from the server
-    while(1) {
+    // Receive data loop
+    while (1) {
         len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
-        if (len < 0) {
-            printf("Error occurred during receiving\n");
-            break; // Exit the loop on error
+        // If error in receiving or connection lost
+        if (len <= 0) {
+            printf("Server disconnected or recv error: errno %d\n", errno);
+            close(sock);
+            sock = -1;
+            // Restart the reconnect timer to retry after a delay
+            xTimerStart(tcp_reconnect_timer, 0);
+            return 0;
         }
-        else if (len == 0) {
-            printf("Server disconnected\n");
-            break; // Exit the loop if server closes the connection
-        }
-        else {
-            recv_buf[len] = 0; // Null-terminate the received string
-
-            // Pass the received data to the analysis function
-            analyse_received_data((const uint8_t *)recv_buf, len);
-        }
+        // Process received data
+        recv_buf[len] = '\0'; // Null-terminate the received data
+        analyse_received_data((const uint8_t *)recv_buf, len);
     }
-
+    // If the loop exits
     close(sock);
+    sock = -1;
     return 0;
 }
 
