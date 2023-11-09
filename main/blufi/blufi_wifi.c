@@ -428,7 +428,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
              * esp_wifi_set_config() is already called by WPS modules for backward compatibility
              * with legacy apps. So directly attempt connection here.
              */
-            ESP_ERROR_CHECK(esp_wifi_wps_disable());
+            esp_wifi_wps_disable();
             esp_wifi_connect();
         }
 #else

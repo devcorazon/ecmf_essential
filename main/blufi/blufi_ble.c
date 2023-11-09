@@ -329,6 +329,11 @@ int blufi_get_ble_connection_number(void) {
 int blufi_ble_init(void) {
 	esp_err_t ret;
 
+	esp_bt_controller_status_t bt_status = esp_bt_controller_get_status();
+    if (bt_status == ESP_BT_CONTROLLER_STATUS_INITED || bt_status == ESP_BT_CONTROLLER_STATUS_ENABLED) {
+	  blufi_ble_deinit();
+    }
+
 	if (!is_bt_mem_released) {
 		ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
 		if (ret != ESP_OK) {

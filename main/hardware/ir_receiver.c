@@ -162,7 +162,7 @@ static void ir_receive_task(void* param) {
         .gpio_num = IR_RX_GPIO_NUM,
     };
     rmt_channel_handle_t rx_channel = NULL;
-    ESP_ERROR_CHECK(rmt_new_rx_channel(&rx_channel_cfg, &rx_channel));
+    rmt_new_rx_channel(&rx_channel_cfg, &rx_channel);
 
 //    printf("register RX done callback\n");
     QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
@@ -170,7 +170,7 @@ static void ir_receive_task(void* param) {
     rmt_rx_event_callbacks_t cbs = {
         .on_recv_done = rmt_rx_done_callback,
     };
-    ESP_ERROR_CHECK(rmt_rx_register_event_callbacks(rx_channel, &cbs, receive_queue));
+    rmt_rx_register_event_callbacks(rx_channel, &cbs, receive_queue);
 
     // the following timing requirement is based on NEC protocol
     rmt_receive_config_t receive_config = {
@@ -179,20 +179,20 @@ static void ir_receive_task(void* param) {
     };
 
 //    printf("enable RMT TX and RX channels\n");
-    ESP_ERROR_CHECK(rmt_enable(rx_channel));
+    rmt_enable(rx_channel);
 
     // save the received RMT symbols
     rmt_symbol_word_t raw_symbols[64]; // 64 symbols should be sufficient for a standard NEC frame
     rmt_rx_done_event_data_t rx_data;
     // ready to receive
-    ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+    rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config);
     while (1) {
         // wait for RX done signal
         if (xQueueReceive(receive_queue, &rx_data, pdMS_TO_TICKS(1000)) == pdPASS) {
             // parse the receive symbols and print the result
             parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
             // start receive again
-            ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
+            rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config);
         }
     }
 }
