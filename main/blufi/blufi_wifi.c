@@ -642,7 +642,6 @@ int blufi_wifi_init(void) {
 	}
 
 	ret = esp_wifi_start();
-	printf("wifi statring 1");
 	if (ret != ESP_OK) {
 		printf("Failed esp_wifi_start\n");
 		return -1;
