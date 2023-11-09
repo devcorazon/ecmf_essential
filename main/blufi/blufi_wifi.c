@@ -52,7 +52,7 @@ static TimerHandle_t tcp_reconnect_timer = NULL;
 static int sock = -1; // Global socket descriptor
 
  /* Wps Config */
-static esp_wps_config_t config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
+esp_wps_config_t wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
 static wifi_config_t wps_ap_creds[MAX_WPS_AP_CRED];
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
@@ -463,13 +463,13 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     case WIFI_EVENT_STA_WPS_ER_FAILED:
     	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
         esp_wifi_wps_disable();
-        esp_wifi_wps_enable(&config);
+        esp_wifi_wps_enable(&wps_config);
         esp_wifi_wps_start(0);
         break;
     case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
     	printf("WIFI_EVENT_STA_WPS_ER_TIMEOUT\n");
         esp_wifi_wps_disable();
-        esp_wifi_wps_enable(&config);
+        esp_wifi_wps_enable(&wps_config);
         esp_wifi_wps_start(0);
         break;
     case WIFI_EVENT_STA_WPS_ER_PIN:

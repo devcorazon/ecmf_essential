@@ -6,9 +6,11 @@
 
 #include "system.h"
 #include "esp_blufi_api.h"
+#include "esp_wps.h"
 
 #include "blufi_internal.h"
 
+extern esp_wps_config_t wps_config;
 extern bool gl_sta_connected;
 extern bool gl_sta_got_ip;
 extern bool ble_is_connected;

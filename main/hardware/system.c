@@ -127,7 +127,7 @@ int system_init(void) {
 
 	uint8_t ssid[SSID_SIZE + 1] = {0};
 	get_ssid(ssid);
-	printf("SSID: %s\n", ssid);
+	printf("\nSSID: %s\n", ssid);
 
 	uint8_t pw[PASSWORD_SIZE + 1] = {0};
 	get_password(pw);
@@ -145,7 +145,7 @@ int system_init(void) {
 	get_ota_url(ota_url);
 	printf("OTA URL: %s\n", ota_url);
 
-//	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
+	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 
 //	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
 //	    get_mode_set(),

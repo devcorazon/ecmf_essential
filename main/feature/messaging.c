@@ -171,11 +171,11 @@ static void wifi_wps_callback(char *pnt_data, size_t length) {
 
 	printf("Im in WPS CALLBACK\n");
 
-//	ret = esp_wifi_wps_enable(&config);
-//	if (ret != ESP_OK) {
-//		printf("Failed esp_wifi_wps_enable\n");
-//		return;
-//	}
+	ret = esp_wifi_wps_enable(&wps_config);
+	if (ret != ESP_OK) {
+		printf("Failed esp_wifi_wps_enable\n");
+		return;
+	}
 
 	ret = esp_wifi_wps_start(0);
 	if (ret != ESP_OK) {
