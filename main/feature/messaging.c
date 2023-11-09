@@ -147,7 +147,7 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 
 			if (get_wifi_active()) {
 				if (gl_sta_connected == true) {
-					wifi_connect_to_server_tcp();
+					tcp_connect_to_server();
 				}
 				else {
 					blufi_wifi_connect();

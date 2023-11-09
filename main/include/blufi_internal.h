@@ -50,7 +50,11 @@
 #define MAX_PORT_VALUE                        65535
 
 #define BLE_ADV_EXPIRY_TIME                       1     // ( in min )
-#define TCP_CONN_RECONNECTING_DELAY            1000     // ( in msec )
+#define TCP_RECONNECTING_DELAY                 1000     // ( in msec )
 #define WIFI_RECONNECTING_DELAY                1000     // (in msec )
+
+#define TCP_KEEPALIVE_IDLE_TIME                  30     // Time in seconds that the connection must be idle before starting to send keepalive probes
+#define TCP_KEEPALIVE_INTVAL                     10     // Time in seconds between individual keepalive probes
+#define TCP_KEEPALIVE_COUNT                       3     // Number of keepalive probes to send before deciding that the connection is broken
 
 #endif /* MAIN_INCLUDE_BLUFI_INTERNAL_H_ */

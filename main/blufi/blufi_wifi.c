@@ -84,7 +84,7 @@ enum wifi_connection_state {
 
 void tcp_reconnect_timer_callback(TimerHandle_t xTimer) {
     printf("TCP expiry, retrying connection...\n");
-    wifi_connect_to_server_tcp();
+    tcp_connect_to_server();
 }
 
 static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
@@ -165,7 +165,41 @@ static bool blufi_wifi_reconnect(void) {
 }
 #endif
 
-int wifi_connect_to_server_tcp(void) {
+static int tcp_enable_keepalive(int sock) {
+	int enable = 1;
+    int idle = TCP_KEEPALIVE_IDLE_TIME;
+    int interval = TCP_KEEPALIVE_INTVAL;
+    int count = TCP_KEEPALIVE_COUNT;
+
+    // Enable TCP keepalive
+    if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable)) < 0) {
+        printf("Failed to set SO_KEEPALIVE on TCP socket\n");
+        return -1;
+    }
+
+    // Set the keepalive idle time
+    if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(idle)) < 0) {
+        printf("Failed to set TCP_KEEPIDLE on TCP socket\n");
+        return -1;
+    }
+
+    // Set the keepalive interval
+    if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) < 0) {
+        printf("Failed to set TCP_KEEPINTVL on TCP socket\n");
+        return -1;
+    }
+
+    // Set the keepalive count
+    if (setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count)) < 0) {
+        printf("Failed to set TCP_KEEPCNT on TCP socket\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+
+int tcp_connect_to_server(void) {
     uint8_t server_ip[SERVER_SIZE + 1] = {0};
     uint8_t port_str[PORT_SIZE + 1] = {0};
     uint16_t port = 0;
@@ -190,12 +224,20 @@ int wifi_connect_to_server_tcp(void) {
 
     // Create the reconnect timer if it hasn't been created yet
     if (tcp_reconnect_timer == NULL) {
-        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_CONN_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
     }
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
         printf("Unable to create socket: errno %d\n", errno);
+        xTimerStart(tcp_reconnect_timer, 0);
+        return -1;
+    }
+
+    // Enable TCP keepalive options on the socket
+    if (tcp_enable_keepalive(sock) < 0) {
+        close(sock);
+        sock = -1;
         xTimerStart(tcp_reconnect_timer, 0);
         return -1;
     }
@@ -294,7 +336,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
         }
 
         if (get_wifi_active()) {
-            wifi_connect_to_server_tcp();                         // connect to server TCP
+        	tcp_connect_to_server();                         // connect to server TCP
         }
         break;
     }

@@ -57,4 +57,4 @@ int blufi_ap_stop(void);
 int blufi_ota_start(void);
 
 int softap_get_current_connection_number(void);
-int wifi_connect_to_server_tcp(void);
+int tcp_connect_to_server(void);
