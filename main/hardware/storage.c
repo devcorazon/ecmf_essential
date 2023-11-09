@@ -54,15 +54,15 @@ static struct storage_entry_s storage_entry_poll[] = {
 		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
 		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
 
- 		{DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
- 		{FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
+ 		{ DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
+ 		{ FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
 
-		{SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE },
-		{PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE },
-		{ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
-		{SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE },
-		{PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE },
-		{OTA_URL_KEY,            &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE }
+		{ SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE + 1 },
+		{ PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE + 1 },
+		{ ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
+		{ SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE + 1 },
+		{ PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE + 1 },
+		{ OTA_URL_KEY,            &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE + 1 }
 };
 
 
