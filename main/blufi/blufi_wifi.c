@@ -187,9 +187,16 @@ int wifi_connect_to_server_tcp(void) {
     }
 
     struct sockaddr_in server_addr;
+
+    // Create the reconnect timer if it hasn't been created yet
+    if (tcp_reconnect_timer == NULL) {
+        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_CONN_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+    }
+
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
         printf("Unable to create socket: errno %d\n", errno);
+        xTimerStart(tcp_reconnect_timer, 0);
         return -1;
     }
 
@@ -206,6 +213,7 @@ int wifi_connect_to_server_tcp(void) {
             printf("DNS resolution failed for %s: errno %d\n", server_ip, errno);
             close(sock);
             sock = -1;
+            xTimerStart(tcp_reconnect_timer, 0);
             return -1;
         }
         // Copy the resolved IP address to server_addr
@@ -217,11 +225,6 @@ int wifi_connect_to_server_tcp(void) {
     server_addr.sin_port = htons(port);
 
     printf("Connecting to %s:%d\n", inet_ntoa(server_addr.sin_addr), port);
-
-    // Create the reconnect timer if it hasn't been created yet
-    if (tcp_reconnect_timer == NULL) {
-        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_CONN_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
-    }
 
     if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
         printf("Socket unable to connect: errno %d\n", errno);
