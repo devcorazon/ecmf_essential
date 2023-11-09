@@ -25,7 +25,7 @@ static void system_mode_speed_set(uint8_t mode, uint8_t speed);
 
 static void user_experience_task(void *pvParameters);
 
-static void user_experience_state_machine(uint8_t test_in_progress);
+static void user_experience_state_machine(void);
 
 enum ux_s {
 	OPERATIVE		= 0,
@@ -33,11 +33,6 @@ enum ux_s {
 	VOC_SETTING,
 	LUX_SETTING,
 	SETTINGS,
-};
-
-enum test_ir {
-	TEST_IR_OFF      = 0,
-	TEST_IR_ON,
 };
 
 static uint8_t user_experience_state = OPERATIVE;
@@ -81,23 +76,16 @@ static void user_experience_task(void *pvParameters) {
 
 	user_experience_task_time = xTaskGetTickCount();
 	while (1) {
-        user_experience_state_machine(test_in_progress());
+        user_experience_state_machine();
 
 		vTaskDelayUntil(&user_experience_task_time, USER_EXPERIENCE_TASK_PERIOD);
 	}
 }
 
-static void user_experience_state_machine(uint8_t test_in_progress) {
+static void user_experience_state_machine(void) {
 	uint32_t button = 0;
 	button = ir_receiver_take_button();
 
-    if (test_in_progress == TEST_IR_ON) {
-    	if (button > 0) {
-    	rgb_led_mode(RGB_LED_COLOR_RED, RGB_LED_MODE_SINGLE_BLINK, false);
-    	}
-    }
-    else
-    {
 	switch (user_experience_state) {
 		case OPERATIVE:
 			switch (button) {
@@ -299,7 +287,6 @@ static void user_experience_state_machine(uint8_t test_in_progress) {
 //					}
 //					break;
 	  }
-   }
 }
 
 int user_experience_init() {

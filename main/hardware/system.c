@@ -145,18 +145,18 @@ int system_init(void) {
 	get_ota_url(ota_url);
 	printf("OTA URL: %s\n", ota_url);
 
-	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
+//	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 
-	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
-	    get_mode_set(),
-	    get_speed_set(),
-	    get_relative_humidity_set(),
-	    get_lux_set(),
-	    get_voc_set(),
-	    get_temperature_offset(),
-	    get_relative_humidity_offset(),
-	    get_filter_operating()
-		);
+//	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
+//	    get_mode_set(),
+//	    get_speed_set(),
+//	    get_relative_humidity_set(),
+//	    get_lux_set(),
+//	    get_voc_set(),
+//	    get_temperature_offset(),
+//	    get_relative_humidity_offset(),
+//	    get_filter_operating()
+//		);
 
 	return 0;
 

@@ -34,6 +34,9 @@
 
 static bool is_bt_mem_released = false;
 
+static wifi_config_t sta_config = {0};
+static wifi_config_t ap_config = {0};
+
 static uint8_t blufi_service_uuid128[32] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
     //first uuid, 16bit, [12],[13] is the value
@@ -192,7 +195,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
 
         if (gl_sta_connected) {
             memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-            memcpy(info.sta_bssid, gl_sta_bssid, 6);
+            memcpy(info.sta_bssid, gl_sta_bssid, sizeof(gl_sta_bssid));
             info.sta_bssid_set = true;
             info.sta_ssid = gl_sta_ssid;
             info.sta_ssid_len = gl_sta_ssid_len;

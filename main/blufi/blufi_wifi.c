@@ -48,9 +48,6 @@ static esp_netif_t *sta_netif = NULL;
 
 int blufi_wifi_connect(void);
 
-wifi_config_t sta_config = {0};
-wifi_config_t ap_config = {0};
-
 static TimerHandle_t tcp_reconnect_timer = NULL;
 static int sock = -1; // Global socket descriptor
 
@@ -281,7 +278,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
         esp_wifi_get_mode(&mode);
 
         memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-        memcpy(info.sta_bssid, gl_sta_bssid, 6);
+        memcpy(info.sta_bssid, gl_sta_bssid, sizeof(gl_sta_bssid));
         info.sta_bssid_set = true;
         info.sta_ssid = gl_sta_ssid;
         info.sta_ssid_len = gl_sta_ssid_len;
@@ -320,7 +317,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         gl_sta_connected = true;
         gl_sta_is_connecting = false;
         event = (wifi_event_sta_connected_t*) event_data;
-        memcpy(gl_sta_bssid, event->bssid, 6);
+        memcpy(gl_sta_bssid, event->bssid, sizeof(gl_sta_bssid));
         memcpy(gl_sta_ssid, event->ssid, event->ssid_len);
         gl_sta_ssid_len = event->ssid_len;
         break;
@@ -337,8 +334,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 #endif
         gl_sta_connected = false;
         gl_sta_got_ip = false;
-        memset(gl_sta_ssid, 0, 32);
-        memset(gl_sta_bssid, 0, 6);
+        memset(gl_sta_ssid, 0, sizeof(gl_sta_ssid));
+        memset(gl_sta_bssid, 0, sizeof(gl_sta_bssid));
         gl_sta_ssid_len = 0;
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
         break;
@@ -350,7 +347,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         if (ble_is_connected) {
             esp_blufi_extra_info_t info;
             memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-            memcpy(info.sta_bssid, gl_sta_bssid, 6);
+            memcpy(info.sta_bssid, gl_sta_bssid, sizeof(gl_sta_bssid));
             info.sta_bssid_set = true;
             info.sta_ssid = gl_sta_ssid;
             info.sta_ssid_len = gl_sta_ssid_len;

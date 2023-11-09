@@ -17,6 +17,7 @@
 #include "board.h"
 #include "system.h"
 #include "storage_internal.h"
+#include "ir_receiver.h"
 #include "sensor.h"
 #include "rgb_led.h"
 #include "fan.h"
@@ -25,6 +26,12 @@
 #include "sgp40.h"
 #include "ltr303.h"
 
+#define	IR_RECEIVER_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
+#define	IR_RECEIVER_TASK_PRIORITY			    (1)
+#define	IR_RECEIVER_TASK_PERIOD				    (100ul / portTICK_PERIOD_MS)
+
+static void ir_receiver_test_task(void *pvParameters);
+TaskHandle_t ir_receiver_test_task_handle = NULL;
 ///
 static esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
 static esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
@@ -42,6 +49,19 @@ static int test_in_progress_reset() {
 
 int test_in_progress() {
 	return testing_in_progress;
+}
+
+static void ir_receiver_test_task(void *pvParameters) {
+	TickType_t ir_receiver_task_time;
+
+	ir_receiver_task_time = xTaskGetTickCount();
+	while (1) {
+    	if (ir_receiver_take_button()) {
+    	rgb_led_mode(RGB_LED_COLOR_RED, RGB_LED_MODE_SINGLE_BLINK, false);
+    	}
+
+		vTaskDelayUntil(&ir_receiver_task_time, IR_RECEIVER_TASK_PERIOD);
+	}
 }
 
 static int cmd_set_mode_speed_func(int argc, char **argv) {
@@ -77,7 +97,6 @@ static int cmd_set_factory_settings_func(int argc, char** argv) {
 }
 
 static int cmd_test_led_func(int argc, char** argv) {
-
 	uint8_t mode;
 	uint8_t color;
 
@@ -178,7 +197,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("LUX reading error\n");
 		}
 		else {
-			printf("LUX =  %u.%01u %%\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
+			printf("LUX =  %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
 		}
 
 		sensor_ntc_sample(&ntc_temp);
@@ -196,7 +215,6 @@ static int cmd_test_all_func(int argc, char **argv) {
 }
 
 static int cmd_test_fan_func(int argc, char **argv) {
-
 	uint8_t speed;
 	uint8_t direction;
 
@@ -271,21 +289,29 @@ static int cmd_test_fan_func(int argc, char **argv) {
 }
 
 static int cmd_test_start_func(int argc, char **argv) {
-	if (test_in_progress() == true) {
-		printf("Run test_stop and start again! \n");
-	} else {
-		blufi_ble_init();
-		test_in_progress_set();
-		blufi_adv_start();
-		blufi_ap_start();
-	}
-	return 0;
+    if (test_in_progress() == true) {
+        printf("Run test_stop and start again! \n");
+    } else {
+        if (xTaskCreate(ir_receiver_test_task, "IR Receiver test task", IR_RECEIVER_TASK_STACK_SIZE, NULL, IR_RECEIVER_TASK_PRIORITY, &ir_receiver_test_task_handle) != pdPASS) {
+            ir_receiver_test_task_handle = NULL;
+        } else {
+            blufi_ble_init();
+            test_in_progress_set();
+            blufi_adv_start();
+            blufi_ap_start();
+        }
+    }
+    return (ir_receiver_test_task_handle != NULL ? 0 : -1);
 }
 
 static int cmd_test_stop_func(int argc, char **argv) {
 	if (test_in_progress() == false) {
 		printf("test already in stop! \n");
 	} else {
+        if (ir_receiver_test_task_handle != NULL) {
+            vTaskDelete(ir_receiver_test_task_handle);
+            ir_receiver_test_task_handle = NULL; // Set the handle to NULL after deleting the task
+        }
 		blufi_ble_deinit();
 		set_mode_set(0);   // reset mode
 		set_speed_set(0);  //reset speed
@@ -299,13 +325,10 @@ static int cmd_test_stop_func(int argc, char **argv) {
 }
 
 static int cmd_info_func(int argc, char **argv) {
-	if (test_in_progress() == false) {
-		printf("test already in stop! \n");
-	}
-	else {
-
     uint8_t bt_addr[BT_ADDRESS_LEN];
     uint8_t wifi_addr[WIFI_ADDRESS_LEN];
+	float lux;
+	float ntc_temp;
 
     static const char* threshold_str[] = { "Not configured", "Low", "Medium", "High" };
     static const char* mode_str[] = { "Off", "Immission", "Emission", "Fixed cycle", "Automatic cycle" };
@@ -327,29 +350,54 @@ static int cmd_info_func(int argc, char **argv) {
     printf("WIFI Active: %s - Connection State: %s\n", (get_wifi_active() == 0 ? "No" : "Yes"), wifi_connection_state_str[blufi_get_wifi_connection_state()]);
 
     printf("Relative Humidity threshold: %s\n", threshold_str[get_relative_humidity_set() & 0x7f]);
-    printf("Luminosity threshold: %s\n", threshold_str[get_lux_set()]);
     printf("VOC threshold: %s\n", threshold_str[get_voc_set() & 0x7f]);
+    printf("Luminosity threshold: %s\n", threshold_str[get_lux_set()]);
 
     printf("Temperature Offset: %d - Humidity Offset: %d\n", get_temperature_offset(), get_relative_humidity_offset());
-
-//    for (size_t idx = 0U; idx < BT_DEVICE_MAX; idx++) {
-//        get_address_device_paired(bt_addr, idx);
-//        if (memcmp(bt_addr, BT_ADDRESS_ANY, BT_ADDRESS_LEN)) {
-//            printf("Device ECMF2 paired %d: %02X:%02X:%02X:%02X:%02X:%02X\n", idx, bt_addr[5], bt_addr[4], bt_addr[3], bt_addr[2], bt_addr[1], bt_addr[0]);
-//        }
-//    }
 
     printf("Setting Mode: %s - Setting Speed: %s\n", mode_str[get_mode_set()], speed_str[get_speed_set()]);
     printf("Mode: %s [calculate duration: %s]  [extra cycle: %s]  \n", mode_str[get_mode_state() & 0x1f], get_mode_state() & 0x80 ? "Yes" : "No", get_mode_state() & 0x40 ? "Yes" : "No");
 
     printf("Speed: %s - Direction: %s\n", speed_str[ADJUST_SPEED(get_speed_state())], direction_str[get_direction_state()]);
 
-    printf("Temperature: %d [%.2f]\n", get_temperature(), get_temperature() * 0.1);
-    printf("Humidity: %d [%.2f]\n", get_relative_humidity(), get_relative_humidity() * 0.1);
-    printf("VOC: %d\n", get_voc());
-    printf("Luminosity: %d\n", get_lux());
+	int16_t temp = get_temperature();
+	if (temp == TEMPERATURE_INVALID) {
+		printf("Temperature reading error\n");
+	} else {
+		printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 	}
 
+	uint16_t rh = get_relative_humidity();
+	if (rh == RELATIVE_HUMIDITY_INVALID) {
+		printf("Relative humidity reading error\n");
+	} else {
+		printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
+	}
+
+	uint16_t voc = get_voc();
+	if (voc == VOC_INVALID) {
+		printf("VOC Index reading error\n");
+	} else {
+		printf("VOC Index =  %u4 \n", voc);
+	}
+
+	ltr303_measure_lux(&lux);
+	uint16_t u16_lux = SET_VALUE_TO_TEMP_RAW(lux);
+
+	if (u16_lux == LUX_INVALID) {
+		printf("LUX reading error\n");
+	} else {
+		printf("LUX =  %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
+	}
+
+	sensor_ntc_sample(&ntc_temp);
+	int16_t i16_ntc_temp = SET_VALUE_TO_TEMP_RAW(ntc_temp);
+
+	if (i16_ntc_temp == TEMPERATURE_INVALID) {
+		printf("NTC Temperature reading error\n");
+	} else {
+		printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
+	}
 	return 0;
 }
 
