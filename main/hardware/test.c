@@ -13,6 +13,7 @@
 #include <freertos/semphr.h>
 
 #include "esp_console.h"
+#include "esp_idf_version.h"
 
 #include "board.h"
 #include "system.h"
@@ -338,8 +339,8 @@ static int cmd_info_func(int argc, char **argv) {
     static const char* wifi_connection_state_str[] = { "Disconnected", "Connected" };
 
     printf("Firmware version: %d.%d.%d\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
-//    printf("ESP version: %d.%d.%d\n", KERNEL_VERSION_MAJOR, KERNEL_VERSION_MINOR, KERNEL_PATCHLEVEL);
-//    printf("Device serial number: " DEVICE_NAME_FMT "\n", *DEVICE_SERIAL_NUMBER_ADDR);
+    printf("ESP version: %d.%d.%d\n", ESP_IDF_VERSION_MAJOR, ESP_IDF_VERSION_MINOR, ESP_IDF_VERSION_PATCH);
+	printf("Device Serial Number: %08lx\n", get_serial_number());
 
     blufi_get_ble_address(bt_addr);
     printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", bt_addr[5], bt_addr[4], bt_addr[3], bt_addr[2], bt_addr[1], bt_addr[0]);

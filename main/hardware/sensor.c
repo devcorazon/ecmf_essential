@@ -162,7 +162,7 @@ static void sensor_task(void *pvParameters) {
 
 
 		sgp40_sample(t_amb, r_hum, &voc_idx);
-		if (get_direction_state() != DIRECTION_IN){
+		if (get_direction_state() != DIRECTION_IN) {
 			set_voc(SET_VALUE_TO_VOC_RAW(voc_idx));
 		}
 
@@ -172,9 +172,9 @@ static void sensor_task(void *pvParameters) {
 		}
 
 		sensor_ntc_sample(&temp);
-		if (get_direction_state() == DIRECTION_OUT){
+		if (get_direction_state() == DIRECTION_OUT) {
 			set_internal_temperature(SET_VALUE_TO_TEMP_RAW(temp));
-		} else if (get_direction_state() == DIRECTION_IN){
+		} else if (get_direction_state() == DIRECTION_IN) {
 			set_external_temperature(SET_VALUE_TO_TEMP_RAW(temp));
 		}
 
