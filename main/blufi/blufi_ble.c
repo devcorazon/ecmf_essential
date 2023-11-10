@@ -34,8 +34,8 @@
 
 static bool is_bt_mem_released = false;
 
-static wifi_config_t sta_config = {0};
-static wifi_config_t ap_config = {0};
+wifi_config_t sta_config = {0};
+wifi_config_t ap_config = {0};
 
 static uint8_t blufi_service_uuid128[32] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */

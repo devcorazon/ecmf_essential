@@ -514,13 +514,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 			get_ssid(ssid);
 
 			if ((memcmp(ssid, evt->ap_cred[0].ssid, SSID_SIZE) == 0) && (strlen((char *)ssid))) {
-				wifi_config_t wifi_config = { 0 };
 
 				memcpy(pwd, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
 
 				set_password((const uint8_t *) pwd);
 
-				blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+				blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
 
 				printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
 
@@ -538,15 +537,11 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
         esp_wifi_wps_disable();
         wps_is_enabled = false;
-        esp_wifi_wps_enable(&wps_config);
-        esp_wifi_wps_start(0);
         break;
     case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
     	printf("WIFI_EVENT_STA_WPS_ER_TIMEOUT\n");
         esp_wifi_wps_disable();
         wps_is_enabled = false;
-        esp_wifi_wps_enable(&wps_config);
-        esp_wifi_wps_start(0);
         break;
     case WIFI_EVENT_STA_WPS_ER_PIN:
     	 printf("WIFI_EVENT_STA_WPS_ER_PIN\n");
@@ -602,7 +597,6 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base, int32_t ev
 
 int blufi_ap_start(void) {
 	esp_err_t ret;
-	wifi_config_t wifi_config = { 0 };
 
 	ret = esp_wifi_set_mode(WIFI_MODE_AP);
 	if (ret != ESP_OK) {
@@ -610,7 +604,7 @@ int blufi_ap_start(void) {
 		return -1;
 	}
 
-	ret = blufi_wifi_configure(WIFI_MODE_AP, &wifi_config);
+	ret = blufi_wifi_configure(WIFI_MODE_AP, &ap_config);
 	if (ret != ESP_OK) {
 		return -1;
 	}
@@ -699,7 +693,6 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
-	wifi_config_t wifi_config = { 0 };
 	wifi_event_group = xEventGroupCreate();
 
 	ret = esp_wifi_set_mode(WIFI_MODE_STA);
@@ -708,7 +701,7 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
-	ret = blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+	ret = blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
 	if (ret != ESP_OK) {
 		printf("Failed blufi_wifi_configure\n");
 		return -1;

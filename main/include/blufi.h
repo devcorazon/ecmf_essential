@@ -21,7 +21,11 @@ extern wifi_sta_list_t gl_sta_list;
 extern bool gl_sta_is_connecting;
 extern esp_blufi_extra_info_t gl_sta_conn_info;
 
+extern wifi_config_t sta_config;
+extern wifi_config_t ap_config;
+
 extern bool wps_is_enabled;
+
 
 void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free);
 int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len);
