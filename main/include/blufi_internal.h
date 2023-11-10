@@ -22,6 +22,8 @@
 #define BLUFI_CMD_PORT      	"PORT"
 #define BLUFI_CMD_WIFI_ACTIVE	"WIFIACT"
 #define BLUFI_CMD_WIFI_WPS	    "WPS"
+#define BLUFI_CMD_REBOOT	    "REBOOT"
+#define BLUFI_CMD_FACTORY	    "FACTORY"
 
 #define WIFI_ADDRESS_LEN        20
 #define BT_ADDRESS_LEN          20

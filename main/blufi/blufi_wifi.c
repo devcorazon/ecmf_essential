@@ -224,6 +224,7 @@ void tcp_receive_data_task(void *pvParameters) {
     char recv_buf[128];
     int len;
 
+    printf("Entring TCP Receive\n");
     while (1) {
 
         if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
@@ -240,6 +241,7 @@ void tcp_receive_data_task(void *pvParameters) {
         recv_buf[len] = '\0'; // Null-terminate the received data
         analyse_received_data((const uint8_t *)recv_buf, len);
     }
+    printf("Exiting TCP Receive\n");
     tcp_close_reconnect();
 
     vTaskDelete(NULL);

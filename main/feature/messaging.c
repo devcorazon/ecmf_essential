@@ -32,6 +32,8 @@ static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
 static void wifi_active_callback(char *pnt_data, size_t length);
 static void wifi_wps_callback(char *pnt_data, size_t length);
+static void reboot_callback(char *pnt_data, size_t length);
+static void factory_callback(char *pnt_data, size_t length);
 
 static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_OTA,			ota_callback	    	},
@@ -40,6 +42,8 @@ static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_PORT,			port_callback	    	},
 	{	BLUFI_CMD_WIFI_ACTIVE,	wifi_active_callback	},
 	{   BLUFI_CMD_WIFI_WPS,     wifi_wps_callback       },
+	{	BLUFI_CMD_REBOOT,	    reboot_callback	        },
+	{   BLUFI_CMD_FACTORY,      factory_callback        },
 };
 
 int analyse_received_data(const uint8_t *data, uint32_t data_len) {
@@ -183,3 +187,13 @@ static void wifi_wps_callback(char *pnt_data, size_t length) {
 		return;
 	}
 }
+
+static void reboot_callback(char *pnt_data, size_t length) {
+	esp_restart();
+}
+
+static void factory_callback(char *pnt_data, size_t length) {
+	storage_set_default();
+	esp_restart();
+}
+

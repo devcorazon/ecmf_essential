@@ -501,6 +501,7 @@ static void work_task(void *arg) {
 	// Delete this task once the function finishes executing
 	vTaskDelete(NULL);
 }
+
 int controller_init() {
 	// Initialization of the semaphore
 	extra_cycle_count_sem = xSemaphoreCreateCounting(EXTRA_CYCLE_COUNT_MAX, EXTRA_CYCLE_COUNT_MAX);

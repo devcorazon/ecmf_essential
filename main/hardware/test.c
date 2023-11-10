@@ -400,6 +400,11 @@ static int cmd_info_func(int argc, char **argv) {
 	return 0;
 }
 
+static int cmd_reboot_func(int argc, char **argv) {
+	 esp_restart();
+	 return 0;
+}
+
 ///
 int test_init(void) {
 	esp_console_register_help_command();
@@ -478,6 +483,14 @@ int test_init(void) {
 
 	 esp_console_cmd_register(&cmd_info);
 
+	 const esp_console_cmd_t cmd_reboot = {
+	       .command = "reboot",
+	       .help = "reboot",
+	       .hint = NULL,
+	       .func = cmd_reboot_func,
+	     };
+
+	 esp_console_cmd_register(&cmd_reboot);
 
 	 return 0;
 }
