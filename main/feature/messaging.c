@@ -28,6 +28,8 @@ struct custom_command_s {
 
 static void ota_callback(char *pnt_data, size_t length);
 static void version_callback(char *pnt_data, size_t length);
+static void ssid_callback(char *pnt_data, size_t length);
+static void password_callback(char *pnt_data, size_t length);
 static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
 static void wifi_active_callback(char *pnt_data, size_t length);
@@ -38,6 +40,8 @@ static void factory_callback(char *pnt_data, size_t length);
 static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_OTA,			ota_callback	    	},
 	{ 	BLUFI_CMD_VERSION,		version_callback		},
+	{	BLUFI_CMD_SSID,	        ssid_callback	        },
+	{   BLUFI_CMD_PWD,          password_callback       },
 	{ 	BLUFI_CMD_SERVER,		server_callback			},
 	{ 	BLUFI_CMD_PORT,			port_callback	    	},
 	{	BLUFI_CMD_WIFI_ACTIVE,	wifi_active_callback	},
@@ -70,6 +74,30 @@ static void version_callback(char *pnt_data, size_t length) {
 
 	ret = esp_blufi_send_custom_data(fw_ver, sizeof(fw_ver));
 	printf("version_callback - %d\n", ret);
+}
+
+static void ssid_callback(char *pnt_data, size_t length) {
+	uint8_t ssid[SSID_SIZE + 1] = { 0 };
+
+    if (length <= SSID_SIZE) {
+    	memcpy(ssid, pnt_data, length);
+        set_ssid((const uint8_t *) ssid);
+    }
+    else {
+        printf("Received ssid data exceeds the storage limit.\n");
+    }
+}
+
+static void password_callback(char *pnt_data, size_t length) {
+	uint8_t pwd[PASSWORD_SIZE + 1] = { 0 };
+
+    if (length <= PASSWORD_SIZE) {
+    	memcpy(pwd, pnt_data, length);
+        set_password((const uint8_t *) pwd);
+    }
+    else {
+        printf("Received password data exceeds the storage limit.\n");
+    }
 }
 
 static void server_callback(char *pnt_data, size_t length) {
@@ -159,7 +187,7 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 			}
 			else {
 				if (gl_sta_connected == true) {
-#warning chiudere sock tcp
+					tcp_close_reconnect();
 					esp_wifi_disconnect();
 				}
 			}
@@ -173,18 +201,21 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 static void wifi_wps_callback(char *pnt_data, size_t length) {
 	int ret;
 
-	printf("Im in WPS CALLBACK\n");
+	if (!wps_is_enabled)
+	{
+		ret = esp_wifi_wps_enable(&wps_config);
+		if (ret != ESP_OK) {
+			printf("Failed esp_wifi_wps_enable\n");
+			return;
+		}
 
-	ret = esp_wifi_wps_enable(&wps_config);
-	if (ret != ESP_OK) {
-		printf("Failed esp_wifi_wps_enable\n");
-		return;
-	}
-
-	ret = esp_wifi_wps_start(0);
-	if (ret != ESP_OK) {
-		printf("Failed esp_wifi_wps_start\n");
-		return;
+		ret = esp_wifi_wps_start(0);
+		if (ret != ESP_OK) {
+			printf("Failed esp_wifi_wps_start\n");
+			return;
+		}
+		printf("Im in WPS CALLBACK\n");
+		wps_is_enabled = true;
 	}
 }
 

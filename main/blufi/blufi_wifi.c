@@ -41,6 +41,10 @@
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 
+#define	TCP_RECEIVE_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
+#define	TCP_RECEIVE_TASK_PRIORITY			        (1)
+#define	TCP_RECEIVE_TASK_PERIOD				        (100ul / portTICK_PERIOD_MS)
+
 static bool wifi_scan_on = false;
 
 static esp_netif_t *ap_netif = NULL;
@@ -79,20 +83,20 @@ wifi_sta_list_t gl_sta_list = {0};   // Use designated initializers to zero out 
 bool gl_sta_is_connecting = false;
 esp_blufi_extra_info_t gl_sta_conn_info = {0}; // Use designated initializers to zero out a struct.
 
+bool wps_is_enabled = false;
+
 enum wifi_connection_state {
     WIFI_DISCONNECTED = 0,
     WIFI_CONNECTED
 };
 
 void tcp_reconnect_timer_callback(TimerHandle_t xTimer) {
-    printf("TCP expiry, retrying connection...\n");
     if (get_wifi_active()) {
     	tcp_connect_to_server();                         // connect to server TCP
     }
 }
 
 void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
-    printf("WIFI expiry, retrying connection...\n");
     if (get_wifi_active()) {
 	    blufi_wifi_connect();                           // connect to WIFI
     }
@@ -160,6 +164,7 @@ static void record_wifi_conn_info(int rssi, uint8_t reason) {
 }
 
 int blufi_wifi_connect(void) {
+	printf("WIFI connecting...\n");
     gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
     return 0;
@@ -178,7 +183,7 @@ static bool blufi_wifi_reconnect(void) {
 #endif
 
 
-static int tcp_close_reconnect(void) {
+int tcp_close_reconnect(void) {
     close(sock);
     sock = -1;
     // Start the reconnect timer to retry after a delay
@@ -223,8 +228,10 @@ static int tcp_enable_keepalive(int sock) {
 void tcp_receive_data_task(void *pvParameters) {
     char recv_buf[128];
     int len;
+    TickType_t tcp_receive_task_time;
 
-    printf("Entring TCP Receive\n");
+    tcp_receive_task_time = xTaskGetTickCount();
+
     while (1) {
 
         if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
@@ -240,10 +247,11 @@ void tcp_receive_data_task(void *pvParameters) {
 
         recv_buf[len] = '\0'; // Null-terminate the received data
         analyse_received_data((const uint8_t *)recv_buf, len);
-    }
-    printf("Exiting TCP Receive\n");
-    tcp_close_reconnect();
 
+        vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
+    }
+
+    tcp_close_reconnect();
     vTaskDelete(NULL);
 }
 
@@ -255,6 +263,8 @@ int tcp_connect_to_server(void) {
     if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
     	return -1;
     }
+
+    printf(" connection to TCP...\n");
 
     get_server(server_ip);
     get_port(port_str);
@@ -318,7 +328,7 @@ int tcp_connect_to_server(void) {
     printf("Successfully connected to the server\n");
 
     // Start the TCP receive data task
-    BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+    BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;
 }
@@ -375,7 +385,9 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-	    xTimerStart(wifi_reconnect_timer, 0);
+    	if (get_wifi_active()) {
+    		xTimerStart(wifi_reconnect_timer, 0);
+    	}
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -493,45 +505,46 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             esp_wifi_connect();
         }
 #else
-			wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
+        	printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
+
+        	wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
 			uint8_t ssid[SSID_SIZE + 1] = { 0 };
-			uint8_t psw[PASSWORD_SIZE + 1] = { 0 };
+			uint8_t pwd[PASSWORD_SIZE + 1] = { 0 };
 
-			printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
+			get_ssid(ssid);
 
-			if (evt) {
+			if ((memcmp(ssid, evt->ap_cred[0].ssid, SSID_SIZE) == 0) && (strlen((char *)ssid))) {
 				wifi_config_t wifi_config = { 0 };
+
+				memcpy(pwd, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
+
+				set_password((const uint8_t *) pwd);
+
+				blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
 
 				printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
 
-				memcpy(ssid, evt->ap_cred[0].ssid, sizeof(evt->ap_cred[0].ssid));
-				memcpy(psw, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
+				if (gl_sta_connected) {
+					esp_wifi_disconnect();
+				}
 
-				set_ssid((const uint8_t *) ssid);
-				set_password((const uint8_t *) psw);
-
-				blufi_wifi_configure(WIFI_MODE_STA, &wifi_config);
+				esp_wifi_wps_disable();
+				wps_is_enabled = false;
+				blufi_wifi_connect();
 			}
-
-			if (gl_sta_connected) {
-				esp_wifi_disconnect();
-			}
-
-			esp_wifi_wps_disable();
-			blufi_wifi_connect();
-
-
 #endif
         break;
     case WIFI_EVENT_STA_WPS_ER_FAILED:
     	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
         esp_wifi_wps_disable();
+        wps_is_enabled = false;
         esp_wifi_wps_enable(&wps_config);
         esp_wifi_wps_start(0);
         break;
     case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
     	printf("WIFI_EVENT_STA_WPS_ER_TIMEOUT\n");
         esp_wifi_wps_disable();
+        wps_is_enabled = false;
         esp_wifi_wps_enable(&wps_config);
         esp_wifi_wps_start(0);
         break;

@@ -76,8 +76,9 @@ static void user_experience_task(void *pvParameters) {
 
 	user_experience_task_time = xTaskGetTickCount();
 	while (1) {
-        user_experience_state_machine();
-
+		if ( test_in_progress() == false) {
+			user_experience_state_machine();
+		}
 		vTaskDelayUntil(&user_experience_task_time, USER_EXPERIENCE_TASK_PERIOD);
 	}
 }

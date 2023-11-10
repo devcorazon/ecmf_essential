@@ -18,6 +18,8 @@
 
 #define BLUFI_CMD_OTA   		"OTA"
 #define BLUFI_CMD_VERSION   	"VERSION"
+#define BLUFI_CMD_SSID          "SSID"
+#define BLUFI_CMD_PWD           "PWD"
 #define BLUFI_CMD_SERVER    	"SERVER"
 #define BLUFI_CMD_PORT      	"PORT"
 #define BLUFI_CMD_WIFI_ACTIVE	"WIFIACT"

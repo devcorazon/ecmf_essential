@@ -127,7 +127,7 @@ int system_init(void) {
 
 	uint8_t ssid[SSID_SIZE + 1] = {0};
 	get_ssid(ssid);
-	printf("\nSSID: %s\n", ssid);
+	printf("SSID: %s\n", ssid);
 
 	uint8_t pw[PASSWORD_SIZE + 1] = {0};
 	get_password(pw);
