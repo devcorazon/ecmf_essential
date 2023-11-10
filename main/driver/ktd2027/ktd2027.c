@@ -160,6 +160,9 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 				case RGB_LED_COLOR_AUTOMATIC_CYCLE:
 					write_all_register(FLASH_PERIOD_AUTOMATIC_CYCLE_BLINK, 1, FLASH_PWM_AUTOMATIC_CYCLE_BLINK, FLASH_PWM_AUTOMATIC_CYCLE_BLINK, 0, 0, 0, 0, 191, 0, 191, 2, 0, 3);
 					break;
+				case RGB_LED_COLOR_CONNECTIVTY:
+					write_all_register(FLASH_PERIOD_CONNECTIVITY, 0, 31, 0, 0, 0, 0, 0, 191, 0, 191, 2, 0, 2);
+					break;
 				case RGB_LED_COLOR_WHITE:
 					write_all_register(FLASH_PERIOD_CLEAR_WARNING, 0, 31, 0, 0, 0, 0, 0, 191, 191, 191, 2, 2, 2);
 					break;

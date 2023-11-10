@@ -117,6 +117,10 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 					led.on_time = 4 * (128 * (FLASH_PERIOD_POWER_OFF + 2));
 					ktd2027_led_set(led.color, RGB_LED_MODE_BLINK);
 					break;
+				case RGB_LED_COLOR_CONNECTIVTY:
+					led.on_time = 4 * (128 * (FLASH_PERIOD_CONNECTIVITY + 2));
+					ktd2027_led_set(RGB_LED_COLOR_CONNECTIVTY, RGB_LED_MODE_BLINK);
+					break;
 				case RGB_LED_COLOR_WHITE:
 					led.on_time = 2 * (128 * (FLASH_PERIOD_CLEAR_WARNING + 2));
 					ktd2027_led_set(RGB_LED_COLOR_WHITE, RGB_LED_MODE_BLINK);

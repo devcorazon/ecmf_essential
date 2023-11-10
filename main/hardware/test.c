@@ -66,7 +66,6 @@ static void ir_receiver_test_task(void *pvParameters) {
 }
 
 static int cmd_set_mode_speed_func(int argc, char **argv) {
-
 	if (argc < 3) {
 		printf("Invalid arguments. Usage: set_ms <index 1> <index 2>\n");
 		return -1;
@@ -151,7 +150,6 @@ static int cmd_test_led_func(int argc, char** argv) {
 }
 
 static int cmd_test_all_func(int argc, char **argv) {
-
 	float lux;
 	float ntc_temp;
 
@@ -171,7 +169,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("Temperature reading error\n");
 		}
 		else {
-			printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
+			printf("Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 		}
 
 		uint16_t rh = get_relative_humidity();
@@ -179,7 +177,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("Relative humidity reading error\n");
 		}
 		else {
-			printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
+			printf("Relative humidity: %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
 		}
 
 	    uint16_t voc = get_voc();
@@ -188,7 +186,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 	        printf("VOC Index reading error\n");
 	    }
 	    else {
-	        printf("VOC Index =  %u4 \n", voc);
+	        printf("VOC Index: %u4 \n", voc);
 	    }
 
 		ltr303_measure_lux(&lux);
@@ -198,7 +196,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("LUX reading error\n");
 		}
 		else {
-			printf("LUX =  %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
+			printf("LUX: %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
 		}
 
 		sensor_ntc_sample(&ntc_temp);
@@ -208,7 +206,7 @@ static int cmd_test_all_func(int argc, char **argv) {
 			printf("NTC Temperature reading error\n");
 		}
 		else {
-			printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
+			printf("NTC Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 		}
 	}
 
@@ -365,21 +363,21 @@ static int cmd_info_func(int argc, char **argv) {
 	if (temp == TEMPERATURE_INVALID) {
 		printf("Temperature reading error\n");
 	} else {
-		printf("Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
+		printf("Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 	}
 
 	uint16_t rh = get_relative_humidity();
 	if (rh == RELATIVE_HUMIDITY_INVALID) {
 		printf("Relative humidity reading error\n");
 	} else {
-		printf("Relative humidity =  %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
+		printf("Relative humidity: %u.%01u %%\n", RH_RAW_TO_INT(rh), RH_RAW_TO_DEC(rh));
 	}
 
 	uint16_t voc = get_voc();
 	if (voc == VOC_INVALID) {
 		printf("VOC Index reading error\n");
 	} else {
-		printf("VOC Index =  %u4 \n", voc);
+		printf("VOC Index: %u4 \n", voc);
 	}
 
 	ltr303_measure_lux(&lux);
@@ -388,7 +386,7 @@ static int cmd_info_func(int argc, char **argv) {
 	if (u16_lux == LUX_INVALID) {
 		printf("LUX reading error\n");
 	} else {
-		printf("LUX =  %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
+		printf("LUX: %u.%01u %\n", TEMP_RAW_TO_INT(u16_lux), TEMP_RAW_TO_DEC(u16_lux));
 	}
 
 	sensor_ntc_sample(&ntc_temp);
@@ -397,7 +395,7 @@ static int cmd_info_func(int argc, char **argv) {
 	if (i16_ntc_temp == TEMPERATURE_INVALID) {
 		printf("NTC Temperature reading error\n");
 	} else {
-		printf("NTC Temperature =  %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
+		printf("NTC Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 	}
 	return 0;
 }

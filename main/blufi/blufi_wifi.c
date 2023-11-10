@@ -112,10 +112,11 @@ static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
         memcpy(wifi_config->ap.ssid, ssid, sizeof(ssid));
         wifi_config->ap.ssid_len = strlen(ssid);
 
-        // Assuming ESP_WIFI_PASS is defined as your AP password. If it is not defined, you will need to replace it.
-        if (strlen(ESP_WIFI_PASS) == 0) {
-            wifi_config->ap.authmode = WIFI_AUTH_OPEN;
-        }
+        // Setting Open authorization
+        wifi_config->ap.authmode = WIFI_AUTH_OPEN;
+
+        // Setting max connections
+        wifi_config->ap.max_connection = 1;
 
         if (esp_wifi_set_config(ESP_IF_WIFI_AP, wifi_config) != ESP_OK) {
             printf("Failed to set WiFi Config AP.\n");
@@ -176,31 +177,14 @@ static bool blufi_wifi_reconnect(void) {
 }
 #endif
 
-void tcp_receive_data_task(void *pvParameters) {
-    char recv_buf[128];
-    int len;
 
-    while (1) {
-
-        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
-            printf("Wi-Fi connection lost, terminating task\n");
-            break;
-        }
-
-        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
-        if (len <= 0) {
-            printf("Server disconnected or recv error: errno %d\n", errno);
-            break;
-        }
-
-        recv_buf[len] = '\0'; // Null-terminate the received data
-        analyse_received_data((const uint8_t *)recv_buf, len);
-    }
-
+static int tcp_close_reconnect(void) {
     close(sock);
     sock = -1;
+    // Start the reconnect timer to retry after a delay
+    xTimerStart(tcp_reconnect_timer, 0);
 
-    vTaskDelete(NULL);
+    return 0;
 }
 
 static int tcp_enable_keepalive(int sock) {
@@ -236,6 +220,30 @@ static int tcp_enable_keepalive(int sock) {
     return 0;
 }
 
+void tcp_receive_data_task(void *pvParameters) {
+    char recv_buf[128];
+    int len;
+
+    while (1) {
+
+        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
+            printf("Wi-Fi connection lost, terminating task\n");
+            break;
+        }
+
+        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
+        if (len <= 0) {
+            printf("Server disconnected or recv error: errno %d\n", errno);
+            break;
+        }
+
+        recv_buf[len] = '\0'; // Null-terminate the received data
+        analyse_received_data((const uint8_t *)recv_buf, len);
+    }
+    tcp_close_reconnect();
+
+    vTaskDelete(NULL);
+}
 
 int tcp_connect_to_server(void) {
     uint8_t server_ip[SERVER_SIZE + 1] = {0};
@@ -271,9 +279,7 @@ int tcp_connect_to_server(void) {
 
     // Enable TCP keepalive options on the socket
     if (tcp_enable_keepalive(sock) < 0) {
-        close(sock);
-        sock = -1;
-        xTimerStart(tcp_reconnect_timer, 0);
+    	tcp_close_reconnect();
         return -1;
     }
 
@@ -288,9 +294,7 @@ int tcp_connect_to_server(void) {
         // If the server_ip is not a valid IP address, resolve the hostname
         if (getaddrinfo((const char *)server_ip, NULL, &hints, &res) != 0) {
             printf("DNS resolution failed for %s: errno %d\n", server_ip, errno);
-            close(sock);
-            sock = -1;
-            xTimerStart(tcp_reconnect_timer, 0);
+            tcp_close_reconnect();
             return -1;
         }
         // Copy the resolved IP address to server_addr
@@ -305,22 +309,18 @@ int tcp_connect_to_server(void) {
 
     if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
         printf("Socket unable to connect: errno %d\n", errno);
-        close(sock);
-        sock = -1;
-        // Start the reconnect timer to retry after a delay
-        xTimerStart(tcp_reconnect_timer, 0);
+        tcp_close_reconnect();
         return -1;
     }
 
     printf("Successfully connected to the server\n");
-    // Connection established, stop the reconnect timer if it is running
-    xTimerStop(tcp_reconnect_timer, 0);
 
     // Start the TCP receive data task
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;
 }
+
 
 int softap_get_current_connection_number(void) {
 
