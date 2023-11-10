@@ -61,6 +61,10 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 
 		case RGB_LED_MODE_ONESHOOT:
 			switch(led.color) {
+				case RGB_LED_COLOR_RED:
+					led.on_time = 512;
+					ktd2027_led_set(RGB_LED_COLOR_RED, RGB_LED_MODE_ON);
+					break;
 				case RGB_LED_COLOR_AQUA_RH:
 					led.on_time = (128 * (THR_CONFIRM_PERIOD + 2)) + 512;
 					ktd2027_led_set(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ON);

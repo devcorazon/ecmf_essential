@@ -58,7 +58,7 @@ static void ir_receiver_test_task(void *pvParameters) {
 	ir_receiver_task_time = xTaskGetTickCount();
 	while (1) {
     	if (ir_receiver_take_button()) {
-    	rgb_led_mode(RGB_LED_COLOR_RED, RGB_LED_MODE_SINGLE_BLINK, false);
+    		rgb_led_mode(RGB_LED_COLOR_RED, RGB_LED_MODE_ONESHOOT, false);
     	}
 
 		vTaskDelayUntil(&ir_receiver_task_time, IR_RECEIVER_TASK_PERIOD);
