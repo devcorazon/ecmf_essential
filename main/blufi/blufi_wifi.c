@@ -392,7 +392,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         }
 #else
     	printf("WIFI_EVENT_STA_DISCONNECTED...\n");
-    	xTimerStart(wifi_reconnect_timer, 0);
 #endif
         gl_sta_connected = false;
         gl_sta_got_ip = false;
@@ -400,6 +399,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         memset(gl_sta_bssid, 0, sizeof(gl_sta_bssid));
         gl_sta_ssid_len = 0;
         xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+    	xTimerStart(wifi_reconnect_timer, 0);
         break;
     case WIFI_EVENT_AP_START:
         if (esp_wifi_get_mode(&mode) != ESP_OK) {
