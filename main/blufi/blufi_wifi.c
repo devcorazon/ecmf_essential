@@ -699,18 +699,17 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
+    // Create the wifi reconnect timer if it hasn't been created yet
+    wifi_reconnect_timer = xTimerCreate("Wifi Reconnect Timer", pdMS_TO_TICKS(WIFI_RECONNECTING_DELAY), pdFALSE, (void *)0, wifi_reconnect_timer_callback);
+
+    // Create the reconnect timer if it hasn't been created yet
+    tcp_reconnect_timer = xTimerCreate("TCP Reconnect Timer", pdMS_TO_TICKS(TCP_RECONNECTING_DELAY), pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+
 	ret = esp_wifi_start();
 	if (ret != ESP_OK) {
 		printf("Failed esp_wifi_start\n");
 		return -1;
 	}
-
-    // Create the wifi reconnect timer if it hasn't been created yet
-    wifi_reconnect_timer = xTimerCreate("Wifi Reconnect Timer", WIFI_RECONNECTING_DELAY, pdFALSE, (void *)0, wifi_reconnect_timer_callback);
-
-    // Create the reconnect timer if it hasn't been created yet
-    tcp_reconnect_timer = xTimerCreate("TCP Reconnect Timer", TCP_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
-
 
 	return 0;
 }
