@@ -176,6 +176,33 @@ static bool blufi_wifi_reconnect(void) {
 }
 #endif
 
+void tcp_receive_data_task(void *pvParameters) {
+    char recv_buf[128];
+    int len;
+
+    while (1) {
+
+        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
+            printf("Wi-Fi connection lost, terminating task\n");
+            break;
+        }
+
+        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
+        if (len <= 0) {
+            printf("Server disconnected or recv error: errno %d\n", errno);
+            break;
+        }
+
+        recv_buf[len] = '\0'; // Null-terminate the received data
+        analyse_received_data((const uint8_t *)recv_buf, len);
+    }
+
+    close(sock);
+    sock = -1;
+
+    vTaskDelete(NULL);
+}
+
 static int tcp_enable_keepalive(int sock) {
 	int enable = 1;
     int idle = TCP_KEEPALIVE_IDLE_TIME;
@@ -214,8 +241,6 @@ int tcp_connect_to_server(void) {
     uint8_t server_ip[SERVER_SIZE + 1] = {0};
     uint8_t port_str[PORT_SIZE + 1] = {0};
     uint16_t port = 0;
-    char recv_buf[128];
-    int len;
 
     if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
     	return -1;
@@ -291,26 +316,10 @@ int tcp_connect_to_server(void) {
     // Connection established, stop the reconnect timer if it is running
     xTimerStop(tcp_reconnect_timer, 0);
 
-    // Receive data loop
-    while (1) {
-        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
-        // If error in receiving or connection lost
-        if (len <= 0) {
-            printf("Server disconnected or recv error: errno %d\n", errno);
-            close(sock);
-            sock = -1;
-            // Restart the reconnect timer to retry after a delay
-            xTimerStart(tcp_reconnect_timer, 0);
-            return 0;
-        }
-        // Process received data
-        recv_buf[len] = '\0'; // Null-terminate the received data
-        analyse_received_data((const uint8_t *)recv_buf, len);
-    }
-    // If the loop exits
-    close(sock);
-    sock = -1;
-    return 0;
+    // Start the TCP receive data task
+    BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", BLUFI_TASK_STACK_SIZE, NULL, BLUFI_TASK_PRIORITY, NULL);
+
+    return task_created == pdPASS ? 0 : -1;
 }
 
 int softap_get_current_connection_number(void) {
