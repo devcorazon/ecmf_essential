@@ -49,6 +49,8 @@ static esp_netif_t *sta_netif = NULL;
 int blufi_wifi_connect(void);
 
 static TimerHandle_t tcp_reconnect_timer = NULL;
+static TimerHandle_t wifi_reconnect_timer = NULL;
+
 static int sock = -1; // Global socket descriptor
 
  /* Wps Config */
@@ -84,7 +86,16 @@ enum wifi_connection_state {
 
 void tcp_reconnect_timer_callback(TimerHandle_t xTimer) {
     printf("TCP expiry, retrying connection...\n");
-    tcp_connect_to_server();
+    if (get_wifi_active()) {
+    	tcp_connect_to_server();                         // connect to server TCP
+    }
+}
+
+void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
+    printf("WIFI expiry, retrying connection...\n");
+    if (get_wifi_active()) {
+	    blufi_wifi_connect();                           // connect to WIFI
+    }
 }
 
 static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
@@ -206,6 +217,10 @@ int tcp_connect_to_server(void) {
     char recv_buf[128];
     int len;
 
+    if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
+    	return -1;
+    }
+
     get_server(server_ip);
     get_port(port_str);
 
@@ -221,11 +236,6 @@ int tcp_connect_to_server(void) {
     }
 
     struct sockaddr_in server_addr;
-
-    // Create the reconnect timer if it hasn't been created yet
-    if (tcp_reconnect_timer == NULL) {
-        tcp_reconnect_timer = xTimerCreate("ReconnectTimer", TCP_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
-    }
 
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 0) {
@@ -354,9 +364,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
     switch (event_id) {
     case WIFI_EVENT_STA_START:
-	    if (get_wifi_active()) {
-		    blufi_wifi_connect();
-	    }
+	    xTimerStart(wifi_reconnect_timer, 0);
         break;
     case WIFI_EVENT_STA_CONNECTED:
         gl_sta_connected = true;
@@ -374,8 +382,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
         }
 #else
-    	vTaskDelay(pdMS_TO_TICKS(WIFI_RECONNECTING_DELAY));
-    	blufi_wifi_connect();
+    	printf("WIFI_EVENT_STA_DISCONNECTED...\n");
+    	xTimerStart(wifi_reconnect_timer, 0);
 #endif
         gl_sta_connected = false;
         gl_sta_got_ip = false;
@@ -401,7 +409,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             printf("BLUFI BLE is not connected yet\n");
         }
         break;
-    case WIFI_EVENT_SCAN_DONE: {
+    case WIFI_EVENT_SCAN_DONE:
         uint16_t apCount = 0;
         wifi_scan_on = false;
         if (esp_wifi_scan_get_ap_num(&apCount) != ESP_OK || apCount == 0) {
@@ -440,7 +448,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         free(ap_list);
         free(blufi_ap_list);
         break;
-    }
+
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
 #if 0
         printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
@@ -474,7 +482,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             esp_wifi_connect();
         }
 #else
-        {
 			wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
 			uint8_t ssid[SSID_SIZE + 1] = { 0 };
 			uint8_t psw[PASSWORD_SIZE + 1] = { 0 };
@@ -501,7 +508,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
 			esp_wifi_wps_disable();
 			blufi_wifi_connect();
-        }
+
 
 #endif
         break;
@@ -688,6 +695,13 @@ int blufi_wifi_init(void) {
 		printf("Failed esp_wifi_start\n");
 		return -1;
 	}
+
+    // Create the wifi reconnect timer if it hasn't been created yet
+    wifi_reconnect_timer = xTimerCreate("Wifi Reconnect Timer", WIFI_RECONNECTING_DELAY, pdFALSE, (void *)0, wifi_reconnect_timer_callback);
+
+    // Create the reconnect timer if it hasn't been created yet
+    tcp_reconnect_timer = xTimerCreate("TCP Reconnect Timer", TCP_RECONNECTING_DELAY, pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+
 
 	return 0;
 }
