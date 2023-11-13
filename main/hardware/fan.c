@@ -60,3 +60,27 @@ int fan_set(uint8_t direction, uint8_t speed) {
 
     return 0;
 }
+
+int fan_set_percentage(uint8_t direction, uint8_t speed_percent) {
+    uint32_t fan_speed;
+
+    if (direction == DIRECTION_IN) {
+        gpio_set_level(FAN_DIRECTION_PIN, 0);
+        fan_speed = (FAN_PWM_MAX * speed_percent) / 100;
+    } else if (direction == DIRECTION_OUT) {
+        gpio_set_level(FAN_DIRECTION_PIN, 1);
+        fan_speed = (FAN_PWM_MAX * speed_percent) / 100;
+    } else if (direction == DIRECTION_NONE) {
+        fan_speed = 0;
+    } else {
+        printf("Invalid direction.\n");
+        return -1;
+    }
+
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, fan_speed);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+    printf("Fan set: direction=%u, speed=%u%%.\n", direction, speed_percent);
+
+    return 0;
+}

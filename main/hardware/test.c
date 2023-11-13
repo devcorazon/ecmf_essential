@@ -11,6 +11,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
+#include <freertos/timers.h>
+
 
 #include "esp_console.h"
 #include "esp_idf_version.h"
@@ -27,6 +29,14 @@
 #include "sgp40.h"
 #include "ltr303.h"
 
+typedef struct {
+    uint32_t cycle_time_s;
+    uint8_t speed_percent;
+    uint8_t direction;
+} FanCycleState;
+
+static TimerHandle_t fan_cycle_timer = NULL; // Timer handle for fan cycle
+////
 #define	IR_RECEIVER_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
 #define	IR_RECEIVER_TASK_PRIORITY			    (1)
 #define	IR_RECEIVER_TASK_PERIOD				    (100ul / portTICK_PERIOD_MS)
@@ -50,6 +60,19 @@ static int test_in_progress_reset() {
 
 int test_in_progress() {
 	return testing_in_progress;
+}
+
+void fan_cycle_timer_callback(TimerHandle_t xTimer) {
+    if (!test_in_progress()) {
+        return;
+    }
+    FanCycleState *state = (FanCycleState *)pvTimerGetTimerID(xTimer);
+    fan_set_percentage(state->direction, state->speed_percent);
+    state->direction = (state->direction == DIRECTION_IN) ? DIRECTION_OUT : DIRECTION_IN;
+
+    // Restart the timer for the next cycle
+    xTimerChangePeriod(xTimer, pdMS_TO_TICKS(state->cycle_time_s * 1000), 0);
+    xTimerStart(xTimer, 0);
 }
 
 static void ir_receiver_test_task(void *pvParameters) {
@@ -287,6 +310,80 @@ static int cmd_test_fan_func(int argc, char **argv) {
 	return 0;
 }
 
+static int cmd_fan_fix_func(int argc, char **argv) {
+    if (argc < 3) {
+        printf("Invalid arguments. Usage: fan_fix <direction> <speed %>\n");
+        return -1;
+    }
+
+    char *endptr;
+    int8_t direction = (uint8_t) strtol(argv[1], &endptr, 10);
+    int8_t speed_percent = (uint8_t) strtol(argv[2], &endptr, 10);
+
+    // Check for conversion errors
+    if (endptr == argv[1] || *endptr != '\0' || direction < 0 || direction > 2 || speed_percent < 0 || speed_percent > 100) {
+        printf("Invalid arguments. Supported values: direction = {0,1,2}, speed = {0-100%}\n");
+        return -1;
+    }
+
+    if (!test_in_progress()) {
+        printf("Make sure to run test_start \n");
+        return -1;
+    }
+
+    fan_set_percentage(direction, speed_percent);
+    return 0;
+}
+
+static int cmd_fan_cycle_func(int argc, char **argv) {
+    if (argc < 3) {
+        printf("Invalid arguments. Usage: fan_cycle <time in (s)> <speed %>\n");
+        return -1;
+    }
+
+    char *endptr;
+    int32_t cycle_time = (uint32_t) strtol(argv[1], &endptr, 10);
+    int8_t speed_percent = (uint8_t) strtol(argv[2], &endptr, 10);
+
+    // Check for conversion errors
+    if (endptr == argv[1] || *endptr != '\0' || cycle_time < 0 || speed_percent > 100) {
+        printf("Invalid arguments. Supported values: {time} >= 0, speed = {0-100%}\n");
+        return -1;
+    }
+
+    if (!test_in_progress() || cycle_time == 0) {
+        printf("Stopping the fan cycle.\n");
+        if (fan_cycle_timer != NULL) {
+            xTimerStop(fan_cycle_timer, 0);
+            xTimerDelete(fan_cycle_timer, 0);
+            fan_cycle_timer = NULL;
+        }
+        fan_set_percentage(DIRECTION_NONE, 0); // Stop the fan
+        return -1;
+    }
+
+    // Set initial state and start fan immediately
+    static FanCycleState state;
+    state.cycle_time_s = cycle_time;
+    state.speed_percent = speed_percent;
+    state.direction = DIRECTION_IN; // Initial direction
+
+    fan_set_percentage(state.direction, state.speed_percent); // Start the fan immediately
+    state.direction = (state.direction == DIRECTION_IN) ? DIRECTION_OUT : DIRECTION_IN; // Prepare for next cycle
+
+    // Create or reset the timer for subsequent cycles
+    if (fan_cycle_timer == NULL) {
+        fan_cycle_timer = xTimerCreate("FanCycleTimer", pdMS_TO_TICKS(state.cycle_time_s * 1000), pdTRUE, (void *)&state, fan_cycle_timer_callback);
+    } else {
+        xTimerChangePeriod(fan_cycle_timer, pdMS_TO_TICKS(state.cycle_time_s * 1000), 0);
+    }
+
+    xTimerStart(fan_cycle_timer, 0);
+
+    return 0;
+}
+
+
 static int cmd_test_start_func(int argc, char **argv) {
     if (test_in_progress() == true) {
         printf("Run test_stop and start again! \n");
@@ -455,6 +552,24 @@ int test_init(void) {
 	     };
 
 	 esp_console_cmd_register(&cmd_test_fan);
+
+	const esp_console_cmd_t cmd_fan_fix = {
+		   .command = "fan_fix",
+		   .help = "Fan fix {Dir} {% Speed}",
+		   .hint = NULL,
+		   .func = cmd_fan_fix_func,
+		 };
+
+	esp_console_cmd_register(&cmd_fan_fix);
+
+	const esp_console_cmd_t cmd_fan_cycle = {
+		   .command = "fan_cycle",
+		   .help = "Fan cycle {tempo (s)} {% Speed}",
+		   .hint = NULL,
+		   .func = cmd_fan_cycle_func,
+		 };
+
+	esp_console_cmd_register(&cmd_fan_cycle);
 
 	 const esp_console_cmd_t cmd_test_start = {
 	       .command = "test_start",

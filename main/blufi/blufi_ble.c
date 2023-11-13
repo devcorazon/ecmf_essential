@@ -37,6 +37,8 @@ static bool is_bt_mem_released = false;
 wifi_config_t sta_config = {0};
 wifi_config_t ap_config = {0};
 
+esp_bt_controller_status_t bt_status;
+
 static uint8_t blufi_service_uuid128[32] = {
     /* LSB <--------------------------------------------------------------------------------> MSB */
     //first uuid, 16bit, [12],[13] is the value
@@ -80,9 +82,13 @@ enum ble_connection_state {
 static enum ble_connection_state current_ble_state = BLE_DISCONNECTED;
 
 static void blufi_adv_expiry_timer_cb(TimerHandle_t xTimer) {
-	printf("BLE ADV Timeout\n");
-    blufi_adv_stop();
-    blufi_ble_deinit();
+	bt_status = esp_bt_controller_get_status();
+
+    if (bt_status == ESP_BT_CONTROLLER_STATUS_INITED || bt_status == ESP_BT_CONTROLLER_STATUS_ENABLED) {
+    	printf("BLE ADV Timeout\n");
+        blufi_adv_stop();
+        blufi_ble_deinit();
+    }
 }
 
 int blufi_adv_start(void) {
@@ -342,7 +348,7 @@ int blufi_get_ble_connection_number(void) {
 int blufi_ble_init(void) {
 	esp_err_t ret;
 
-	esp_bt_controller_status_t bt_status = esp_bt_controller_get_status();
+	bt_status = esp_bt_controller_get_status();
     if (bt_status == ESP_BT_CONTROLLER_STATUS_INITED || bt_status == ESP_BT_CONTROLLER_STATUS_ENABLED) {
 	  blufi_ble_deinit();
     }

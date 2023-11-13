@@ -66,5 +66,6 @@ static inline uint8_t ADJUST_SPEED(uint8_t speed) {
 
 int fan_init();
 int fan_set(uint8_t direction, uint8_t speed);
+int fan_set_percentage(uint8_t direction, uint8_t speed_percent);
 
 #endif /* MAIN_INCLUDE_FAN_H_ */
