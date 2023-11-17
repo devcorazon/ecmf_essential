@@ -35,7 +35,7 @@ int blufi_ble_init(void);
 int blufi_ble_deinit(void);
 
 int blufi_wifi_init(void);
-int blufi_wifi_denit(void);
+int blufi_wifi_deinit(void);
 
 int blufi_adv_start(void);
 int blufi_adv_stop(void);

@@ -15,6 +15,7 @@
 
 
 #include "esp_console.h"
+#include "esp_wifi.h"
 #include "esp_idf_version.h"
 
 #include "board.h"
@@ -385,22 +386,44 @@ static int cmd_fan_cycle_func(int argc, char **argv) {
 
 
 static int cmd_test_start_func(int argc, char **argv) {
+	esp_err_t ret;
     if (test_in_progress() == true) {
         printf("Run test_stop and start again! \n");
-    } else {
-        if (xTaskCreate(ir_receiver_test_task, "IR Receiver test task", IR_RECEIVER_TASK_STACK_SIZE, NULL, IR_RECEIVER_TASK_PRIORITY, &ir_receiver_test_task_handle) != pdPASS) {
-            ir_receiver_test_task_handle = NULL;
-        } else {
-            blufi_ble_init();
-            test_in_progress_set();
-            blufi_adv_start();
-            blufi_ap_start();
-        }
+        return -1;
     }
+    if (xTaskCreate(ir_receiver_test_task, "IR Receiver test task", IR_RECEIVER_TASK_STACK_SIZE, NULL, IR_RECEIVER_TASK_PRIORITY, &ir_receiver_test_task_handle) != pdPASS) {
+            ir_receiver_test_task_handle = NULL;
+            return -1;
+    }
+
+    blufi_ble_init();
+	test_in_progress_set();
+
+	if (get_sta_connected() || get_sta_is_connecting()) {
+		esp_err_t ret = esp_wifi_disconnect();
+		if (ret != ESP_OK) {
+			printf("Failed to disconnect WiFi STA: %s\n", esp_err_to_name(ret));
+			return -1;
+		}
+	}
+
+	ret = blufi_adv_start();
+	if (ret != ESP_OK) {
+		printf("Failed to start blufi advertisement: %s\n", esp_err_to_name(ret));
+		return -1;
+	}
+
+	ret = blufi_ap_start();
+	if (ret != ESP_OK) {
+		printf("Failed to start blufi AP: %s\n", esp_err_to_name(ret));
+		return -1;
+	}
+
     return (ir_receiver_test_task_handle != NULL ? 0 : -1);
 }
 
 static int cmd_test_stop_func(int argc, char **argv) {
+	esp_err_t ret;
 	if (test_in_progress() == false) {
 		printf("test already in stop! \n");
 	} else {
@@ -416,6 +439,20 @@ static int cmd_test_stop_func(int argc, char **argv) {
 		blufi_adv_stop();  // blufi Access point stop
 		blufi_ap_stop();  // blufi adv point start
 		test_in_progress_reset();
+		ret = blufi_wifi_deinit();
+	    if (ret != ESP_OK) {
+	        printf("Failed to deinitialize WiFi: %s\n", esp_err_to_name(ret));
+	        return -1;
+	    }
+
+	    if (get_wifi_active()) {
+	        ret = blufi_wifi_init();
+	        if (ret != ESP_OK) {
+	            printf("Failed to reinitialize WiFi: %s\n", esp_err_to_name(ret));
+	            return -1;
+	        }
+	        blufi_wifi_connect(); // Ensure this function attempts to reconnect
+	    }
 	}
 	return 0;
 }

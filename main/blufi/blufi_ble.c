@@ -255,6 +255,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         set_sta_config(&sta_config);
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA SSID %s\n", sta_config.sta.ssid);
+        set_ssid(sta_config.sta.ssid);
         break;
     }
 
@@ -265,6 +266,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         set_sta_config(&sta_config);
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA PASSWORD %s\n", sta_config.sta.password);
+        set_password(sta_config.sta.password);
         break;
     }
 

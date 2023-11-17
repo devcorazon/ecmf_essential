@@ -728,8 +728,8 @@ int blufi_get_wifi_active(void) {
 int blufi_wifi_init(void) {
 	esp_err_t ret;
 
-	/* Initializing Wifi */
-	esp_netif_init();
+    /* Initializing Wifi */
+    esp_netif_init();
 
 	ret = esp_event_loop_create_default();
 	if (ret != ESP_OK) {
@@ -737,9 +737,13 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
-	esp_netif_create_default_wifi_sta();
+    if (!sta_netif) { // Check if the STA netif already exists
+        sta_netif = esp_netif_create_default_wifi_sta();
+    }
 
-	esp_netif_create_default_wifi_ap();
+    if (!ap_netif) { // Check if the AP netif already exists
+        ap_netif = esp_netif_create_default_wifi_ap();
+    }
 
 	ret = esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
 	if (ret != ESP_OK) {
@@ -796,15 +800,15 @@ int blufi_wifi_init(void) {
 	return 0;
 }
 
-int ble_wifi_deinit(void) {
+int blufi_wifi_deinit(void) {
 	esp_err_t ret;
 
-	/* wifi de-init */
     ret = esp_wifi_deinit();
     if (ret != ESP_OK) {
         printf("Failed to deinitialize WiFi: %s\n", esp_err_to_name(ret));
         return -1;
     }
+
 
     ret = esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
     if (ret != ESP_OK) {
