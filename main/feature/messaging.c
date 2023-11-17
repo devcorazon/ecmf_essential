@@ -178,17 +178,17 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 			set_wifi_active(wifi_active);
 
 			if (get_wifi_active()) {
-				if (gl_sta_connected == true) {
-					tcp_connect_to_server();
+				if (get_sta_connected() == true) {
+				    tcp_connect_to_server();
 				}
 				else {
-					blufi_wifi_connect();
+				    blufi_wifi_connect();
 				}
 			}
 			else {
-				if (gl_sta_connected == true) {
-					tcp_close_reconnect();
-					esp_wifi_disconnect();
+				if (get_sta_connected() == true) {
+				    tcp_close_reconnect();
+				    esp_wifi_disconnect();
 				}
 			}
 		}
@@ -201,8 +201,9 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 static void wifi_wps_callback(char *pnt_data, size_t length) {
 	int ret;
 
-	if (!wps_is_enabled)
+	if (!get_wps_is_enabled())
 	{
+		esp_wps_config_t wps_config = get_wps_config();
 		ret = esp_wifi_wps_enable(&wps_config);
 		if (ret != ESP_OK) {
 			printf("Failed esp_wifi_wps_enable\n");
@@ -215,7 +216,7 @@ static void wifi_wps_callback(char *pnt_data, size_t length) {
 			return;
 		}
 		printf("Im in WPS CALLBACK\n");
-		wps_is_enabled = true;
+		set_wps_is_enabled(true);
 	}
 }
 

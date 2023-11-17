@@ -57,10 +57,6 @@ static TimerHandle_t wifi_reconnect_timer = NULL;
 
 static int sock = -1; // Global socket descriptor
 
- /* Wps Config */
-esp_wps_config_t wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
-static wifi_config_t wps_ap_creds[MAX_WPS_AP_CRED];
-
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 
@@ -73,17 +69,19 @@ const int FAIL_BIT = BIT1;
 static int s_ap_creds_num = 0;
 
 /* store the station info for send back to phone */
-bool gl_sta_connected = false;
-bool gl_sta_got_ip = false;
-bool ble_is_connected = false;
-uint8_t gl_sta_bssid[BSSID_SIZE] = {0};
-uint8_t gl_sta_ssid[SSID_SIZE] = {0};
-int gl_sta_ssid_len = 0;
-wifi_sta_list_t gl_sta_list = {0};   // Use designated initializers to zero out a struct.
-bool gl_sta_is_connecting = false;
-esp_blufi_extra_info_t gl_sta_conn_info = {0}; // Use designated initializers to zero out a struct.
-
-bool wps_is_enabled = false;
+static bool gl_sta_connected = false;
+static bool gl_sta_got_ip = false;
+static bool ble_is_connected = false;
+static uint8_t gl_sta_bssid[BSSID_SIZE] = {0};
+static uint8_t gl_sta_ssid[SSID_SIZE] = {0};
+static int gl_sta_ssid_len = 0;
+static wifi_sta_list_t gl_sta_list = {0};
+static bool gl_sta_is_connecting = false;
+static esp_blufi_extra_info_t gl_sta_conn_info = {0};
+static wifi_config_t gl_sta_config = {0};
+static wifi_config_t gl_ap_config = {0};
+static bool gl_wps_is_enabled = false;
+static esp_wps_config_t gl_wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
 
 enum wifi_connection_state {
     WIFI_DISCONNECTED = 0,
@@ -99,6 +97,124 @@ void tcp_reconnect_timer_callback(TimerHandle_t xTimer) {
 void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
     if (get_wifi_active()) {
 	    blufi_wifi_connect();                           // connect to WIFI
+    }
+}
+
+bool get_sta_connected(void) {
+    return gl_sta_connected;
+}
+
+void set_sta_connected(bool value) {
+    gl_sta_connected = value;
+}
+
+bool get_sta_got_ip(void) {
+    return gl_sta_got_ip;
+}
+
+void set_sta_got_ip(bool value) {
+    gl_sta_got_ip = value;
+}
+
+bool get_ble_is_connected(void) {
+    return ble_is_connected;
+}
+
+void set_ble_is_connected(bool value) {
+    ble_is_connected = value;
+}
+
+uint8_t* get_sta_bssid(void) {
+    return gl_sta_bssid;
+}
+
+void set_sta_bssid(const uint8_t* bssid) {
+    if (bssid != NULL) {
+        memcpy(gl_sta_bssid, bssid, BSSID_SIZE);
+    }
+}
+
+uint8_t* get_sta_ssid(void) {
+    return gl_sta_ssid;
+}
+
+void set_sta_ssid(const uint8_t* ssid) {
+    if (ssid != NULL) {
+        memcpy(gl_sta_ssid, ssid, SSID_SIZE);
+    }
+}
+
+int get_sta_ssid_len(void) {
+    return gl_sta_ssid_len;
+}
+
+void set_sta_ssid_len(int len) {
+    gl_sta_ssid_len = len;
+}
+
+wifi_sta_list_t get_sta_list(void) {
+    return gl_sta_list;
+}
+
+void set_sta_list(const wifi_sta_list_t* list) {
+    if (list != NULL) {
+        gl_sta_list = *list;
+    }
+}
+
+bool get_sta_is_connecting(void) {
+    return gl_sta_is_connecting;
+}
+
+void set_sta_is_connecting(bool value) {
+    gl_sta_is_connecting = value;
+}
+
+esp_blufi_extra_info_t* get_sta_conn_info(void) {
+    return &gl_sta_conn_info;
+}
+
+void set_sta_conn_info(const esp_blufi_extra_info_t* info) {
+    if (info != NULL) {
+        gl_sta_conn_info = *info;
+    }
+}
+
+wifi_config_t get_sta_config(void) {
+    return gl_sta_config;
+}
+
+void set_sta_config(const wifi_config_t* config) {
+    if (config != NULL) {
+        gl_sta_config = *config;
+    }
+}
+
+wifi_config_t get_ap_config(void) {
+    return gl_ap_config;
+}
+
+void set_ap_config(const wifi_config_t* config) {
+    if (config != NULL) {
+        gl_ap_config = *config;
+    }
+}
+
+bool get_wps_is_enabled(void) {
+    return gl_wps_is_enabled;
+}
+
+void set_wps_is_enabled(bool value) {
+	gl_wps_is_enabled = value;
+}
+
+esp_wps_config_t get_wps_config(void) {
+    return gl_wps_config;
+}
+
+void set_wps_config(const esp_wps_config_t* config) {
+    if (config != NULL) {
+    	gl_wps_config = *config;
     }
 }
 
@@ -151,37 +267,28 @@ static int blufi_wifi_configure(uint8_t mode, wifi_config_t *wifi_config) {
 }
 
 static void record_wifi_conn_info(int rssi, uint8_t reason) {
-    memset(&gl_sta_conn_info, 0, sizeof(esp_blufi_extra_info_t));
-    if (gl_sta_is_connecting) {
-        gl_sta_conn_info.sta_max_conn_retry_set = true;
-        gl_sta_conn_info.sta_max_conn_retry = WIFI_CONNECTION_MAXIMUM_RETRY;
+    esp_blufi_extra_info_t conn_info;
+    memset(&conn_info, 0, sizeof(esp_blufi_extra_info_t));
+
+    if (get_sta_is_connecting()) {
+    	conn_info.sta_max_conn_retry_set = true;
+    	conn_info.sta_max_conn_retry = WIFI_CONNECTION_MAXIMUM_RETRY;
     } else {
-        gl_sta_conn_info.sta_conn_rssi_set = true;
-        gl_sta_conn_info.sta_conn_rssi = rssi;
-        gl_sta_conn_info.sta_conn_end_reason_set = true;
-        gl_sta_conn_info.sta_conn_end_reason = reason;
+    	conn_info.sta_conn_rssi_set = true;
+    	conn_info.sta_conn_rssi = rssi;
+        conn_info.sta_conn_end_reason_set = true;
+        conn_info.sta_conn_end_reason = reason;
     }
+
+    set_sta_conn_info(&conn_info);
 }
 
 int blufi_wifi_connect(void) {
-	printf("WIFI connecting...\n");
-    gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
+    printf("WIFI connecting...\n");
+    set_sta_is_connecting(esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
     return 0;
 }
-
-#if 0
-static bool blufi_wifi_reconnect(void) {
-	printf("BLUFI WiFi starts reconnection\n");
-	if (!gl_sta_is_connecting) {
-	    gl_sta_is_connecting = (esp_wifi_connect() == ESP_OK);
-	    record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
-	}
-
-    return true;
-}
-#endif
-
 
 int tcp_close_reconnect(void) {
     close(sock);
@@ -335,13 +442,16 @@ int tcp_connect_to_server(void) {
 
 
 int softap_get_current_connection_number(void) {
+    wifi_sta_list_t sta_list;
 
-    if (esp_wifi_ap_get_sta_list(&gl_sta_list) == ESP_OK) {
-        return gl_sta_list.num;
+    if (esp_wifi_ap_get_sta_list(&sta_list) == ESP_OK) {
+        set_sta_list(&sta_list);
+        return get_sta_list().num;
     }
 
     return 0;
 }
+
 
 static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) {
     wifi_mode_t mode;
@@ -354,12 +464,13 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
         esp_wifi_get_mode(&mode);
 
         memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-        memcpy(info.sta_bssid, gl_sta_bssid, sizeof(gl_sta_bssid));
+        memcpy(info.sta_bssid, get_sta_bssid(), sizeof(gl_sta_bssid));
         info.sta_bssid_set = true;
-        info.sta_ssid = gl_sta_ssid;
-        info.sta_ssid_len = gl_sta_ssid_len;
-        gl_sta_got_ip = true;
-        if (ble_is_connected == true) {
+        info.sta_ssid = get_sta_ssid();
+        info.sta_ssid_len = get_sta_ssid_len();
+        set_sta_got_ip(true);
+
+        if (get_ble_is_connected()) {
             esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_SUCCESS, softap_get_current_connection_number(), &info);
         }
         else {
@@ -390,44 +501,36 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     	}
         break;
     case WIFI_EVENT_STA_CONNECTED:
-        gl_sta_connected = true;
-        gl_sta_is_connecting = false;
-        event = (wifi_event_sta_connected_t*) event_data;
-        memcpy(gl_sta_bssid, event->bssid, sizeof(gl_sta_bssid));
-        memcpy(gl_sta_ssid, event->ssid, event->ssid_len);
-        gl_sta_ssid_len = event->ssid_len;
-        break;
+    	set_sta_connected(true);
+    	set_sta_is_connecting(false);
+    	event = (wifi_event_sta_connected_t*) event_data;
+    	set_sta_bssid(event->bssid);
+    	set_sta_ssid(event->ssid);
+    	set_sta_ssid_len(event->ssid_len);
+    	break;
     case WIFI_EVENT_STA_DISCONNECTED:
-#if 0
-    	if (!blufi_wifi_reconnect()) {
-            gl_sta_is_connecting = false;
-            disconnected_event = (wifi_event_sta_disconnected_t*) event_data;
-            record_wifi_conn_info(disconnected_event->rssi, disconnected_event->reason);
-        }
-#else
     	printf("WIFI_EVENT_STA_DISCONNECTED...\n");
-#endif
-        gl_sta_connected = false;
-        gl_sta_got_ip = false;
-        memset(gl_sta_ssid, 0, sizeof(gl_sta_ssid));
-        memset(gl_sta_bssid, 0, sizeof(gl_sta_bssid));
-        gl_sta_ssid_len = 0;
-        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+    	set_sta_connected(false);
+    	set_sta_got_ip(false);
+    	memset(get_sta_ssid(), 0, SSID_SIZE);
+    	memset(get_sta_bssid(), 0, BSSID_SIZE);
+    	set_sta_ssid_len(0);
+    	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
     	xTimerStart(wifi_reconnect_timer, 0);
-        break;
+    	break;
     case WIFI_EVENT_AP_START:
         if (esp_wifi_get_mode(&mode) != ESP_OK) {
             status = -1;
             break;
         }
-        if (ble_is_connected) {
+        if (get_ble_is_connected()) {
             esp_blufi_extra_info_t info;
             memset(&info, 0, sizeof(esp_blufi_extra_info_t));
-            memcpy(info.sta_bssid, gl_sta_bssid, sizeof(gl_sta_bssid));
+            memcpy(info.sta_bssid, get_sta_bssid(), BSSID_SIZE);
             info.sta_bssid_set = true;
-            info.sta_ssid = gl_sta_ssid;
-            info.sta_ssid_len = gl_sta_ssid_len;
-            esp_blufi_send_wifi_conn_report(mode, gl_sta_got_ip ? ESP_BLUFI_STA_CONN_SUCCESS : ESP_BLUFI_STA_NO_IP, softap_get_current_connection_number(), &info);
+            info.sta_ssid = get_sta_ssid();
+            info.sta_ssid_len = get_sta_ssid_len();
+            esp_blufi_send_wifi_conn_report(mode, get_sta_got_ip() ? ESP_BLUFI_STA_CONN_SUCCESS : ESP_BLUFI_STA_NO_IP, softap_get_current_connection_number(), &info);
         } else {
             printf("BLUFI BLE is not connected yet\n");
         }
@@ -462,7 +565,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
             blufi_ap_list[i].rssi = ap_list[i].rssi;
             memcpy(blufi_ap_list[i].ssid, ap_list[i].ssid, sizeof(ap_list[i].ssid));
         }
-        if (ble_is_connected) {
+        if (get_ble_is_connected()) {
             esp_blufi_send_wifi_list(apCount, blufi_ap_list);
         } else {
             printf("BLUFI BLE is not connected yet\n");
@@ -473,38 +576,6 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         break;
 
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
-#if 0
-        printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
-        {
-            wifi_event_sta_wps_er_success_t *evt =
-                (wifi_event_sta_wps_er_success_t *)event_data;
-            int i;
-
-            if (evt) {
-                s_ap_creds_num = evt->ap_cred_cnt;
-                for (i = 0; i < s_ap_creds_num; i++) {
-                    memcpy(wps_ap_creds[i].sta.ssid, evt->ap_cred[i].ssid,
-                           sizeof(evt->ap_cred[i].ssid));
-                    memcpy(wps_ap_creds[i].sta.password, evt->ap_cred[i].passphrase,
-                           sizeof(evt->ap_cred[i].passphrase));
-                }
-                /* If multiple AP credentials are received from WPS, connect with first one */
-                printf("Connecting to SSID: %s, Passphrase: %s\n",
-                         wps_ap_creds[0].sta.ssid, wps_ap_creds[0].sta.password);
-                esp_wifi_set_config(WIFI_IF_STA, &wps_ap_creds[0]);
-
-//                set_ssid(wps_ap_creds[0].sta.ssid);
-//                set_password(wps_ap_creds[0].sta.password);
-            }
-            /*
-             * If only one AP credential is received from WPS, there will be no event data and
-             * esp_wifi_set_config() is already called by WPS modules for backward compatibility
-             * with legacy apps. So directly attempt connection here.
-             */
-            esp_wifi_wps_disable();
-            esp_wifi_connect();
-        }
-#else
         	printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
 
         	wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
@@ -519,6 +590,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 
 				set_password((const uint8_t *) pwd);
 
+				wifi_config_t sta_config = get_sta_config();
 				blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
 
 				printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
@@ -528,20 +600,19 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
 				}
 
 				esp_wifi_wps_disable();
-				wps_is_enabled = false;
+				set_wps_is_enabled(false);
 				blufi_wifi_connect();
 			}
-#endif
         break;
     case WIFI_EVENT_STA_WPS_ER_FAILED:
     	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
         esp_wifi_wps_disable();
-        wps_is_enabled = false;
+        set_wps_is_enabled(false);
         break;
     case WIFI_EVENT_STA_WPS_ER_TIMEOUT:
     	printf("WIFI_EVENT_STA_WPS_ER_TIMEOUT\n");
         esp_wifi_wps_disable();
-        wps_is_enabled = false;
+        set_wps_is_enabled(false);
         break;
     case WIFI_EVENT_STA_WPS_ER_PIN:
     	 printf("WIFI_EVENT_STA_WPS_ER_PIN\n");
@@ -604,10 +675,12 @@ int blufi_ap_start(void) {
 		return -1;
 	}
 
-	ret = blufi_wifi_configure(WIFI_MODE_AP, &ap_config);
+	wifi_config_t t_ap_config = get_ap_config();
+	ret = blufi_wifi_configure(WIFI_MODE_AP, &t_ap_config);
 	if (ret != ESP_OK) {
-		return -1;
+	    return -1;
 	}
+
 
 	ret = esp_wifi_start();
 	if (ret != ESP_OK) {
@@ -701,10 +774,11 @@ int blufi_wifi_init(void) {
 		return -1;
 	}
 
+	wifi_config_t sta_config = get_sta_config();
 	ret = blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
 	if (ret != ESP_OK) {
-		printf("Failed blufi_wifi_configure\n");
-		return -1;
+	    printf("Failed blufi_wifi_configure\n");
+	    return -1;
 	}
 
     // Create the wifi reconnect timer if it hasn't been created yet

@@ -10,23 +10,6 @@
 
 #include "blufi_internal.h"
 
-extern esp_wps_config_t wps_config;
-extern bool gl_sta_connected;
-extern bool gl_sta_got_ip;
-extern bool ble_is_connected;
-extern uint8_t gl_sta_bssid[BSSID_SIZE];
-extern uint8_t gl_sta_ssid[SSID_SIZE];
-extern int gl_sta_ssid_len;
-extern wifi_sta_list_t gl_sta_list;
-extern bool gl_sta_is_connecting;
-extern esp_blufi_extra_info_t gl_sta_conn_info;
-
-extern wifi_config_t sta_config;
-extern wifi_config_t ap_config;
-
-extern bool wps_is_enabled;
-
-
 void blufi_dh_negotiate_data_handler(uint8_t *data, int len, uint8_t **output_data, int *output_len, bool *need_free);
 int blufi_aes_encrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len);
 int blufi_aes_decrypt(uint8_t iv8, uint8_t *crypt_data, int crypt_len);
@@ -65,3 +48,43 @@ int blufi_ota_start(void);
 int softap_get_current_connection_number(void);
 int tcp_connect_to_server(void);
 int tcp_close_reconnect(void);
+
+// Getters & Setters
+esp_wps_config_t get_wps_config(void);
+void set_wps_config(const esp_wps_config_t* config);
+
+bool get_sta_connected(void);
+void set_sta_connected(bool value);
+
+bool get_sta_got_ip(void);
+void set_sta_got_ip(bool value);
+
+bool get_ble_is_connected(void);
+void set_ble_is_connected(bool value);
+
+uint8_t* get_sta_bssid(void);
+void set_sta_bssid(const uint8_t* bssid);
+
+uint8_t* get_sta_ssid(void);
+void set_sta_ssid(const uint8_t* ssid);
+
+int get_sta_ssid_len(void);
+void set_sta_ssid_len(int len);
+
+wifi_sta_list_t get_sta_list(void);
+void set_sta_list(const wifi_sta_list_t* list);
+
+bool get_sta_is_connecting(void);
+void set_sta_is_connecting(bool value);
+
+esp_blufi_extra_info_t* get_sta_conn_info(void);
+void set_sta_conn_info(const esp_blufi_extra_info_t* info);
+
+wifi_config_t get_sta_config(void);
+void set_sta_config(const wifi_config_t* config);
+
+wifi_config_t get_ap_config(void);
+void set_ap_config(const wifi_config_t* config);
+
+bool get_wps_is_enabled(void);
+void set_wps_is_enabled(bool value);
