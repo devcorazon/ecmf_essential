@@ -66,7 +66,7 @@ uint8_t* get_sta_bssid(void);
 void set_sta_bssid(const uint8_t* bssid);
 
 uint8_t* get_sta_ssid(void);
-void set_sta_ssid(const uint8_t* ssid);
+void set_sta_ssid(const uint8_t* ssid,uint8_t ssid_length);
 
 int get_sta_ssid_len(void);
 void set_sta_ssid_len(int len);

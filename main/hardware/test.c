@@ -397,7 +397,6 @@ static int cmd_test_start_func(int argc, char **argv) {
     }
 
     blufi_ble_init();
-	test_in_progress_set();
 
 	if (get_sta_connected() || get_sta_is_connecting()) {
 		esp_err_t ret = esp_wifi_disconnect();
@@ -418,6 +417,8 @@ static int cmd_test_start_func(int argc, char **argv) {
 		printf("Failed to start blufi AP: %s\n", esp_err_to_name(ret));
 		return -1;
 	}
+
+	test_in_progress_set();
 
     return (ir_receiver_test_task_handle != NULL ? 0 : -1);
 }

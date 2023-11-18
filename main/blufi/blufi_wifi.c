@@ -66,8 +66,6 @@ static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 const int FAIL_BIT = BIT1;
 
-static int s_ap_creds_num = 0;
-
 /* store the station info for send back to phone */
 static bool gl_sta_connected = false;
 static bool gl_sta_got_ip = false;
@@ -138,9 +136,9 @@ uint8_t* get_sta_ssid(void) {
     return gl_sta_ssid;
 }
 
-void set_sta_ssid(const uint8_t* ssid) {
+void set_sta_ssid(const uint8_t* ssid,uint8_t ssid_length) {
     if (ssid != NULL) {
-        memcpy(gl_sta_ssid, ssid, SSID_SIZE);
+        memcpy(gl_sta_ssid, ssid, ssid_length);
     }
 }
 
@@ -284,7 +282,6 @@ static void record_wifi_conn_info(int rssi, uint8_t reason) {
 }
 
 int blufi_wifi_connect(void) {
-    printf("WIFI connecting...\n");
     set_sta_is_connecting(esp_wifi_connect() == ESP_OK);
     record_wifi_conn_info(INVALID_RSSI, INVALID_REASON);
     return 0;
@@ -490,7 +487,6 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,int32_t even
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data) {
     wifi_event_sta_connected_t *event;
-    wifi_event_sta_disconnected_t *disconnected_event;
     wifi_mode_t mode;
     int status = 0;
 
@@ -505,7 +501,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     	set_sta_is_connecting(false);
     	event = (wifi_event_sta_connected_t*) event_data;
     	set_sta_bssid(event->bssid);
-    	set_sta_ssid(event->ssid);
+    	set_sta_ssid(event->ssid,event->ssid_len);
     	set_sta_ssid_len(event->ssid_len);
     	break;
     case WIFI_EVENT_STA_DISCONNECTED:
@@ -618,7 +614,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     	 printf("WIFI_EVENT_STA_WPS_ER_PIN\n");
         /* display the PIN code */
         wifi_event_sta_wps_er_pin_t* event = (wifi_event_sta_wps_er_pin_t*) event_data;
-  //      printf("WPS_PIN = \n" PINSTR, PIN2STR(event->pin_code));
+        printf("WPS_PIN = \n%08d", event->pin_code);
         break;
     default:
         break;
