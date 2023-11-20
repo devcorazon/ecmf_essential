@@ -394,6 +394,8 @@ static int cmd_test_start_func(int argc, char **argv) {
 
 	test_in_progress_set();
 
+	fan_set(0,0);      //reset fan
+
     if (xTaskCreate(ir_receiver_test_task, "IR Receiver test task", IR_RECEIVER_TASK_STACK_SIZE, NULL, IR_RECEIVER_TASK_PRIORITY, &ir_receiver_test_task_handle) != pdPASS) {
             ir_receiver_test_task_handle = NULL;
             return -1;
@@ -420,8 +422,6 @@ static int cmd_test_start_func(int argc, char **argv) {
 		printf("Failed to start blufi AP: %s\n", esp_err_to_name(ret));
 		return -1;
 	}
-
-	fan_set(0,0);      //reset fan
 
     return (ir_receiver_test_task_handle != NULL ? 0 : -1);
 }

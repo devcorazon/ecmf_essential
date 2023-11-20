@@ -120,12 +120,13 @@ int blufi_adv_start(void) {
 
     printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
 
-	if (!test_in_progress()) {
-		// Start the timer
-		if (blufi_adv_expiry_timer) {
-			xTimerStart(blufi_adv_expiry_timer, 0);
-		}
-	}
+    if (test_in_progress()) {
+    	printf("STOPPING TIMER\n");
+    	xTimerStop(blufi_adv_expiry_timer, 0);
+    } else {
+        printf("STARTING TIMER\n");
+        xTimerStart(blufi_adv_expiry_timer, 0);
+    }
 
     return 0;
 }
@@ -140,17 +141,20 @@ int blufi_adv_stop(void) {
 
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
 
-	if (!test_in_progress()) {
-		// Rearm the timer at the beginning of the callback for any BLE event
-		if (blufi_adv_expiry_timer != NULL) {
-			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-			if (xTimerResetFromISR(blufi_adv_expiry_timer, &xHigherPriorityTaskWoken) != pdPASS) {
-				// Handle error
-				printf("Timer reset failed\n");
-			}
-			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-		}
-	}
+//    if (!test_in_progress()) {
+//        // Rearm the timer at the beginning of the callback for any BLE event
+//        if (blufi_adv_expiry_timer != NULL) {
+//            printf("REARM TIMER\n");
+//            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//            if (xTimerResetFromISR(blufi_adv_expiry_timer, &xHigherPriorityTaskWoken) != pdPASS) {
+//                // Handle error
+//                printf("Timer reset failed\n");
+//            }
+//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+//        }
+//    } else {
+//        printf("BLE EVENT RECEIVED BUT TIMER NOT REARMED (test_in_progress)\n");
+//    }
 
     /* actually, should post to blufi_task handle the procedure,
      * now, as a example, we do it more simply */
@@ -171,6 +175,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         blufi_security_init();
         current_ble_state = BLE_CONNECTED;
         ble_connection_count++;
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
+        }
         break;
     }
     case ESP_BLUFI_EVENT_BLE_DISCONNECT: {
@@ -345,6 +352,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
     }
     case ESP_BLUFI_EVENT_RECV_CUSTOM_DATA: {
         printf("Recv Custom Data %" PRIu32 "\n", param->custom_data.data_len);
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
+        }
         esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
         analyse_received_data(param->custom_data.data, param->custom_data.data_len);
         break;
