@@ -31,6 +31,7 @@
 #include "structs.h"
 #include "messaging.h"
 #include "storage.h"
+#include "test.h"
 
 static bool is_bt_mem_released = false;
 
