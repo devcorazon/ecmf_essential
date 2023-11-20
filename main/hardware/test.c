@@ -391,6 +391,9 @@ static int cmd_test_start_func(int argc, char **argv) {
         printf("Run test_stop and start again! \n");
         return -1;
     }
+
+	test_in_progress_set();
+
     if (xTaskCreate(ir_receiver_test_task, "IR Receiver test task", IR_RECEIVER_TASK_STACK_SIZE, NULL, IR_RECEIVER_TASK_PRIORITY, &ir_receiver_test_task_handle) != pdPASS) {
             ir_receiver_test_task_handle = NULL;
             return -1;
@@ -419,8 +422,6 @@ static int cmd_test_start_func(int argc, char **argv) {
 	}
 
 	fan_set(0,0);      //reset fan
-
-	test_in_progress_set();
 
     return (ir_receiver_test_task_handle != NULL ? 0 : -1);
 }

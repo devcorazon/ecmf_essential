@@ -40,6 +40,7 @@ enum ux_s {
 static uint8_t user_experience_state = OPERATIVE;
 
 static void configuration_sensor_timer_cb(TimerHandle_t xTimer) {
+	rgb_led_mode(RGB_LED_COLOR_AQUA_RH + user_experience_state - 1, RGB_LED_MODE_ONESHOOT, false);
 	user_experience_state = OPERATIVE;
 }
 
@@ -315,10 +316,7 @@ static void user_experience_state_machine(void) {
 int user_experience_init() {
 	BaseType_t user_experience_task_created = xTaskCreate(user_experience_task, "User experience task ", USER_EXPERIENCE_TASK_STACK_SIZE, NULL, USER_EXPERIENCE_TASK_PRIORITY, NULL);
 
-    // Create the timer if not already done
-    if (!configuration_sensor_timer) {
-    	configuration_sensor_timer = xTimerCreate("configuration_sensor_timer", pdMS_TO_TICKS(CONFIGURATION_SENSOR_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, configuration_sensor_timer_cb);
-    }
+    configuration_sensor_timer = xTimerCreate("configuration_sensor_timer", pdMS_TO_TICKS(CONFIGURATION_SENSOR_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, configuration_sensor_timer_cb);
 
 	return ((user_experience_task_created) == pdPASS ? 0 : -1);
 }

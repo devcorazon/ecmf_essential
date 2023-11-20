@@ -139,15 +139,18 @@ int blufi_adv_stop(void) {
 }
 
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
-    // Rearm the timer at the beginning of the callback for any BLE event
-    if (blufi_adv_expiry_timer != NULL) {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        if(xTimerResetFromISR(blufi_adv_expiry_timer, &xHigherPriorityTaskWoken) != pdPASS) {
-            // Handle error
-            printf("Timer reset failed\n");
-        }
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
+
+	if (!test_in_progress()) {
+		// Rearm the timer at the beginning of the callback for any BLE event
+		if (blufi_adv_expiry_timer != NULL) {
+			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+			if (xTimerResetFromISR(blufi_adv_expiry_timer, &xHigherPriorityTaskWoken) != pdPASS) {
+				// Handle error
+				printf("Timer reset failed\n");
+			}
+			portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+		}
+	}
 
     /* actually, should post to blufi_task handle the procedure,
      * now, as a example, we do it more simply */
@@ -417,10 +420,7 @@ int blufi_ble_init(void) {
 		}
 	}
 
-    // Create the timer if not already done
-    if (!blufi_adv_expiry_timer) {
-    	blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
-    }
+    blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
 
 	return 0;
 }
