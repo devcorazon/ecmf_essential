@@ -36,6 +36,7 @@
 #include "structs.h"
 #include "messaging.h"
 #include "storage.h"
+#include "test.h"
 
 #include "esp_ota_ops.h"
 #include "esp_http_client.h"
@@ -512,7 +513,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
     	memset(get_sta_bssid(), 0, BSSID_SIZE);
     	set_sta_ssid_len(0);
     	xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-    	xTimerStart(wifi_reconnect_timer, 0);
+    	if (test_in_progress()) {
+    		xTimerStop(wifi_reconnect_timer, 0);
+    	}
+    	else {
+    		xTimerStart(wifi_reconnect_timer, 0);
+    	}
     	break;
     case WIFI_EVENT_AP_START:
         if (esp_wifi_get_mode(&mode) != ESP_OK) {
@@ -572,33 +578,33 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,int32_t ev
         break;
 
     case WIFI_EVENT_STA_WPS_ER_SUCCESS:
-        	printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
+        printf("WIFI_EVENT_STA_WPS_ER_SUCCESS\n");
 
-        	wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
-			uint8_t ssid[SSID_SIZE + 1] = { 0 };
-			uint8_t pwd[PASSWORD_SIZE + 1] = { 0 };
+        wifi_event_sta_wps_er_success_t *evt = (wifi_event_sta_wps_er_success_t *)event_data;
+		uint8_t ssid[SSID_SIZE + 1] = { 0 };
+		uint8_t pwd[PASSWORD_SIZE + 1] = { 0 };
 
-			get_ssid(ssid);
+		get_ssid(ssid);
 
-			if ((memcmp(ssid, evt->ap_cred[0].ssid, SSID_SIZE) == 0) && (strlen((char *)ssid))) {
+		if ((memcmp(ssid, evt->ap_cred[0].ssid, SSID_SIZE) == 0) && (strlen((char *)ssid))) {
 
-				memcpy(pwd, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
+			memcpy(pwd, evt->ap_cred[0].passphrase, sizeof(evt->ap_cred[0].passphrase));
 
-				set_password((const uint8_t *) pwd);
+			set_password((const uint8_t *) pwd);
 
-				wifi_config_t sta_config = get_sta_config();
-				blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
+			wifi_config_t sta_config = get_sta_config();
+			blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
 
-				printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
+			printf("Connecting to SSID: %s, Passphrase: %s\n", evt->ap_cred[0].ssid, evt->ap_cred[0].passphrase);
 
-				if (gl_sta_connected) {
-					esp_wifi_disconnect();
-				}
-
-				esp_wifi_wps_disable();
-				set_wps_is_enabled(false);
-				blufi_wifi_connect();
+			if (gl_sta_connected) {
+				esp_wifi_disconnect();
 			}
+
+			esp_wifi_wps_disable();
+			set_wps_is_enabled(false);
+			blufi_wifi_connect();
+		}
         break;
     case WIFI_EVENT_STA_WPS_ER_FAILED:
     	printf("WIFI_EVENT_STA_WPS_ER_FAILED\n");
@@ -663,39 +669,24 @@ static void ota_event_handler(void* arg, esp_event_base_t event_base, int32_t ev
 }
 
 int blufi_ap_start(void) {
-	esp_err_t ret;
-
-	ret = esp_wifi_set_mode(WIFI_MODE_AP);
-	if (ret != ESP_OK) {
-		printf("Failed to set WiFi mode: %s\n", esp_err_to_name(ret));
-		return -1;
-	}
+	esp_wifi_set_mode(WIFI_MODE_AP);
 
 	wifi_config_t t_ap_config = get_ap_config();
-	ret = blufi_wifi_configure(WIFI_MODE_AP, &t_ap_config);
-	if (ret != ESP_OK) {
-	    return -1;
-	}
+    blufi_wifi_configure(WIFI_MODE_AP, &t_ap_config);
 
-
-	ret = esp_wifi_start();
-	if (ret != ESP_OK) {
-		printf("Failed to start WiFi: %s\n", esp_err_to_name(ret));
-	}
+    esp_wifi_start();
 
 	return 0;
 }
 
 int blufi_ap_stop(void) {
-    esp_err_t ret;
-
     printf("Stopping WiFi access point...");
 
-    ret = esp_wifi_stop();
-    if (ret != ESP_OK) {
-        printf("Failed to stop WiFi: %s\n", esp_err_to_name(ret));
-        return -1;
-    }
+    esp_wifi_set_mode(WIFI_MODE_STA);
+
+    wifi_config_t sta_config = get_sta_config();
+    blufi_wifi_configure(WIFI_MODE_STA, &sta_config);
+
     return 0;
 }
 
