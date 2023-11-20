@@ -401,8 +401,6 @@ static int cmd_test_start_func(int argc, char **argv) {
             return -1;
     }
 
-    blufi_ble_init();
-
 	if (get_sta_connected() || get_sta_is_connecting()) {
 		esp_err_t ret = esp_wifi_disconnect();
 		if (ret != ESP_OK) {
@@ -435,7 +433,6 @@ static int cmd_test_stop_func(int argc, char **argv) {
             vTaskDelete(ir_receiver_test_task_handle);
             ir_receiver_test_task_handle = NULL; // Set the handle to NULL after deleting the task
         }
-		blufi_ble_deinit();
 		rgb_led_set(0,0);  // reset led
 		blufi_adv_stop();  // blufi Access point stop
 		blufi_ap_stop();  // blufi adv point start

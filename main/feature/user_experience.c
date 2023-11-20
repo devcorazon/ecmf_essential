@@ -175,7 +175,6 @@ static void user_experience_state_machine(void) {
 
 				case BUTTON_9_LONG:
 					rgb_led_mode(RGB_LED_COLOR_CONNECTIVTY, RGB_LED_MODE_DOUBLE_BLINK, false);
-					blufi_ble_init();
 					blufi_adv_start();
 					break;
 

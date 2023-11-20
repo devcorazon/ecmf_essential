@@ -805,7 +805,6 @@ int blufi_wifi_deinit(void) {
         return -1;
     }
 
-
     ret = esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
     if (ret != ESP_OK) {
         printf("Failed to unregister WiFi event handler: %s\n", esp_err_to_name(ret));
@@ -828,6 +827,10 @@ int blufi_wifi_deinit(void) {
     if (ret != ESP_OK) {
         printf("Failed to delete default event loop: %s\n", esp_err_to_name(ret));
         return -1;
+    }
+
+    if (wifi_event_group) {
+        vEventGroupDelete(wifi_event_group);
     }
 
     if (ap_netif) {

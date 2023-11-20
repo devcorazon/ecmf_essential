@@ -83,48 +83,19 @@ static void blufi_adv_expiry_timer_cb(TimerHandle_t xTimer) {
 	bt_status = esp_bt_controller_get_status();
 
     if (bt_status == ESP_BT_CONTROLLER_STATUS_INITED || bt_status == ESP_BT_CONTROLLER_STATUS_ENABLED) {
-    	printf("BLE ADV Timeout\n");
         blufi_adv_stop();
-        blufi_ble_deinit();
     }
 }
 
 int blufi_adv_start(void) {
-    esp_err_t ret;
-
-    // Creating the new BT device name
-    uint32_t serial_number = get_serial_number();
-    char serial_number_str[9]; // 8 characters for the hexadecimal number and 1 for the null terminator
-    sprintf(serial_number_str, "%08" PRIx32, serial_number); // Convert to hex string
-
-    char bt_name_prefix[] = "ECMF-";
-    char bt_device_name[32]; // BT name can be up to 248 bytes, but we keep it shorter for simplicity
-
-    snprintf(bt_device_name, sizeof(bt_device_name), "%s%s", bt_name_prefix, serial_number_str); // Concatenate the prefix and the serial number
-
-    ret = esp_blufi_host_and_cb_init(&callbacks);
-	if (ret != ESP_OK) {
-		printf("%s BLUFI initialise failed: %s\n", __func__, esp_err_to_name(ret));
-		return -1;
-	}
-
-    // Set the custom Bluetooth device name
-    ret = esp_ble_gap_set_device_name(bt_device_name);
-    if (ret != ESP_OK) {
-        printf("%s set device name failed: %s\n", __func__, esp_err_to_name(ret));
-        return -1;
-    }
-
-    // Now, start BLUFi advertising
+    // start BLUFi advertising
     esp_ble_gap_config_adv_data(&blufi_adv_data);
 
-    printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
+    printf("BT_ADV Started ver:%04x\n", esp_blufi_get_version());
 
     if (test_in_progress()) {
-    	printf("STOPPING TIMER\n");
     	xTimerStop(blufi_adv_expiry_timer, 0);
     } else {
-        printf("STARTING TIMER\n");
         xTimerStart(blufi_adv_expiry_timer, 0);
     }
 
@@ -140,21 +111,6 @@ int blufi_adv_stop(void) {
 }
 
 static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t *param) {
-
-//    if (!test_in_progress()) {
-//        // Rearm the timer at the beginning of the callback for any BLE event
-//        if (blufi_adv_expiry_timer != NULL) {
-//            printf("REARM TIMER\n");
-//            BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//            if (xTimerResetFromISR(blufi_adv_expiry_timer, &xHigherPriorityTaskWoken) != pdPASS) {
-//                // Handle error
-//                printf("Timer reset failed\n");
-//            }
-//            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-//        }
-//    } else {
-//        printf("BLE EVENT RECEIVED BUT TIMER NOT REARMED (test_in_progress)\n");
-//    }
 
     /* actually, should post to blufi_task handle the procedure,
      * now, as a example, we do it more simply */
@@ -429,8 +385,31 @@ int blufi_ble_init(void) {
 			return -1;
 		}
 	}
+	// Creating ADV timer expiry
+    blufi_adv_expiry_timer = xTimerCreate("blufi adv timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
 
-    blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
+    // Creating the new BT device name
+    uint32_t serial_number = get_serial_number();
+    char serial_number_str[9]; // 8 characters for the hexadecimal number and 1 for the null terminator
+    sprintf(serial_number_str, "%08" PRIx32, serial_number); // Convert to hex string
+
+    char bt_name_prefix[] = "ECMF-";
+    char bt_device_name[32]; // BT name can be up to 248 bytes, but we keep it shorter for simplicity
+
+    snprintf(bt_device_name, sizeof(bt_device_name), "%s%s", bt_name_prefix, serial_number_str); // Concatenate the prefix and the serial number
+
+    ret = esp_blufi_host_and_cb_init(&callbacks);
+	if (ret != ESP_OK) {
+		printf("%s BLUFI initialise failed: %s\n", __func__, esp_err_to_name(ret));
+		return -1;
+	}
+
+    // Set the custom Bluetooth device name
+    ret = esp_ble_gap_set_device_name(bt_device_name);
+    if (ret != ESP_OK) {
+        printf("%s set device name failed: %s\n", __func__, esp_err_to_name(ret));
+        return -1;
+    }
 
 	return 0;
 }

@@ -123,6 +123,7 @@ int system_init(void) {
 	ir_receiver_init();
 	controller_init();
 	user_experience_init();
+	blufi_ble_init();
 	blufi_wifi_init();
 
 	uint8_t ssid[SSID_SIZE + 1] = {0};
