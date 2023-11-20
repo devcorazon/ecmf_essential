@@ -191,6 +191,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         else {
             esp_blufi_send_wifi_conn_report(mode, ESP_BLUFI_STA_CONN_FAIL, softap_get_current_connection_number(), get_sta_conn_info());
         }
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
+        }
         printf("BLUFI get wifi status from AP\n");
         break;
     }
@@ -220,6 +223,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA SSID %s\n", sta_config.sta.ssid);
         set_ssid(sta_config.sta.ssid);
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
+        }
         break;
     }
 
@@ -231,6 +237,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         esp_wifi_set_config(WIFI_IF_STA, &sta_config);
         printf("Recv STA PASSWORD %s\n", sta_config.sta.password);
         set_password(sta_config.sta.password);
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
+        }
         break;
     }
 
@@ -303,6 +312,9 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
         esp_err_t ret = esp_wifi_scan_start(&scanConf, true);
         if (ret != ESP_OK) {
             esp_blufi_send_error_info(ESP_BLUFI_WIFI_SCAN_FAIL);
+        }
+        if (!test_in_progress()) {
+            xTimerReset(blufi_adv_expiry_timer, 0);
         }
         break;
     }
