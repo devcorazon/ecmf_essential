@@ -413,11 +413,11 @@ static void work_task(void *arg) {
 		break;
 
 	case MODE_IMMISSION:
-		set_mode_set(MODE_FIXED_CYCLE);
+		set_mode_set(MODE_AUTOMATIC_CYCLE);
 		break;
 
 	case MODE_EMISSION:
-		set_mode_set(MODE_FIXED_CYCLE);
+		set_mode_set(MODE_AUTOMATIC_CYCLE);
 		break;
 
 	case MODE_FIXED_CYCLE:

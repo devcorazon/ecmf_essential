@@ -418,6 +418,8 @@ static int cmd_test_start_func(int argc, char **argv) {
 		return -1;
 	}
 
+	fan_set(0,0);      //reset fan
+
 	test_in_progress_set();
 
     return (ir_receiver_test_task_handle != NULL ? 0 : -1);
@@ -433,9 +435,6 @@ static int cmd_test_stop_func(int argc, char **argv) {
             ir_receiver_test_task_handle = NULL; // Set the handle to NULL after deleting the task
         }
 		blufi_ble_deinit();
-		set_mode_set(0);   // reset mode
-		set_speed_set(0);  //reset speed
-		fan_set(0,0);      //reset fan
 		rgb_led_set(0,0);  // reset led
 		blufi_adv_stop();  // blufi Access point stop
 		blufi_ap_stop();  // blufi adv point start

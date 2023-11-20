@@ -27,6 +27,8 @@ static void user_experience_task(void *pvParameters);
 
 static void user_experience_state_machine(void);
 
+static TimerHandle_t configuration_sensor_timer = NULL;
+
 enum ux_s {
 	OPERATIVE		= 0,
 	RH_SETTING,
@@ -36,6 +38,10 @@ enum ux_s {
 };
 
 static uint8_t user_experience_state = OPERATIVE;
+
+static void configuration_sensor_timer_cb(TimerHandle_t xTimer) {
+	user_experience_state = OPERATIVE;
+}
 
 static void system_mode_speed_set(uint8_t mode, uint8_t speed) {
 	static uint8_t mode_ux = MODE_AUTOMATIC_CYCLE;
@@ -150,6 +156,7 @@ static void user_experience_state_machine(void) {
 				case BUTTON_7_LONG:
 					user_experience_state = RH_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+					xTimerStart(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_8:
@@ -159,6 +166,7 @@ static void user_experience_state_machine(void) {
 				case BUTTON_8_LONG:
 					user_experience_state = VOC_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					xTimerStart(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_9:
@@ -177,6 +185,7 @@ static void user_experience_state_machine(void) {
 				case BUTTON_10_LONG:
 					user_experience_state = LUX_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					xTimerStart(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_11:
@@ -198,21 +207,25 @@ static void user_experience_state_machine(void) {
 						set_relative_humidity_set(RH_THRESHOLD_SETTING_NOT_CONFIGURED);
 					}
 					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_8_LONG:
 					user_experience_state = VOC_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_10_LONG:
 					user_experience_state = LUX_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_9:
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_ONESHOOT, false);
+					xTimerStop(configuration_sensor_timer, 0);
 					break;
 			}
 
@@ -228,21 +241,25 @@ static void user_experience_state_machine(void) {
 						set_voc_set(VOC_THRESHOLD_SETTING_NOT_CONFIGURED);
 					}
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_7_LONG:
 					user_experience_state = RH_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_10_LONG:
 					user_experience_state = LUX_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_9:
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_ONESHOOT, false);
+					xTimerStop(configuration_sensor_timer, 0);
 					break;
 			}
 			break;
@@ -257,21 +274,25 @@ static void user_experience_state_machine(void) {
 						set_lux_set(LUX_THRESHOLD_SETTING_NOT_CONFIGURED);
 					}
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_CONF_OFFSET + get_lux_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_7_LONG:
 					user_experience_state = RH_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_AQUA_RH, RGB_LED_MODE_CONF_OFFSET + get_relative_humidity_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_8_LONG:
 					user_experience_state = VOC_SETTING;
 					rgb_led_mode(RGB_LED_COLOR_GREEN_VOC, RGB_LED_MODE_CONF_OFFSET + get_voc_set(), true);
+					xTimerReset(configuration_sensor_timer, 0);
 					break;
 
 				case BUTTON_9:
 					user_experience_state = OPERATIVE;
 					rgb_led_mode(RGB_LED_COLOR_YELLOW_LUX, RGB_LED_MODE_ONESHOOT, false);
+					xTimerStop(configuration_sensor_timer, 0);
 					break;
 			}
 			break;
@@ -293,6 +314,11 @@ static void user_experience_state_machine(void) {
 
 int user_experience_init() {
 	BaseType_t user_experience_task_created = xTaskCreate(user_experience_task, "User experience task ", USER_EXPERIENCE_TASK_STACK_SIZE, NULL, USER_EXPERIENCE_TASK_PRIORITY, NULL);
+
+    // Create the timer if not already done
+    if (!configuration_sensor_timer) {
+    	configuration_sensor_timer = xTimerCreate("configuration_sensor_timer", pdMS_TO_TICKS(CONFIGURATION_SENSOR_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, configuration_sensor_timer_cb);
+    }
 
 	return ((user_experience_task_created) == pdPASS ? 0 : -1);
 }

@@ -119,15 +119,12 @@ int blufi_adv_start(void) {
 
     printf("BLUFI VERSION %04x\n", esp_blufi_get_version());
 
-    // Create the timer if not already done
-    if (!blufi_adv_expiry_timer) {
-    	blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
-    }
-
-    // Start the timer
-    if (blufi_adv_expiry_timer) {
-        xTimerStart(blufi_adv_expiry_timer, 0);
-    }
+	if (!test_in_progress()) {
+		// Start the timer
+		if (blufi_adv_expiry_timer) {
+			xTimerStart(blufi_adv_expiry_timer, 0);
+		}
+	}
 
     return 0;
 }
@@ -418,6 +415,12 @@ int blufi_ble_init(void) {
 			return -1;
 		}
 	}
+
+    // Create the timer if not already done
+    if (!blufi_adv_expiry_timer) {
+    	blufi_adv_expiry_timer = xTimerCreate("blufi_adv_expiry_timer", pdMS_TO_TICKS(BLE_ADV_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, blufi_adv_expiry_timer_cb);
+    }
+
 	return 0;
 }
 
