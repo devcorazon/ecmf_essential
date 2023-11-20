@@ -8,6 +8,6 @@
 #ifndef MAIN_INCLUDE_MESSAGING_H_
 #define MAIN_INCLUDE_MESSAGING_H_
 
-int analyse_received_data(const uint8_t *data, uint32_t data_len);
+int ble_analyse_received_data(const uint8_t *data, uint32_t data_len);
 
 #endif /* MAIN_INCLUDE_MESSAGING_H_ */

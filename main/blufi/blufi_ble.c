@@ -324,7 +324,7 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
             xTimerReset(blufi_adv_expiry_timer, 0);
         }
         esp_log_buffer_hex("Custom Data", param->custom_data.data, param->custom_data.data_len);
-        analyse_received_data(param->custom_data.data, param->custom_data.data_len);
+        ble_analyse_received_data(param->custom_data.data, param->custom_data.data_len);
         break;
     }
 

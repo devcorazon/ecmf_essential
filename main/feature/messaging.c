@@ -18,6 +18,7 @@
 #include "blufi.h"
 #include "messaging.h"
 #include "storage.h"
+#include "statistic.h"
 
 typedef void (*command_callback_t) (char *pnt_data, size_t length);
 
@@ -33,24 +34,30 @@ static void password_callback(char *pnt_data, size_t length);
 static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
 static void wifi_active_callback(char *pnt_data, size_t length);
+static void wifi_active_key_callback(char *pnt_data, size_t length);
 static void wifi_wps_callback(char *pnt_data, size_t length);
+static void wrn_flt_disable_callback(char *pnt_data, size_t length);
+static void wrn_flt_clear_callback(char *pnt_data, size_t length);
 static void reboot_callback(char *pnt_data, size_t length);
 static void factory_callback(char *pnt_data, size_t length);
 
 static const struct custom_command_s custom_commands_table[] = {
-	{ 	BLUFI_CMD_OTA,			ota_callback	    	},
-	{ 	BLUFI_CMD_VERSION,		version_callback		},
-	{	BLUFI_CMD_SSID,	        ssid_callback	        },
-	{   BLUFI_CMD_PWD,          password_callback       },
-	{ 	BLUFI_CMD_SERVER,		server_callback			},
-	{ 	BLUFI_CMD_PORT,			port_callback	    	},
-	{	BLUFI_CMD_WIFI_ACTIVE,	wifi_active_callback	},
-	{   BLUFI_CMD_WIFI_WPS,     wifi_wps_callback       },
-	{	BLUFI_CMD_REBOOT,	    reboot_callback	        },
-	{   BLUFI_CMD_FACTORY,      factory_callback        },
+	{ 	BLUFI_CMD_OTA,		    	ota_callback	         	},
+	{ 	BLUFI_CMD_VERSION,	    	version_callback	     	},
+	{	BLUFI_CMD_SSID,	            ssid_callback	            },
+	{   BLUFI_CMD_PWD,              password_callback           },
+	{ 	BLUFI_CMD_SERVER,		    server_callback		    	},
+	{ 	BLUFI_CMD_PORT,			    port_callback	    	    },
+	{	BLUFI_CMD_WIFI_ACTIVE,	    wifi_active_callback	    },
+	{	BLUFI_CMD_WIFI_ACTIVE_KEY,	wifi_active_key_callback },
+	{   BLUFI_CMD_WIFI_WPS,         wifi_wps_callback           },
+	{	BLUFI_CMD_WRN_FLT_DISABLE,	wrn_flt_disable_callback    },
+	{	BLUFI_CMD_WRN_FLT_CLEAR,	wrn_flt_clear_callback     	},
+	{	BLUFI_CMD_REBOOT,	        reboot_callback	            },
+	{   BLUFI_CMD_FACTORY,          factory_callback            },
 };
 
-int analyse_received_data(const uint8_t *data, uint32_t data_len) {
+int ble_analyse_received_data(const uint8_t *data, uint32_t data_len) {
     for (size_t i = 0; i < ARRAY_SIZE(custom_commands_table); i++) {
         char *ptr = strstr((char *) data, custom_commands_table[i].command);
         size_t len = data_len;
@@ -69,7 +76,6 @@ int analyse_received_data(const uint8_t *data, uint32_t data_len) {
 static void version_callback(char *pnt_data, size_t length) {
 	esp_err_t ret;
 
-//	uint8_t fw_ver[] = { FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH };
 	uint8_t fw_ver[] = { FW_VERSION_MAJOR + 0x30, FW_VERSION_MINOR + 0x30, FW_VERSION_PATCH + 0x30 };
 
 	ret = esp_blufi_send_custom_data(fw_ver, sizeof(fw_ver));
@@ -148,13 +154,10 @@ static void ota_callback(char *pnt_data, size_t length) {
 static void wifi_active_callback(char *pnt_data, size_t length) {
 	uint8_t wifi_active = (uint8_t) (pnt_data[0]);
 
-#warning VALUE_NOT_BINARY
-#if 1
 	if ((wifi_active != 0x30) && (wifi_active != 0x31)) {
 		wifi_active = 0x31;
 	}
 	wifi_active -= 0x30;
-#endif
 
 	if (length == 1) {
 		if (get_wifi_active() != wifi_active) {
@@ -198,6 +201,10 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
     }
 }
 
+static void wifi_active_key_callback(char *pnt_data, size_t length) {
+	printf("WIFI ACTIVE KEY NEED TO BE IMPLEMENTED\n");
+}
+
 static void wifi_wps_callback(char *pnt_data, size_t length) {
 	int ret;
 
@@ -218,6 +225,27 @@ static void wifi_wps_callback(char *pnt_data, size_t length) {
 		printf("Im in WPS CALLBACK\n");
 		set_wps_is_enabled(true);
 	}
+}
+
+static void wrn_flt_disable_callback(char *ptr_data, size_t length) {
+    if (ptr_data == NULL || length == 0) {
+        printf("No data received for WRNFLTDISABLE command\n");
+        return;
+    }
+
+    int value = atoi(ptr_data); // Convert the data to an integer
+    if (value > 0) {
+    	printf("Disabling Filter Warning\n");
+    }
+    else
+    {
+    	printf("Enabling Filter Warning\n");
+    }
+}
+
+static void wrn_flt_clear_callback(char *pnt_data, size_t length) {
+	printf("Reseting Filter\n");
+	statistic_reset_filter();
 }
 
 static void reboot_callback(char *pnt_data, size_t length) {

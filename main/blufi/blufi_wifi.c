@@ -351,7 +351,7 @@ void tcp_receive_data_task(void *pvParameters) {
         }
 
         recv_buf[len] = '\0'; // Null-terminate the received data
-        analyse_received_data((const uint8_t *)recv_buf, len);
+//        analyse_received_data((const uint8_t *)recv_buf, len);
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }

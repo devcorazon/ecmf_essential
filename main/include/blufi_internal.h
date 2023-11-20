@@ -16,16 +16,19 @@
 #define ESP_WIFI_PASS      "mypassword"
 #define ESP_WIFI_CHANNEL   1
 
-#define BLUFI_CMD_OTA   		"OTA"
-#define BLUFI_CMD_VERSION   	"VERSION"
-#define BLUFI_CMD_SSID          "SSID"
-#define BLUFI_CMD_PWD           "PWD"
-#define BLUFI_CMD_SERVER    	"SERVER"
-#define BLUFI_CMD_PORT      	"PORT"
-#define BLUFI_CMD_WIFI_ACTIVE	"WIFIACT"
-#define BLUFI_CMD_WIFI_WPS	    "WPS"
-#define BLUFI_CMD_REBOOT	    "REBOOT"
-#define BLUFI_CMD_FACTORY	    "FACTORY"
+#define BLUFI_CMD_OTA   		   "OTA"
+#define BLUFI_CMD_VERSION   	   "VERSION"
+#define BLUFI_CMD_SSID             "SSID"
+#define BLUFI_CMD_PWD              "PWD"
+#define BLUFI_CMD_SERVER    	   "SERVER"
+#define BLUFI_CMD_PORT      	   "PORT"
+#define BLUFI_CMD_WIFI_ACTIVE	   "WIFIACT"
+#define BLUFI_CMD_WIFI_ACTIVE_KEY  "WIFIACTKEY"
+#define BLUFI_CMD_WIFI_WPS	       "WPS"
+#define BLUFI_CMD_WRN_FLT_DISABLE  "WRNFLTDISABLE"
+#define BLUFI_CMD_WRN_FLT_CLEAR	   "WRNFLTCLEAR"
+#define BLUFI_CMD_REBOOT	       "REBOOT"
+#define BLUFI_CMD_FACTORY	       "FACTORY"
 
 #define WIFI_ADDRESS_LEN        20
 #define BT_ADDRESS_LEN          20
