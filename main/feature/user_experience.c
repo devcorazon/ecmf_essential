@@ -15,6 +15,7 @@
 #include "test.h"
 #include "rgb_led.h"
 #include "blufi.h"
+#include "statistic.h"
 
 
 #define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
@@ -193,6 +194,7 @@ static void user_experience_state_machine(void) {
 
 				case BUTTON_11_LONG:
 					rgb_led_mode(RGB_LED_COLOR_WHITE, RGB_LED_MODE_DOUBLE_BLINK, false);
+					statistic_reset_filter();
 					break;
 			}
 			break;

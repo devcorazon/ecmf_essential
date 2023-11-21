@@ -42,6 +42,8 @@ struct configuration_settings_s {
 	int16_t		temperature_offset;
 	int16_t    	relative_humidity_offset;
 	uint16_t    automatic_cycle_duration;
+	uint8_t     wrn_flt_disable;
+
 };
 
 ////

@@ -76,6 +76,9 @@ int set_automatic_cycle_duration(uint16_t automatic_cycle_duration);
 uint32_t get_filter_operating(void);
 int set_filter_operating(uint32_t filter_operating);
 
+uint8_t get_wrn_flt_disable(void);
+int set_wrn_flt_disable(uint8_t wrn_flt_disable);
+
 void get_ssid(uint8_t *ssid);
 int set_ssid(const uint8_t *ssid);
 

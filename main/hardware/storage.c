@@ -15,21 +15,22 @@
 #include "system.h"
 #include "storage_internal.h"
 
-#define MODE_SET_KEY		 "mode_set"
-#define SPEED_SET_KEY		 "speed_set"
-#define R_HUM_SET_KEY     	 "r_hum_set"
-#define LUX_SET_KEY		     "lux_set"
-#define VOC_SET_KEY		     "voc_set"
-#define TEMP_OFFSET_KEY	     "temp_offset"
-#define R_HUM_OFFSET_KEY     "r_hum_offset"
-#define DEVICE_STATE_KEY     "device_state"
-#define FILTER_OPERATING_KEY "filter"
-#define SSID_KEY             "ssid"
-#define PASSWORD_KEY         "password"
-#define ACTIVE_KEY           "active"
-#define SERVER_KEY           "server"
-#define PORT_KEY             "port"
-#define OTA_URL_KEY          "ota"
+#define MODE_SET_KEY		  "mode_set"
+#define SPEED_SET_KEY		  "speed_set"
+#define R_HUM_SET_KEY     	  "r_hum_set"
+#define LUX_SET_KEY		      "lux_set"
+#define VOC_SET_KEY		      "voc_set"
+#define TEMP_OFFSET_KEY	      "temp_offset"
+#define R_HUM_OFFSET_KEY      "r_hum_offset"
+#define DEVICE_STATE_KEY      "device_state"
+#define FILTER_OPERATING_KEY  "filter"
+#define WRN_FLT_DISABLE_KEY   "wrnfltdisable"
+#define SSID_KEY              "ssid"
+#define PASSWORD_KEY          "password"
+#define ACTIVE_KEY            "active"
+#define SERVER_KEY            "server"
+#define PORT_KEY              "port"
+#define OTA_URL_KEY           "ota"
 
 
 static nvs_handle_t storage_handle;
@@ -44,25 +45,26 @@ static int storage_save_all_entry(void);
 static struct application_data_s application_data;
 
 static struct storage_entry_s storage_entry_poll[] = {
-		{ MODE_SET_KEY,		    &application_data.configuration_settings.mode_set,						DATA_TYPE_UINT8, 	1 },
-		{ SPEED_SET_KEY,		&application_data.configuration_settings.speed_set,						DATA_TYPE_UINT8, 	1 },
+		{ MODE_SET_KEY,		           &application_data.configuration_settings.mode_set,					  DATA_TYPE_UINT8, 	  1 },
+		{ SPEED_SET_KEY,		       &application_data.configuration_settings.speed_set,					  DATA_TYPE_UINT8, 	  1 },
 
-		{ R_HUM_SET_KEY,		&application_data.configuration_settings.relative_humidity_set,			DATA_TYPE_UINT8, 	1 },
-		{ LUX_SET_KEY,		    &application_data.configuration_settings.lux_set,						DATA_TYPE_UINT8, 	1 },
-		{ VOC_SET_KEY,		    &application_data.configuration_settings.voc_set,						DATA_TYPE_UINT8, 	1 },
+		{ R_HUM_SET_KEY,		       &application_data.configuration_settings.relative_humidity_set,		  DATA_TYPE_UINT8, 	  1 },
+		{ LUX_SET_KEY,		           &application_data.configuration_settings.lux_set,					  DATA_TYPE_UINT8, 	  1 },
+		{ VOC_SET_KEY,		           &application_data.configuration_settings.voc_set,					  DATA_TYPE_UINT8, 	  1 },
 
-		{ TEMP_OFFSET_KEY,    	&application_data.configuration_settings.temperature_offset,			DATA_TYPE_INT16, 	2 },
-		{ R_HUM_OFFSET_KEY,  	&application_data.configuration_settings.relative_humidity_offset,		DATA_TYPE_INT16, 	2 },
+		{ TEMP_OFFSET_KEY,    	       &application_data.configuration_settings.temperature_offset,			  DATA_TYPE_INT16, 	  2 },
+		{ R_HUM_OFFSET_KEY,  	       &application_data.configuration_settings.relative_humidity_offset,	  DATA_TYPE_INT16, 	  2 },
 
- 		{ DEVICE_STATE_KEY,      &application_data.runtime_data.device_state,                            DATA_TYPE_UINT8,    1 },
- 		{ FILTER_OPERATING_KEY,  &application_data.runtime_data.filter_operating,                        DATA_TYPE_UINT32,   4 },
+ 		{ DEVICE_STATE_KEY,            &application_data.runtime_data.device_state,                           DATA_TYPE_UINT8,    1 },
+ 		{ FILTER_OPERATING_KEY,        &application_data.runtime_data.filter_operating,                       DATA_TYPE_UINT32,   4 },
+ 		{ WRN_FLT_DISABLE_KEY,         &application_data.configuration_settings.wrn_flt_disable,              DATA_TYPE_UINT8,    1 },
 
-		{ SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE + 1 },
-		{ PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE + 1 },
-		{ ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
-		{ SERVER_KEY,             &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE + 1 },
-		{ PORT_KEY,               &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE + 1 },
-		{ OTA_URL_KEY,            &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE + 1 }
+		{ SSID_KEY,                    &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE + 1 },
+		{ PASSWORD_KEY,                &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE + 1 },
+		{ ACTIVE_KEY,                  &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
+		{ SERVER_KEY,                  &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE + 1 },
+		{ PORT_KEY,                    &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE + 1 },
+		{ OTA_URL_KEY,                 &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE + 1 }
 };
 
 
@@ -97,6 +99,7 @@ static void storage_init_configuration_settings(void) {
 	application_data.configuration_settings.mode_set = MODE_OFF;
 	application_data.configuration_settings.temperature_offset = 0;
 	application_data.configuration_settings.relative_humidity_offset = 0;
+	application_data.configuration_settings.wrn_flt_disable = 0;
 }
 
 int storage_init(void) {
@@ -379,6 +382,19 @@ int set_filter_operating(uint32_t filter_operating) {
     application_data.runtime_data.filter_operating = filter_operating;
 
     storage_save_entry_with_key(FILTER_OPERATING_KEY);
+
+    return 0;
+}
+
+uint8_t get_wrn_flt_disable(void) {
+    return application_data.configuration_settings.wrn_flt_disable;
+
+}
+
+int set_wrn_flt_disable(uint8_t wrn_flt_disable) {
+	application_data.configuration_settings.wrn_flt_disable = wrn_flt_disable;
+
+    storage_save_entry_with_key(WRN_FLT_DISABLE_KEY);
 
     return 0;
 }

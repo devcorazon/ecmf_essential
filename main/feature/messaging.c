@@ -233,13 +233,14 @@ static void wrn_flt_disable_callback(char *ptr_data, size_t length) {
         return;
     }
 
-    int value = atoi(ptr_data); // Convert the data to an integer
-    if (value > 0) {
+    int value = atoi(ptr_data);
+    if (value) {
     	printf("Disabling Filter Warning\n");
+    	set_wrn_flt_disable(1);
     }
-    else
-    {
+    else {
     	printf("Enabling Filter Warning\n");
+    	set_wrn_flt_disable(0);
     }
 }
 
