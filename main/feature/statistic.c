@@ -11,8 +11,7 @@
 #include "structs.h"
 #include "fan.h"
 
-#define SAVING_THRESHOLD_STATS				(FILTER_THRESHOLD / 10u)
-
+#define SAVING_THRESHOLD_STATS				(50u)
 
 typedef struct {
     struct {
@@ -66,7 +65,18 @@ void statistic_update_handler(void) {
 						(statistics_current.speed_counters_tot_sec.boost	* COEFF_BOOST)) / (COEFF_SCALE * SECONDS_PER_HOUR);
 
 	if (filter_operating / SAVING_THRESHOLD_STATS) {
-		set_filter_operating(get_filter_operating() + ((filter_operating / SAVING_THRESHOLD_STATS) * SAVING_THRESHOLD_STATS));
+//		printf("Begin Filter Saved Thr: %ld - Actual Thr: %ld\n", get_filter_operating(),  filter_operating);
+//		printf("NIGHT: %ld - LOW: %ld - MED: %ld - HIGH: %ld - BOOST: %ld\n", statistics_current.speed_counters_tot_sec.night, statistics_current.speed_counters_tot_sec.low, statistics_current.speed_counters_tot_sec.medium, statistics_current.speed_counters_tot_sec.high, statistics_current.speed_counters_tot_sec.boost);
+
+		uint32_t filter_operating_diff = 0ul;
+
+		filter_operating_diff += statistics_current.speed_counters_tot_sec.night / ((COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_NIGHT);
+		filter_operating_diff += statistics_current.speed_counters_tot_sec.low / ((COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_LOW);
+		filter_operating_diff += statistics_current.speed_counters_tot_sec.medium / ((COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_MEDIUM);
+		filter_operating_diff += statistics_current.speed_counters_tot_sec.high / ((COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_HIGH);
+		filter_operating_diff += statistics_current.speed_counters_tot_sec.boost / ((COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_BOOST);
+
+		set_filter_operating(get_filter_operating() + filter_operating_diff);
 
 		statistics_current.speed_counters_tot_sec.night		%= (COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_NIGHT;
 		statistics_current.speed_counters_tot_sec.low		%= (COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_LOW;
@@ -74,12 +84,16 @@ void statistic_update_handler(void) {
 		statistics_current.speed_counters_tot_sec.high		%= (COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_HIGH;
 		statistics_current.speed_counters_tot_sec.boost		%= (COEFF_SCALE * SECONDS_PER_HOUR) / COEFF_BOOST;
 
-		filter_operating %= SAVING_THRESHOLD_STATS;
+		filter_operating -= filter_operating_diff;
+
+//		printf("End Filter Saved Thr: %ld - Actual Thr: %ld\n", get_filter_operating(),  filter_operating);
+//		printf("NIGHT: %ld - LOW: %ld - MED: %ld - HIGH: %ld - BOOST: %ld\n", statistics_current.speed_counters_tot_sec.night, statistics_current.speed_counters_tot_sec.low, statistics_current.speed_counters_tot_sec.medium, statistics_current.speed_counters_tot_sec.high, statistics_current.speed_counters_tot_sec.boost);
 	}
 
 	// Check threshold
 	if (((get_filter_operating() + filter_operating) >= FILTER_THRESHOLD) && !(get_device_state() & THRESHOLD_FILTER_WARNING)) {
 		set_device_state(get_device_state() | THRESHOLD_FILTER_WARNING);
+		printf("THRESHOLD_FILTER_WARNING\n");
 	}
 
 //	printf("Filter Operating Total: %ld\n", get_filter_operating() + filter_operating);

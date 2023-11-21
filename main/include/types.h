@@ -41,7 +41,6 @@
 #define LUX_RAW_TO_INT(lux)						(uint16_t) (lux / LUX_SCALE)
 #define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
 
-#if 0
 #define SECONDS_PER_HOUR						3600u
 
 /// Timing
@@ -52,18 +51,6 @@
 #define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
 #define DURATION_EXTRA_CYCLE_BOOST				(200U)
 #define DURATION_RESTART_EXTRA_CYCLE			(1U * SECONDS_PER_HOUR)
-#else
-
-#define SECONDS_PER_HOUR						720u
-/// Timing
-#define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
-#define DURATION_FIXED_CYCLE					(15U)
-#define DURATION_AUTOMATIC_CYCLE_OUT			(10U)
-#define DURATION_AUTOMATIC_CYCLE_IN				(30U)
-#define DURATION_RESTART_AUTOMATIC_CYCLE		(10U * SECONDS_PER_HOUR)
-#define DURATION_EXTRA_CYCLE_BOOST				(35U)
-#define DURATION_RESTART_EXTRA_CYCLE			(1U * SECONDS_PER_HOUR)
-#endif
 
 #define ceiling_fraction(numerator, divider) (((numerator) + ((divider) - 1)) / (divider))
 #define SECONDS_TO_MS(seconds) ((seconds) * 1000UL)
@@ -105,7 +92,7 @@
 #define OFFSET_BOUND_MAX						(500)
 
 // Filters
-#define FILTER_THRESHOLD						10u//(1000u)
+#define FILTER_THRESHOLD						(1000u)
 
 #define THRESHOLD_FILTER_WARNING				BIT(0)
 

@@ -504,6 +504,9 @@ static int cmd_info_func(int argc, char **argv) {
 	} else {
 		printf("NTC Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(i16_ntc_temp), TEMP_RAW_TO_DEC(i16_ntc_temp));
 	}
+
+	printf("Filter Operating Saved: %ld - State: Warning %s\n", get_filter_operating(), get_device_state() ? "ON" : "OFF");
+
 	return 0;
 }
 
