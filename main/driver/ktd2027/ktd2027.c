@@ -136,7 +136,7 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 			} else if (color == RGB_LED_COLOR_AUTOMATIC_CYCLE) {
 //				write_all_register(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 191, 0, 0, 1);
 //				write_all_register(10, 0, 150, 0, 0, 2, 2, 0, 0, 0, 191, 0, 0, 2);
-			} else if (color == RGB_LED_COLOR_WHITE) {
+			} else if (color == RGB_LED_COLOR_CLEAR_WARNING) {
 				write_all_register(0, 0, 0, 0, 0, 0, 0, 0, 191, 191, 191, 1, 1, 1);
 			} else if (color == RGB_LED_COLOR_TEST) {
 				write_all_register(0, 0, 0, 0, 0, 0, 0, 0, 191, 191, 191, 1, 1, 1);
@@ -163,7 +163,10 @@ int ktd2027_led_set(uint8_t color, uint8_t mode) {
 				case RGB_LED_COLOR_CONNECTIVTY:
 					write_all_register(FLASH_PERIOD_CONNECTIVITY, 0, 31, 0, 0, 0, 0, 0, 191, 0, 191, 2, 0, 2);
 					break;
-				case RGB_LED_COLOR_WHITE:
+				case RGB_LED_COLOR_FILTER_WARNING:
+					write_all_register(FLASH_PERIOD_FILTER_WARNING, 0, 31, 0, 0, 0, 0, 0, 191, 19, 0, 2, 2, 0);
+					break;
+				case RGB_LED_COLOR_CLEAR_WARNING:
 					write_all_register(FLASH_PERIOD_CLEAR_WARNING, 0, 31, 0, 0, 0, 0, 0, 191, 191, 191, 2, 2, 2);
 					break;
 			}

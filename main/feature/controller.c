@@ -43,6 +43,7 @@
 #define CONDITION_COUNT_MAX						    3U
 #define CONDITION_COUNT_RETURN_LUX				    300U
 
+#define CONTROLLER_FILTER_WARNING_PERIOD_MS			SECONDS_TO_MS(300U)
 //
 static uint16_t calculate_duration_automatic_cycle(int16_t emission_temperature, int16_t immission_temperature);
 //
@@ -61,10 +62,11 @@ static void work_task(void *arg);
 static SemaphoreHandle_t extra_cycle_count_sem;
 
 // Define the timer handle
-TimerHandle_t controller_timer = NULL;
-TimerHandle_t restart_automatic_cycle_timer = NULL;
-TimerHandle_t restart_extra_cycle_timer = NULL;
-TimerHandle_t work_timer = NULL;
+static TimerHandle_t controller_timer = NULL;
+static TimerHandle_t restart_automatic_cycle_timer = NULL;
+static TimerHandle_t restart_extra_cycle_timer = NULL;
+static TimerHandle_t work_timer = NULL;
+static TimerHandle_t filter_warning_timer = NULL;
 
 static uint8_t calculate_duration_inversions_count;
 static uint8_t extra_cycle_inversions_count;
@@ -96,11 +98,22 @@ static void controller_task(void *pvParameters) {
     statistic_init();
 
 	controller_task_time = xTaskGetTickCount();
+
 	while (1) {
 
 		if (test_in_progress() == false) {
 			controller_state_machine();
 			statistic_update_handler();
+
+			if (get_device_state() & THRESHOLD_FILTER_WARNING) {
+				if (!get_wrn_flt_disable()) {
+					if (!xTimerIsTimerActive(filter_warning_timer)) {
+						rgb_led_mode(RGB_LED_COLOR_FILTER_WARNING, RGB_LED_MODE_DOUBLE_BLINK, false);
+
+						xTimerStart(filter_warning_timer, 0);
+					}
+				}
+			}
 		}
 
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
@@ -404,6 +417,10 @@ static void restart_extra_cycle_timer_expiry(TimerHandle_t xTimer) {
 	printf("MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE - RESET COUNT\n");
 }
 
+static void filter_warning_timer_expiry(TimerHandle_t xTimer) {
+}
+
+
 static void work_task(void *arg) {
 	uint8_t mode_state = get_mode_state();
 
@@ -512,6 +529,8 @@ int controller_init() {
 	restart_automatic_cycle_timer = xTimerCreate("restart_automatic_cycle_timer", pdMS_TO_TICKS(DURATION_RESTART_AUTOMATIC_CYCLE_MS), pdFALSE, (void*) 0, restart_automatic_cycle_timer_expiry);
 
 	restart_extra_cycle_timer = xTimerCreate("restart_extra_cycle_timer", pdMS_TO_TICKS(DURATION_RESTART_EXTRA_CYCLE_MS), pdFALSE, (void*) 0, restart_extra_cycle_timer_expiry);
+
+	filter_warning_timer = xTimerCreate("filter_warning_timer", pdMS_TO_TICKS(CONTROLLER_FILTER_WARNING_PERIOD_MS), pdFALSE, (void *) 0, filter_warning_timer_expiry);
 
 	BaseType_t controller_task_created = xTaskCreate(controller_task, "Controller task ", CONTROLLER_TASK_STACK_SIZE, NULL, CONTROLLER_TASK_PRIORITY, NULL);
 

@@ -97,9 +97,9 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 					led.on_time = 1 * (128 * (FLASH_PERIOD_AUTOMATIC_CYCLE_BLINK + 2));
 					ktd2027_led_set(RGB_LED_COLOR_AUTOMATIC_CYCLE, RGB_LED_MODE_BLINK);
 					break;
-				case RGB_LED_COLOR_WHITE:
+				case RGB_LED_COLOR_CLEAR_WARNING:
 					led.on_time = 1024;
-					ktd2027_led_set(RGB_LED_COLOR_WHITE, RGB_LED_MODE_ON);
+					ktd2027_led_set(RGB_LED_COLOR_CLEAR_WARNING, RGB_LED_MODE_ON);
 					break;
 			}
 			break;
@@ -125,9 +125,13 @@ static void rgb_led_set_params(uint8_t color, uint32_t mode, bool repeated) {
 					led.on_time = 4 * (128 * (FLASH_PERIOD_CONNECTIVITY + 2));
 					ktd2027_led_set(RGB_LED_COLOR_CONNECTIVTY, RGB_LED_MODE_BLINK);
 					break;
-				case RGB_LED_COLOR_WHITE:
+				case RGB_LED_COLOR_FILTER_WARNING:
+					led.on_time = 2 * (128 * (FLASH_PERIOD_FILTER_WARNING + 2));
+					ktd2027_led_set(RGB_LED_COLOR_FILTER_WARNING, RGB_LED_MODE_BLINK);
+					break;
+				case RGB_LED_COLOR_CLEAR_WARNING:
 					led.on_time = 2 * (128 * (FLASH_PERIOD_CLEAR_WARNING + 2));
-					ktd2027_led_set(RGB_LED_COLOR_WHITE, RGB_LED_MODE_BLINK);
+					ktd2027_led_set(RGB_LED_COLOR_CLEAR_WARNING, RGB_LED_MODE_BLINK);
 					break;
 			}
 			break;

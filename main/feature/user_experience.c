@@ -17,19 +17,12 @@
 #include "blufi.h"
 #include "statistic.h"
 
-
+///
 #define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
 #define	USER_EXPERIENCE_TASK_PRIORITY			    (1)
 #define	USER_EXPERIENCE_TASK_PERIOD				    (100ul / portTICK_PERIOD_MS)
 
-static void system_mode_speed_set(uint8_t mode, uint8_t speed);
-
-static void user_experience_task(void *pvParameters);
-
-static void user_experience_state_machine(void);
-
-static TimerHandle_t configuration_sensor_timer = NULL;
-
+///
 enum ux_s {
 	OPERATIVE		= 0,
 	RH_SETTING,
@@ -38,8 +31,18 @@ enum ux_s {
 	SETTINGS,
 };
 
+#define CONFIGURATION_SENSOR_EXPIRY_TIME          SECONDS_TO_MS(60U)     // ( 1 min )
+
+///
+static void system_mode_speed_set(uint8_t mode, uint8_t speed);
+static void user_experience_task(void *pvParameters);
+static void user_experience_state_machine(void);
+
+///
+static TimerHandle_t configuration_sensor_timer = NULL;
 static uint8_t user_experience_state = OPERATIVE;
 
+///
 static void configuration_sensor_timer_cb(TimerHandle_t xTimer) {
 	rgb_led_mode(RGB_LED_COLOR_AQUA_RH + user_experience_state - 1, RGB_LED_MODE_ONESHOOT, false);
 	user_experience_state = OPERATIVE;
@@ -193,7 +196,7 @@ static void user_experience_state_machine(void) {
 					break;
 
 				case BUTTON_11_LONG:
-					rgb_led_mode(RGB_LED_COLOR_WHITE, RGB_LED_MODE_DOUBLE_BLINK, false);
+					rgb_led_mode(RGB_LED_COLOR_CLEAR_WARNING, RGB_LED_MODE_DOUBLE_BLINK, false);
 					statistic_reset_filter();
 					break;
 			}
@@ -317,7 +320,7 @@ static void user_experience_state_machine(void) {
 int user_experience_init() {
 	BaseType_t user_experience_task_created = xTaskCreate(user_experience_task, "User experience task ", USER_EXPERIENCE_TASK_STACK_SIZE, NULL, USER_EXPERIENCE_TASK_PRIORITY, NULL);
 
-    configuration_sensor_timer = xTimerCreate("configuration_sensor_timer", pdMS_TO_TICKS(CONFIGURATION_SENSOR_EXPIRY_TIME * 60 * 1000), pdFALSE, (void *) 0, configuration_sensor_timer_cb);
+    configuration_sensor_timer = xTimerCreate("configuration_sensor_timer", pdMS_TO_TICKS(CONFIGURATION_SENSOR_EXPIRY_TIME), pdFALSE, (void *) 0, configuration_sensor_timer_cb);
 
 	return ((user_experience_task_created) == pdPASS ? 0 : -1);
 }
