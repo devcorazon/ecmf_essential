@@ -19,6 +19,7 @@ idf_component_register(
                     	"blufi/blufi_ota.c"
 
                     	"feature/controller.c"
+                    	"feature/protocol.c"
                     	"feature/user_experience.c"
                     	"feature/statistic.c"
                     	"feature/messaging.c"

@@ -65,7 +65,6 @@ static SemaphoreHandle_t extra_cycle_count_sem;
 static TimerHandle_t controller_timer = NULL;
 static TimerHandle_t restart_automatic_cycle_timer = NULL;
 static TimerHandle_t restart_extra_cycle_timer = NULL;
-static TimerHandle_t work_timer = NULL;
 static TimerHandle_t filter_warning_timer = NULL;
 
 static uint8_t calculate_duration_inversions_count;
@@ -100,7 +99,6 @@ static void controller_task(void *pvParameters) {
 	controller_task_time = xTaskGetTickCount();
 
 	while (1) {
-
 		if (test_in_progress() == false) {
 			controller_state_machine();
 			statistic_update_handler();
@@ -115,7 +113,6 @@ static void controller_task(void *pvParameters) {
 				}
 			}
 		}
-
 		vTaskDelayUntil(&controller_task_time, CONTROLLER_TASK_PERIOD);
 	}
 }
