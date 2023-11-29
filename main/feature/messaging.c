@@ -163,16 +163,16 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 		if (get_wifi_active() != wifi_active) {
 			if (wifi_active) {
 				char ssid[SSID_SIZE + 1] = { 0 };
-				char psw[PASSWORD_SIZE + 1] = { 0 };
+				char pwd[PASSWORD_SIZE + 1] = { 0 };
 				char server[SERVER_SIZE + 1] = { 0 };
 				char port[PORT_SIZE + 1] = { 0 };
 
 				get_ssid((uint8_t *) ssid);
-				get_password((uint8_t *) psw);
+				get_password((uint8_t *) pwd);
 				get_server((uint8_t *) server);
 				get_port((uint8_t *) port);
 
-				if (!strlen(ssid) || !strlen(psw) || !strlen(server) || !strlen(port)) {
+				if (!strlen(ssid) || !strlen(pwd) || !strlen(server) || !strlen(port)) {
 					printf("SSID, PSK, SERVER and PORT missing\n");
 					return;
 				}
