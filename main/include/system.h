@@ -34,6 +34,8 @@
 
 #define FIRMWARE_VERSION				(FW_VERSION_MAJOR << 12) + (FW_VERSION_MINOR << 6) + FW_VERSION_PATCH
 
+#define ECMF_IR_DEVICE_CODE             10
+
 #define POWER_MAIN_12V
 
 #ifdef POWER_MAIN_12V

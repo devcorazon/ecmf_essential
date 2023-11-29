@@ -48,6 +48,7 @@ int blufi_ota_start(void);
 int softap_get_current_connection_number(void);
 int tcp_connect_to_server(void);
 int tcp_close_reconnect(void);
+int tcp_send_data(const uint8_t *data, size_t len);
 
 // Getters & Setters
 esp_wps_config_t get_wps_config(void);

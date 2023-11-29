@@ -12,9 +12,9 @@
 #define INVALID_REASON                255
 #define INVALID_RSSI                  -128
 
-#define ESP_WIFI_SSID      "ECMF-{serial_number}"
-#define ESP_WIFI_PASS      "mypassword"
-#define ESP_WIFI_CHANNEL   1
+#define ESP_WIFI_SSID              "ECMF-{serial_number}"
+#define ESP_WIFI_PASS              "mypassword"
+#define ESP_WIFI_CHANNEL           1
 
 #define BLUFI_CMD_OTA   		   "OTA"
 #define BLUFI_CMD_VERSION   	   "VERSION"

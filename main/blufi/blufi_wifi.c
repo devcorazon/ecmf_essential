@@ -34,6 +34,7 @@
 #include "blufi.h"
 
 #include "structs.h"
+#include "protocol.h"
 #include "messaging.h"
 #include "storage.h"
 #include "test.h"
@@ -338,6 +339,8 @@ void tcp_receive_data_task(void *pvParameters) {
     tcp_receive_task_time = xTaskGetTickCount();
 
     while (1) {
+        // Reset the buffer before receiving new data
+        memset(recv_buf, 0, sizeof(recv_buf));
 
         if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
             printf("Wi-Fi connection lost, terminating task\n");
@@ -350,12 +353,22 @@ void tcp_receive_data_task(void *pvParameters) {
             break;
         }
 
-        recv_buf[len] = '\0'; // Null-terminate the received data
-//        analyse_received_data((const uint8_t *)recv_buf, len);
+        // Process the received byte array
+        printf("Received %d bytes: ", len);
+        for (int i = 0; i < len; ++i) {
+            printf("%02x ", (unsigned char)recv_buf[i]);
+        }
+        printf("\n");
+
+        // Elaborate the received data
+        struct protocol_trame trame;
+        trame.data = (uint8_t*) recv_buf;  // Cast to uint8_t* if necessary
+        trame.len = (uint16_t) len;  // Cast to uint16_t, assuming len fits into uint16_t
+
+        proto_elaborate_data(&trame);
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
-
     tcp_close_reconnect();
     vTaskDelete(NULL);
 }
@@ -368,8 +381,6 @@ int tcp_connect_to_server(void) {
     if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
     	return -1;
     }
-
-    printf(" connection to TCP...\n");
 
     get_server(server_ip);
     get_port(port_str);
@@ -436,6 +447,21 @@ int tcp_connect_to_server(void) {
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
 
     return task_created == pdPASS ? 0 : -1;
+}
+
+int tcp_send_data(const uint8_t *data, size_t len) {
+    if (sock < 0) {
+        printf("Invalid socket\n");
+        return -1;
+    }
+
+    int sent = send(sock, data, len, 0);
+    if (sent < 0) {
+        printf("Failed to send data: errno %d\n", errno);
+        return -1;
+    }
+
+    return sent; // Return the number of bytes sent
 }
 
 
