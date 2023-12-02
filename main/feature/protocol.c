@@ -645,7 +645,7 @@ static void proto_parse_execute_function_data(const void *buf) {
     proto_send_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id);
 }
 
-int proto_elaborate_data(struct protocol_trame *buf) {
+int proto_elaborate_data(simple_buf_t *buf) {
     uint16_t length;
     uint32_t address;
     uint8_t funct;
@@ -670,11 +670,13 @@ int proto_elaborate_data(struct protocol_trame *buf) {
                 // CRC validation (uncomment to enable)
                 // printf("CRC: %02x\n", calculate_crc(&buf->data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
 
-                if ((address == get_serial_number()) && (crc == calculate_crc(&buf->data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
+             //   if ((address == get_serial_number()) && (crc == calculate_crc(&buf->data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
                     // Debug log (uncomment to enable)
                     // printf("Received data: "); // Followed by hex dump code
 
                     funct = buf->data[idx + PROTOCOL_TRAME_FUNCT_POS];
+
+                    printf("length:%d , address:%d , function:%d , crc:%d\n",length,address,funct,crc);
 
                     switch (funct) {
                         case PROTOCOL_FUNCT_QUERY:
@@ -693,7 +695,7 @@ int proto_elaborate_data(struct protocol_trame *buf) {
                         	proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
                             break;
                     }
-                }
+//                }
 
                 return 0;
             }

@@ -52,6 +52,8 @@ static bool wifi_scan_on = false;
 static esp_netif_t *ap_netif = NULL;
 static esp_netif_t *sta_netif = NULL;
 
+TimerHandle_t reset_rx_trame_timer;
+
 int blufi_wifi_connect(void);
 
 static TimerHandle_t tcp_reconnect_timer = NULL;
@@ -98,6 +100,10 @@ void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
     if (get_wifi_active()) {
 	    blufi_wifi_connect();                           // connect to WIFI
     }
+}
+
+void reset_rx_trame_callback(TimerHandle_t xTimer) {
+                                                       // TCP Rx trame callback
 }
 
 bool get_sta_connected(void) {
@@ -332,14 +338,17 @@ static int tcp_enable_keepalive(int sock) {
 }
 
 void tcp_receive_data_task(void *pvParameters) {
-    char recv_buf[128];
+	uint8_t recv_buf[TCP_RX_BUFFER_SIZE];
     int len;
     TickType_t tcp_receive_task_time;
 
     tcp_receive_task_time = xTaskGetTickCount();
+    simple_buf_t rx_trame = {.data = malloc(TCP_RX_BUFFER_SIZE), .size = TCP_RX_BUFFER_SIZE, .len = 0};
+
+    reset_rx_trame_timer = xTimerCreate("Trame Rx Timeout", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_callback);
+
 
     while (1) {
-        // Reset the buffer before receiving new data
         memset(recv_buf, 0, sizeof(recv_buf));
 
         if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
@@ -347,28 +356,21 @@ void tcp_receive_data_task(void *pvParameters) {
             break;
         }
 
-        len = recv(sock, recv_buf, sizeof(recv_buf) - 1, 0);
+        len = recv(sock, recv_buf, sizeof(recv_buf), 0);
         if (len <= 0) {
             printf("Server disconnected or recv error: errno %d\n", errno);
             break;
         }
 
-        // Process the received byte array
-        printf("Received %d bytes: ", len);
-        for (int i = 0; i < len; ++i) {
-            printf("%02x ", (unsigned char)recv_buf[i]);
+        if (len > 0) {
+            xTimerStart(reset_rx_trame_timer, 0); // Start/reset the timer
+            simple_buf_add_mem(&rx_trame, (uint8_t *)recv_buf, len);
+            proto_elaborate_data(&rx_trame);
         }
-        printf("\n");
-
-        // Elaborate the received data
-        struct protocol_trame trame;
-        trame.data = (uint8_t*) recv_buf;  // Cast to uint8_t* if necessary
-        trame.len = (uint16_t) len;  // Cast to uint16_t, assuming len fits into uint16_t
-
-        proto_elaborate_data(&trame);
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
+
     tcp_close_reconnect();
     vTaskDelete(NULL);
 }

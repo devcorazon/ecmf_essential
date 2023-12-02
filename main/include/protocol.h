@@ -12,6 +12,6 @@
 #include "blufi_internal.h"
 #include "protocol_internal.h"
 
-int proto_elaborate_data(struct protocol_trame *buf);
+int proto_elaborate_data(simple_buf_t *buf);
 
 #endif /* MAIN_INCLUDE_PROTOCOL_H_ */
