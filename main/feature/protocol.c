@@ -46,54 +46,49 @@ static uint8_t calculate_crc(const void *buf, size_t len) {
 }
 
 static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size) {
-    struct protocol_trame trame;
-    trame.data = (uint8_t *)malloc(PROTOCOL_TRAME_FIX_LEN + len);
-    trame.len = 0;
-
-    if (trame.data == NULL) {
+    if (out_data == NULL || out_data_size < PROTOCOL_TRAME_FIX_LEN + len) {
+        printf("Output buffer is null or not large enough\n");
         return;
     }
 
+    size_t index = 0;
+
     // STX
-    trame.data[trame.len++] = PROTOCOL_TRAME_STX;
+    out_data[index++] = PROTOCOL_TRAME_STX;
 
     // ADDR
     uint32_t serial_num = convert_big_endian_32(get_serial_number());
-    memcpy(&trame.data[trame.len], &serial_num, sizeof(serial_num));
-    trame.len += sizeof(serial_num);
+    memcpy(&out_data[index], &serial_num, sizeof(serial_num));
+    index += sizeof(serial_num);
 
     // LEN (STX and ETX excluded)
     uint16_t length_field = convert_big_endian_16(PROTOCOL_TRAME_WO_SE_FIX_LEN + len);
-    memcpy(&trame.data[trame.len], &length_field, sizeof(length_field));
-    trame.len += sizeof(length_field);
+    memcpy(&out_data[index], &length_field, sizeof(length_field));
+    index += sizeof(length_field);
 
     // FUNCT
-    trame.data[trame.len++] = funct;
+    out_data[index++] = funct;
 
     // DATA
-    if (buf != NULL) {
-        memcpy(&trame.data[trame.len], buf, len);
-        trame.len += len;
+    if (buf != NULL && len > 0) {
+        memcpy(&out_data[index], buf, len);
+        index += len;
     }
 
     // CRC
-    trame.data[trame.len++] = calculate_crc(&trame.data[PROTOCOL_TRAME_ADDR_POS], PROTOCOL_TRAME_WO_SE_FIX_LEN + len - 1);
+    out_data[index++] = calculate_crc(&out_data[PROTOCOL_TRAME_ADDR_POS], PROTOCOL_TRAME_WO_SE_FIX_LEN + len - 1);
 
     // ETX
-    trame.data[trame.len++] = PROTOCOL_TRAME_ETX;
+    out_data[index++] = PROTOCOL_TRAME_ETX;
 
-    if (out_data != NULL && out_data_size >= trame.len) {
-          memcpy(out_data, trame.data, trame.len);
-    }
     // Send trame
-    if (tcp_send_data(trame.data, trame.len) < 0) {
+    if (tcp_send_data(out_data, index) < 0) {
         printf("Failed to send data\n");
     }
 
-    free(trame.data);
-
     return;
 }
+
 
 static void proto_send_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t out_data_size) {
 	struct protocol_ack_s ack;
