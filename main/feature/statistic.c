@@ -103,5 +103,4 @@ void statistic_reset_filter(void) {
 	set_device_state(get_device_state() & ~THRESHOLD_FILTER_WARNING);
     set_filter_operating(0u);
     statistic_init();
-    filter_operating = 0;
 }

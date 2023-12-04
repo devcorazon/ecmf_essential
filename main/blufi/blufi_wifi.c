@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "freertos/timers.h"
+#include "freertos/ringbuf.h"
 
 #include "esp_system.h"
 #include "esp_mac.h"
@@ -84,6 +85,8 @@ static wifi_config_t gl_sta_config = {0};
 static wifi_config_t gl_ap_config = {0};
 static bool gl_wps_is_enabled = false;
 static esp_wps_config_t gl_wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
+
+RingbufHandle_t xRingBuffer;
 
 enum wifi_connection_state {
     WIFI_DISCONNECTED = 0,
@@ -338,15 +341,14 @@ static int tcp_enable_keepalive(int sock) {
 }
 
 void tcp_receive_data_task(void *pvParameters) {
-	uint8_t recv_buf[TCP_RX_BUFFER_SIZE];
+    uint8_t recv_buf[RING_BUFFER_SIZE];
     int len;
     TickType_t tcp_receive_task_time;
 
     tcp_receive_task_time = xTaskGetTickCount();
-    simple_buf_t rx_trame = {.data = malloc(TCP_RX_BUFFER_SIZE), .size = TCP_RX_BUFFER_SIZE, .len = 0};
 
     reset_rx_trame_timer = xTimerCreate("Trame Rx Timeout", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_callback);
-
+    xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_NOSPLIT);
 
     while (1) {
         memset(recv_buf, 0, sizeof(recv_buf));
@@ -363,14 +365,16 @@ void tcp_receive_data_task(void *pvParameters) {
         }
 
         if (len > 0) {
-            xTimerStart(reset_rx_trame_timer, 0); // Start/reset the timer
-            simple_buf_add_mem(&rx_trame, (uint8_t *)recv_buf, len);
-            proto_elaborate_data(&rx_trame);
+            xTimerStart(reset_rx_trame_timer, 0);
+            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY); // Save data into ring buffer
         }
+
+        proto_elaborate_data(xRingBuffer);
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
 
+    vRingbufferDelete(xRingBuffer);
     tcp_close_reconnect();
     vTaskDelete(NULL);
 }

@@ -8,7 +8,7 @@
 #ifndef MAIN_INCLUDE_PROTOCOL_INTERNAL_H_
 #define MAIN_INCLUDE_PROTOCOL_INTERNAL_H_
 
-#define TCP_RX_BUFFER_SIZE 128
+#define RING_BUFFER_SIZE 128
 ///
 #define PROTOCOL_TRAME_WO_SE_FIX_LEN	(8u)
 #define PROTOCOL_TRAME_FIX_LEN			(PROTOCOL_TRAME_WO_SE_FIX_LEN + 2u)
@@ -22,6 +22,8 @@
 #define PROTOCOL_TRAME_LENGHT_POS		(5u)
 #define PROTOCOL_TRAME_FUNCT_POS		(7u)
 #define PROTOCOL_TRAME_DATA_POS			(8u)
+
+
 
 ///
 enum {
@@ -216,12 +218,6 @@ struct protocol_content_s {
 
 #define SIZEOF_CONTENT(x)			(sizeof(struct protocol_content_s) - sizeof(union protocol_data_u) + sizeof((x)))
 
-typedef struct {
-    uint8_t *data;
-    size_t len;
-    size_t size;
-} simple_buf_t;
-
 struct protocol_trame {
     uint8_t *data;
     uint16_t len;
@@ -262,14 +258,5 @@ static inline void sys_memcpy_swap(void *dst, const void *src, size_t length){
 		*pdst++ = *psrc--;
 	}
 }
-
-static inline void simple_buf_add_mem(simple_buf_t *buf, const uint8_t *mem, size_t len) {
-    if (buf->len + len > buf->size) {
-        // handle buffer overflow
-    }
-    memcpy(buf->data + buf->len, mem, len);
-    buf->len += len;
-}
-
 
 #endif /* MAIN_INCLUDE_PROTOCOL_INTERNAL_H_ */

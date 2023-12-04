@@ -17,6 +17,7 @@
 
 #include <storage.h>
 #include <blufi.h>
+#include "protocol.h"
 #include "protocol_internal.h"
 
 static uint8_t calculate_crc(const void *buf, size_t len);
@@ -24,6 +25,25 @@ static void proto_send_data(uint8_t funct, const void *buf, size_t len);
 static void proto_parse_query_data(const void *buf);
 static void proto_parse_write_data(const void *buf);
 static void proto_parse_execute_function_data(const void *buf);
+
+static uint8_t calculate_crc(const void *buf, size_t len) {
+	uint8_t *data = (uint8_t *)buf;
+	uint8_t crc = 0xff;
+	uint8_t polynom = 0x31;
+
+	for (size_t i = 0; i < len; i++) {
+		crc = crc ^ *data++;
+		for (size_t j = 0; j < 8; j++) {
+			if (crc & 0x80) {
+				crc = (crc << 1) ^ polynom;
+			} else {
+				crc = crc << 1;
+			}
+		}
+	}
+
+	return crc;
+}
 
 static void proto_send_data(uint8_t funct, const void *buf, size_t len) {
     struct protocol_trame trame;
@@ -68,26 +88,8 @@ static void proto_send_data(uint8_t funct, const void *buf, size_t len) {
     }
 
     free(trame.data);
+
     return;
-}
-
-static uint8_t calculate_crc(const void *buf, size_t len) {
-	uint8_t *data = (uint8_t *)buf;
-	uint8_t crc = 0xff;
-	uint8_t polynom = 0x31;
-
-	for (size_t i = 0; i < len; i++) {
-		crc = crc ^ *data++;
-		for (size_t j = 0; j < 8; j++) {
-			if (crc & 0x80) {
-				crc = (crc << 1) ^ polynom;
-			} else {
-				crc = crc << 1;
-			}
-		}
-	}
-
-	return crc;
 }
 
 static void proto_send_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data) {
@@ -645,61 +647,60 @@ static void proto_parse_execute_function_data(const void *buf) {
     proto_send_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id);
 }
 
-int proto_elaborate_data(simple_buf_t *buf) {
-    uint16_t length;
-    uint32_t address;
-    uint8_t funct;
-    uint8_t crc;
+int proto_elaborate_data(RingbufHandle_t xRingBuffer) {
+    uint8_t *item;
+    size_t item_size;
+    int processed = 0;
 
-    for (size_t idx = 0; idx < buf->len; idx++) {
-        if ((buf->data[idx] == PROTOCOL_TRAME_STX) && (buf->len >= (idx + PROTOCOL_TRAME_FUNCT_POS))) {
-            address = (buf->data[idx + PROTOCOL_TRAME_ADDR_POS] << 24) |
-                      (buf->data[idx + PROTOCOL_TRAME_ADDR_POS + 1] << 16) |
-                      (buf->data[idx + PROTOCOL_TRAME_ADDR_POS + 2] << 8) |
-                      (buf->data[idx + PROTOCOL_TRAME_ADDR_POS + 3]);
+    while ((item = (uint8_t *)xRingbufferReceive(xRingBuffer, &item_size, 0)) != NULL) {
+        for (size_t idx = 0; idx < item_size; ++idx) {
+            if ((item[idx] == PROTOCOL_TRAME_STX) && (item_size >= (idx + PROTOCOL_TRAME_FUNCT_POS))) {
+                uint32_t address = (item[idx + PROTOCOL_TRAME_ADDR_POS] << 24) |
+                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 1] << 16) |
+                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 2] << 8) |
+                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 3]);
 
-            length = (buf->data[idx + PROTOCOL_TRAME_LENGHT_POS] << 8) |
-                     (buf->data[idx + PROTOCOL_TRAME_LENGHT_POS + 1]);
+                uint16_t length = (item[idx + PROTOCOL_TRAME_LENGHT_POS] << 8) |
+                                  (item[idx + PROTOCOL_TRAME_LENGHT_POS + 1]);
 
-            // Add to length STX and ETX field.
-            length += 2U;
+                length += 2U;
 
-            if ((buf->len >= (idx + length)) && (buf->data[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
-                crc = buf->data[idx + length - 2U];
+                if ((item_size >= (idx + length)) && (item[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
+                    uint8_t crc = item[idx + length - 2U];
 
-                // CRC validation (uncomment to enable)
-                // printf("CRC: %02x\n", calculate_crc(&buf->data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
+                    uint8_t funct = item[idx + PROTOCOL_TRAME_FUNCT_POS];
 
-             //   if ((address == get_serial_number()) && (crc == calculate_crc(&buf->data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
-                    // Debug log (uncomment to enable)
-                    // printf("Received data: "); // Followed by hex dump code
-
-                    funct = buf->data[idx + PROTOCOL_TRAME_FUNCT_POS];
-
-                    printf("length:%d , address:%d , function:%d , crc:%d\n",length,address,funct,crc);
+                    printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
 
                     switch (funct) {
                         case PROTOCOL_FUNCT_QUERY:
-                            proto_parse_query_data(&buf->data[idx + PROTOCOL_TRAME_DATA_POS]);
+                            proto_parse_query_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
                             break;
 
                         case PROTOCOL_FUNCT_WRITE:
-                      //     proto_parse_write_data(&buf->data[idx + WIFI_TRAME_DATA_POS]);
+             //               parse_write_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
                             break;
 
                         case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
-                   //         proto_parse_execute_function_data(&buf->data[idx + WIFI_TRAME_DATA_POS]);
+               //             parse_execute_function_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
                             break;
 
                         default:
-                        	proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
+                            proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
                             break;
                     }
-//                }
-
-                return 0;
+                    processed = 1;
+                    break;
+                }
             }
         }
+
+        vRingbufferReturnItem(xRingBuffer, (void *)item);
+
+        if (processed) {
+            break;
+        }
     }
-    return -1;
+
+    return processed ? 0 : -1;
 }
