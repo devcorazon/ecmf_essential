@@ -21,10 +21,10 @@
 #include "protocol_internal.h"
 
 static uint8_t calculate_crc(const void *buf, size_t len);
-static void proto_send_data(uint8_t funct, const void *buf, size_t len);
-static void proto_parse_query_data(const void *buf);
-static void proto_parse_write_data(const void *buf);
-static void proto_parse_execute_function_data(const void *buf);
+static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size);
+static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t out_data_size);
+static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t out_data_size);
+static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t out_data_size);
 
 static uint8_t calculate_crc(const void *buf, size_t len) {
 	uint8_t *data = (uint8_t *)buf;
@@ -45,7 +45,7 @@ static uint8_t calculate_crc(const void *buf, size_t len) {
 	return crc;
 }
 
-static void proto_send_data(uint8_t funct, const void *buf, size_t len) {
+static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size) {
     struct protocol_trame trame;
     trame.data = (uint8_t *)malloc(PROTOCOL_TRAME_FIX_LEN + len);
     trame.len = 0;
@@ -82,6 +82,9 @@ static void proto_send_data(uint8_t funct, const void *buf, size_t len) {
     // ETX
     trame.data[trame.len++] = PROTOCOL_TRAME_ETX;
 
+    if (out_data != NULL && out_data_size >= trame.len) {
+          memcpy(out_data, trame.data, trame.len);
+    }
     // Send trame
     if (tcp_send_data(trame.data, trame.len) < 0) {
         printf("Failed to send data\n");
@@ -92,27 +95,27 @@ static void proto_send_data(uint8_t funct, const void *buf, size_t len) {
     return;
 }
 
-static void proto_send_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data) {
+static void proto_send_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t out_data_size) {
 	struct protocol_ack_s ack;
 
 	ack.ack_code = ack_code;
 	ack.fuct_code = funct_code;
 	ack.add_data = convert_big_endian_16(add_data);
 
-	proto_send_data(PROTOCOL_FUNCT_ACK, &ack, sizeof(ack));
+	proto_send_data(PROTOCOL_FUNCT_ACK, &ack, sizeof(ack),out_data, out_data_size);
 }
 
-static void proto_send_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data) {
+static void proto_send_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data, uint8_t *out_data, size_t out_data_size) {
 	struct protocol_nack_s nack;
 
 	nack.nack_code = nack_code;
 	nack.fuct_code = funct_code;
 	nack.add_data = convert_big_endian_16(add_data);
 
-	proto_send_data(PROTOCOL_FUNCT_NACK, &nack, sizeof(nack));
+	proto_send_data(PROTOCOL_FUNCT_NACK, &nack, sizeof(nack),out_data, out_data_size);
 }
 
-static void proto_send_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index) {
+static void proto_send_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index, uint8_t *out_data, size_t out_data_size) {
 	struct protocol_content_s content;
 	size_t len;
 
@@ -305,20 +308,22 @@ static void proto_send_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t
 			return;
 	}
 
-	proto_send_data(funct, &content, len);
+	proto_send_data(funct, &content, len, out_data, out_data_size);
+
+
 }
 
-static void proto_send_identification(void) {
-	struct protocol_identification_s identification;
+//static void proto_send_identification(void) {
+//	struct protocol_identification_s identification;
+//
+//	identification.device_code = convert_big_endian_16(ECMF_IR_DEVICE_CODE);
+//	identification.serial_number = convert_big_endian_32(get_serial_number());
+//	proto_send_data(PROTOCOL_FUNCT_IDENTIFICATION, identification, sizeof(identification), out_data, out_data_size);
+//}
 
-	identification.device_code = convert_big_endian_16(ECMF_IR_DEVICE_CODE);
-	identification.serial_number = convert_big_endian_32(get_serial_number());
-	proto_send_data(PROTOCOL_FUNCT_IDENTIFICATION, &identification, sizeof(identification));
-}
 
 
-
-static void proto_parse_query_data(const void *buf) {
+static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
 	struct protocol_content_s *content = (struct protocol_content_s *)buf;
 	uint16_t obj_id;
 	uint16_t index;
@@ -330,7 +335,7 @@ static void proto_parse_query_data(const void *buf) {
 		(obj_id != PROTOCOL_OBJID_WIFI_CONF) && (obj_id != PROTOCOL_OBJID_PROFILE) && (obj_id != PROTOCOL_OBJID_CLOCK) &&
 		(obj_id != PROTOCOL_OBJID_OPER) && (obj_id != PROTOCOL_OBJID_STATS) && (obj_id != PROTOCOL_OBJID_MASTER_STATE) && (obj_id != PROTOCOL_OBJID_STATE)) {
 
-		proto_send_nack(PROTOCOL_NACK_CODE_QUERY_ERR, PROTOCOL_FUNCT_QUERY, obj_id);
+		proto_send_nack(PROTOCOL_NACK_CODE_QUERY_ERR, PROTOCOL_FUNCT_QUERY, obj_id, out_data, out_data_size);
 		return;
 	}
 
@@ -341,18 +346,19 @@ static void proto_parse_query_data(const void *buf) {
 //		}
 //	}
 
-    proto_send_answer_voluntary(PROTOCOL_FUNCT_ANSWER, obj_id, index);
+    proto_send_answer_voluntary(PROTOCOL_FUNCT_ANSWER, obj_id, index, out_data, out_data_size);
+
 }
 
-//static void proto_parse_write_data(const void *buf) {
-//	struct protocol_content_s *content = (struct protocol_content_s *)buf;
-//	uint16_t obj_id;
-//	uint16_t index;
-//
-//	obj_id = sys_cpu_to_be16(content->obj_id);
-//	index = sys_cpu_to_be16(content->index);
-//
-//	switch (obj_id) {
+static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
+	struct protocol_content_s *content = (struct protocol_content_s *)buf;
+	uint16_t obj_id;
+	uint16_t index;
+
+	obj_id = convert_big_endian_16(content->obj_id);
+	index = convert_big_endian_16(content->index);
+
+	switch (obj_id) {
 //		case PROTOCOL_OBJID_CONF:
 //		{
 //#warning
@@ -592,41 +598,38 @@ static void proto_parse_query_data(const void *buf) {
 //			break;
 //		}
 //
-//		case PROTOCOL_OBJID_OPER:
-//		{
-//			if (get_role() != ROLE_MASTER) {
-//				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id);
-//				return;
-//			}
-//
-//			if (content->data.oper.mode_setting > MODE_AUTOMATIC_CYCLE) {
-//				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id);
-//				return;
-//			}
-//
-//#warning UNMODIFIED_VALUE
-//			if (((content->data.oper.mode_setting != MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH)) ||
-//				((content->data.oper.mode_setting == MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH))) {
-//		//	&& (content->data.oper.speed_setting != SPEED_PROLIFED))) {
-//
-//				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id);
-//				return;
-//			}
-//
-//			set_mode_set(content->data.oper.mode_setting);
-//			set_speed_set(content->data.oper.speed_setting);
-//			break;
-//		}
-//
-//		default:
-//			proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id);
-//			return;
-//	}
-//
-//	proto_send_ack(WIFI_ACK_CODE_WRITE_OK, PROTOCOL_FUNCT_WRITE, obj_id);
-//}
+		case PROTOCOL_OBJID_OPER:
+		{
 
-static void proto_parse_execute_function_data(const void *buf) {
+			if (content->data.oper.mode_setting > MODE_AUTOMATIC_CYCLE) {
+				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+				return;
+			}
+
+//#warning UNMODIFIED_VALUE
+			if (((content->data.oper.mode_setting != MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH)) ||
+				((content->data.oper.mode_setting == MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH))) {
+		//	&& (content->data.oper.speed_setting != SPEED_PROLIFED))) {
+
+				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+				return;
+			}
+
+			set_mode_set(content->data.oper.mode_setting);
+			set_speed_set(content->data.oper.speed_setting);
+			break;
+		}
+//
+		default:
+			proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+			return;
+	}
+//
+	proto_send_ack(PROTOCOL_ACK_CODE_WRITE_OK, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+}
+
+
+static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
     uint8_t *data = (uint8_t *)buf;
     uint16_t exec_funct_id = convert_big_endian_16(*(uint16_t*)&data[0]);
     uint8_t *add_data = &data[2];
@@ -640,74 +643,63 @@ static void proto_parse_execute_function_data(const void *buf) {
         }
 
         default:
-            proto_send_nack(PROTOCOL_NACK_CODE_EXEC_F_ERR, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id);
+            proto_send_nack(PROTOCOL_NACK_CODE_EXEC_F_ERR, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
             return;
     }
 
-    proto_send_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id);
+    proto_send_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
 }
 
-int proto_elaborate_data(RingbufHandle_t xRingBuffer) {
-    uint8_t *item;
-    size_t item_size;
+int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data, size_t out_data_size) {
     int processed = 0;
 
-    while ((item = (uint8_t *)xRingbufferReceive(xRingBuffer, &item_size, 0)) != NULL) {
-        for (size_t idx = 0; idx < item_size; ++idx) {
-            if ((item[idx] == PROTOCOL_TRAME_STX) && (item_size >= (idx + PROTOCOL_TRAME_FUNCT_POS))) {
-                uint32_t address = (item[idx + PROTOCOL_TRAME_ADDR_POS] << 24) |
-                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 1] << 16) |
-                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 2] << 8) |
-                                   (item[idx + PROTOCOL_TRAME_ADDR_POS + 3]);
+    for (size_t idx = 0; idx < in_data_size; ++idx) {
+        if ((in_data[idx] == PROTOCOL_TRAME_STX) && (in_data_size >= (idx + PROTOCOL_TRAME_FUNCT_POS))) {
+            uint32_t address = (in_data[idx + PROTOCOL_TRAME_ADDR_POS] << 24) |
+                               (in_data[idx + PROTOCOL_TRAME_ADDR_POS + 1] << 16) |
+                               (in_data[idx + PROTOCOL_TRAME_ADDR_POS + 2] << 8) |
+                               (in_data[idx + PROTOCOL_TRAME_ADDR_POS + 3]);
 
-                uint16_t length = (item[idx + PROTOCOL_TRAME_LENGHT_POS] << 8) |
-                                  (item[idx + PROTOCOL_TRAME_LENGHT_POS + 1]);
+            uint16_t length = (in_data[idx + PROTOCOL_TRAME_LENGHT_POS] << 8) |
+                              (in_data[idx + PROTOCOL_TRAME_LENGHT_POS + 1]);
 
-                length += 2U;
+            length += 2U;
 
-                if ((item_size >= (idx + length)) && (item[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
-                    uint8_t crc = item[idx + length - 2U];
+            if ((in_data_size >= (idx + length)) && (in_data[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
+                uint8_t crc = in_data[idx + length - 2U];
 
-                    // CRC validation (uncomment to enable)
-                    printf("CRC: %02x\n", calculate_crc(&item[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
+                // CRC validation (uncomment to enable)
+                printf("CRC: %02x\n", calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
 
+                if ((address == get_serial_number()) && (crc == calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
+                    // Debug log (uncomment to enable)
+                    // printf("Received data: "); // Followed by hex dump code
 
-                    if ((address == get_serial_number()) && (crc == calculate_crc(&item[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
-						// Debug log (uncomment to enable)
-						// printf("Received data: "); // Followed by hex dump code
+                    uint8_t funct = in_data[idx + PROTOCOL_TRAME_FUNCT_POS];
 
-						uint8_t funct = item[idx + PROTOCOL_TRAME_FUNCT_POS];
+                    printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
 
-						printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
+                    switch (funct) {
+                        case PROTOCOL_FUNCT_QUERY:
+                            proto_parse_query_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                            break;
 
-						switch (funct) {
-						case PROTOCOL_FUNCT_QUERY:
-							proto_parse_query_data( &item[idx + PROTOCOL_TRAME_DATA_POS]);
-							break;
+                        case PROTOCOL_FUNCT_WRITE:
+                             proto_parse_write_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                            break;
 
-						case PROTOCOL_FUNCT_WRITE:
-				//			proto_parse_write_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
-							break;
+                        case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
+                             proto_parse_execute_function_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                            break;
 
-						case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
-				//			proto_parse_execute_function_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
-							break;
-
-						default:
-							proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
-							break;
-						}
-						processed = 1;
-						break;
-					}
-				}
+                        default:
+                            proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
+                            break;
+                    }
+                    processed = 1;
+                    break;
+                }
             }
-        }
-
-        vRingbufferReturnItem(xRingBuffer, (void *)item);
-
-        if (processed) {
-            break;
         }
     }
 

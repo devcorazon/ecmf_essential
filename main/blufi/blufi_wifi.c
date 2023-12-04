@@ -344,11 +344,17 @@ void tcp_receive_data_task(void *pvParameters) {
     uint8_t recv_buf[RING_BUFFER_SIZE];
     int len;
     TickType_t tcp_receive_task_time;
+    uint8_t *in_data;
+    size_t in_data_size;
+//    uint8_t *out_data;
+    uint8_t out_data[RING_BUFFER_SIZE];
+    size_t out_data_size = 0;
 
     tcp_receive_task_time = xTaskGetTickCount();
 
     reset_rx_trame_timer = xTimerCreate("Trame Rx Timeout", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_callback);
     xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_NOSPLIT);
+
 
     while (1) {
         memset(recv_buf, 0, sizeof(recv_buf));
@@ -366,10 +372,13 @@ void tcp_receive_data_task(void *pvParameters) {
 
         if (len > 0) {
             xTimerStart(reset_rx_trame_timer, 0);
-            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY); // Save data into ring buffer
+            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
         }
 
-        proto_elaborate_data(xRingBuffer);
+        while ((in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0)) != NULL) {
+            proto_elaborate_data(in_data, in_data_size, out_data, out_data_size);
+            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
+        }
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
