@@ -668,30 +668,39 @@ int proto_elaborate_data(RingbufHandle_t xRingBuffer) {
                 if ((item_size >= (idx + length)) && (item[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
                     uint8_t crc = item[idx + length - 2U];
 
-                    uint8_t funct = item[idx + PROTOCOL_TRAME_FUNCT_POS];
+                    // CRC validation (uncomment to enable)
+                    printf("CRC: %02x\n", calculate_crc(&item[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
 
-                    printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
 
-                    switch (funct) {
-                        case PROTOCOL_FUNCT_QUERY:
-                            proto_parse_query_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
-                            break;
+                    if ((address == get_serial_number()) && (crc == calculate_crc(&item[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
+						// Debug log (uncomment to enable)
+						// printf("Received data: "); // Followed by hex dump code
 
-                        case PROTOCOL_FUNCT_WRITE:
-             //               parse_write_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
-                            break;
+						uint8_t funct = item[idx + PROTOCOL_TRAME_FUNCT_POS];
 
-                        case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
-               //             parse_execute_function_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
-                            break;
+						printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
 
-                        default:
-                            proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
-                            break;
-                    }
-                    processed = 1;
-                    break;
-                }
+						switch (funct) {
+						case PROTOCOL_FUNCT_QUERY:
+							proto_parse_query_data( &item[idx + PROTOCOL_TRAME_DATA_POS]);
+							break;
+
+						case PROTOCOL_FUNCT_WRITE:
+				//			proto_parse_write_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
+							break;
+
+						case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
+				//			proto_parse_execute_function_data(&item[idx + PROTOCOL_TRAME_DATA_POS]);
+							break;
+
+						default:
+							proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U);
+							break;
+						}
+						processed = 1;
+						break;
+					}
+				}
             }
         }
 
