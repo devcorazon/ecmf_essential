@@ -42,8 +42,11 @@
 #define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
 
 #define SECONDS_PER_HOUR						3600u
+#define DAYS_PER_WEEK                           7u
+#define HOURS_PER_DAY                           24u
+#define QUARTERS_HOUR_PER_DAY                   4*HOURS_PER_DAY
 
-/// Timing
+///  Timing
 #define DURATION_IMMISSION_EMISSION				(1U * SECONDS_PER_HOUR)
 #define DURATION_FIXED_CYCLE					(45U)
 #define DURATION_AUTOMATIC_CYCLE_OUT			(45U)
@@ -97,6 +100,7 @@
 #define THRESHOLD_FILTER_WARNING				BIT(0)
 
 #define VALUE_UNMODIFIED                         0xFF
+#define VALUE_UNMODIFIED_LONG                    0x7FFF
 
 // Filter coefficients
 #define COEFF_NIGHT  							(200u)

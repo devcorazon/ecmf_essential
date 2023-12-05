@@ -53,6 +53,7 @@ struct wifi_configuration_settings_s {
 	uint8_t     active;
 	uint8_t     server[SERVER_SIZE + 1];
 	uint8_t     port[PORT_SIZE + 1];
+	uint16_t    period;
 	uint8_t     ota_url[OTA_URL_SIZE + 1];
 };
 

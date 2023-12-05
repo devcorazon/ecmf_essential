@@ -131,10 +131,10 @@ struct protocol_wifi_conf_s {
 	uint16_t period;
 } __attribute__((packed));
 
-///// Profile.
-//struct protocol_prof_s {									// compatibilità ECMF2 (sempre tutto a 0)
-//	uint8_t profile[DAYS_PER_WEEK][HOURS_PER_DAY];
-//} __attribute__((packed));
+/// Profile.
+struct protocol_prof_s {									// compatibilità ECMF2 (sempre tutto a 0)
+	uint8_t profile[DAYS_PER_WEEK][HOURS_PER_DAY];
+} __attribute__((packed));
 
 /// Clock.
 struct protocol_clock_s {
@@ -174,9 +174,9 @@ struct protocol_stats_data_s {									// compatibilità ECMF2 (sempre 0)
 	uint16_t high_tot_hour;
 	uint16_t boost_tot_hour;
 
-//	int16_t temperature_quarter[QUARTERS_HOUR_PER_DAY];
-//	uint8_t relative_humidity_quarter[QUARTERS_HOUR_PER_DAY];
-//	uint16_t voc_quarter[QUARTERS_HOUR_PER_DAY];
+	int16_t temperature_quarter[QUARTERS_HOUR_PER_DAY];
+	uint8_t relative_humidity_quarter[QUARTERS_HOUR_PER_DAY];
+	uint16_t voc_quarter[QUARTERS_HOUR_PER_DAY];
 } __attribute__((packed));
 
 /// Master state.
@@ -202,7 +202,7 @@ union protocol_data_u {
     struct protocol_conf_s conf;
     struct protocol_adv_conf_s adv_conf;
     struct protocol_wifi_conf_s wifi_conf;
-//    struct protocol_prof_s prof;
+    struct protocol_prof_s prof;
     struct protocol_clock_s clock;
     struct protocol_oper_s oper;
     struct protocol_stats_data_s stats;
