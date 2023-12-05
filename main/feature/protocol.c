@@ -541,7 +541,12 @@ int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data
                     uint8_t funct = in_data[idx + PROTOCOL_TRAME_FUNCT_POS];
 
                     // Debug log (uncomment to enable)
-                    printf("length:%d, address:%d, function:%d, crc:%d\n", length, address, funct, crc);
+                    printf("Receving data (length = %zu):\n", length);
+                    for (size_t i = 0; i < length; ++i) {
+                    	printf("%02x ", in_data[i]);
+                    	if ((i + 1) % 16 == 0) printf("\n");
+                    }
+                    printf("\n");
 
                     switch (funct) {
                         case PROTOCOL_FUNCT_QUERY:

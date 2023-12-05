@@ -448,11 +448,11 @@ static int cmd_info_func(int argc, char **argv) {
 	printf("Device Serial Number: %08lx\n", get_serial_number());
 
     blufi_get_ble_address(bt_addr);
-    printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", bt_addr[5], bt_addr[4], bt_addr[3], bt_addr[2], bt_addr[1], bt_addr[0]);
+    printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", bt_addr[0], bt_addr[1], bt_addr[2], bt_addr[3], bt_addr[4], bt_addr[5]);
     printf("BT Connection Number: %d - Connection State: %s\n", blufi_get_ble_connection_number(), bt_connection_state_str[blufi_get_ble_connection_state()]);
 
     blufi_get_wifi_address(wifi_addr);
-    printf("WIFI address: %02X:%02X:%02X:%02X:%02X:%02X\n", wifi_addr[5], wifi_addr[4], wifi_addr[3], wifi_addr[2], wifi_addr[1], wifi_addr[0]);
+    printf("WIFI address: %02X:%02X:%02X:%02X:%02X:%02X\n", wifi_addr[0], wifi_addr[1], wifi_addr[2], wifi_addr[3], wifi_addr[4], wifi_addr[5]);
     printf("WIFI Active: %s - Connection State: %s\n", (get_wifi_active() == 0 ? "No" : "Yes"), wifi_connection_state_str[blufi_get_wifi_connection_state()]);
 
     printf("Relative Humidity threshold: %s\n", threshold_str[get_relative_humidity_set() & 0x7f]);

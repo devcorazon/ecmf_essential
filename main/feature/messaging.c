@@ -40,6 +40,12 @@ static void wrn_flt_disable_callback(char *pnt_data, size_t length);
 static void wrn_flt_clear_callback(char *pnt_data, size_t length);
 static void reboot_callback(char *pnt_data, size_t length);
 static void factory_callback(char *pnt_data, size_t length);
+static void th_rh_callback(char *pnt_data, size_t length);
+static void th_lux_callback(char *pnt_data, size_t length);
+static void th_voc_callback(char *pnt_data, size_t length);
+static void offset_rh_callback(char *pnt_data, size_t length);
+static void offset_t_callback(char *pnt_data, size_t length);
+
 
 static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_OTA,		    	ota_callback	         	},
@@ -55,6 +61,11 @@ static const struct custom_command_s custom_commands_table[] = {
 	{	BLUFI_CMD_WRN_FLT_CLEAR,	wrn_flt_clear_callback     	},
 	{	BLUFI_CMD_REBOOT,	        reboot_callback	            },
 	{   BLUFI_CMD_FACTORY,          factory_callback            },
+	{   BLUFI_CMD_TH_RH,            th_rh_callback              },
+	{   BLUFI_CMD_TH_LUX,           th_lux_callback             },
+	{   BLUFI_CMD_TH_VOC,           th_voc_callback             },
+	{   BLUFI_CMD_OFFSET_RH,        offset_rh_callback             },
+	{   BLUFI_CMD_OFFSET_T,         offset_t_callback             },
 };
 
 int ble_analyse_received_data(const uint8_t *data, uint32_t data_len) {
@@ -257,3 +268,56 @@ static void factory_callback(char *pnt_data, size_t length) {
 	esp_restart();
 }
 
+static void th_rh_callback(char *pnt_data, size_t length) {
+	uint8_t th_rh = (uint8_t) (pnt_data[0]);
+
+	if (th_rh < 0x34 && th_rh >= 0x30) {
+		th_rh -= 0x30;
+        set_relative_humidity_set(th_rh);
+	}
+    else {
+        printf("Received RH THRESHOLD data exceeds the storage limit.\n");
+    }
+}
+static void th_lux_callback(char *pnt_data, size_t length) {
+	uint8_t th_lux = (uint8_t) (pnt_data[0]);
+
+	if (th_lux < 0x34 && th_lux >= 0x30) {
+		th_lux -= 0x30;
+        set_lux_set(th_lux);
+	}
+    else {
+        printf("Received LUX THRESHOLD data exceeds the storage limit.\n");
+    }
+}
+static void th_voc_callback(char *pnt_data, size_t length) {
+	uint8_t th_voc = (uint8_t) (pnt_data[0]);
+
+	if (th_voc < 0x34 && th_voc >= 0x30) {
+		th_voc -= 0x30;
+        set_voc_set(th_voc);
+	}
+    else {
+        printf("Received VOC THRESHOLD data exceeds the storage limit.\n");
+    }
+}
+
+static void offset_rh_callback(char *pnt_data, size_t length) {
+	int offset = atoi(pnt_data);
+
+	 if (offset >= OFFSET_BOUND_MIN && offset <= OFFSET_BOUND_MAX) {
+	     set_relative_humidity_offset(offset);
+	  } else {
+	     printf("Received offset is outside the allowed range (-500 to 500).\n");
+	  }
+}
+
+static void offset_t_callback(char *pnt_data, size_t length) {
+	int offset = atoi(pnt_data);
+
+	 if (offset >= OFFSET_BOUND_MIN && offset <= OFFSET_BOUND_MAX) {
+	     set_temperature_offset(offset);
+	  } else {
+	     printf("Received offset is outside the allowed range (-500 to 500).\n");
+	  }
+}

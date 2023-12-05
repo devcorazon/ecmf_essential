@@ -29,6 +29,12 @@
 #define BLUFI_CMD_WRN_FLT_CLEAR	   "WRNFLTCLEAR"
 #define BLUFI_CMD_REBOOT	       "REBOOT"
 #define BLUFI_CMD_FACTORY	       "FACTORY"
+#define BLUFI_CMD_TH_RH            "TH_RH"
+#define BLUFI_CMD_TH_LUX    	   "TH_LUX"
+#define BLUFI_CMD_TH_VOC	       "TH_VOC"
+#define BLUFI_CMD_OFFSET_RH	       "OFFSET_RH"
+#define BLUFI_CMD_OFFSET_T   	   "OFFSET_T"
+
 
 #define WIFI_ADDRESS_LEN           20
 #define BT_ADDRESS_LEN             20

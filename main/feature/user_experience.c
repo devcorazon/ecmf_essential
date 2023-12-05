@@ -16,6 +16,7 @@
 #include "rgb_led.h"
 #include "blufi.h"
 #include "statistic.h"
+#include "user_experience.h"
 
 ///
 #define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
@@ -37,10 +38,15 @@ enum ux_s {
 static void system_mode_speed_set(uint8_t mode, uint8_t speed);
 static void user_experience_task(void *pvParameters);
 static void user_experience_state_machine(void);
-
-///
 static TimerHandle_t configuration_sensor_timer = NULL;
 static uint8_t user_experience_state = OPERATIVE;
+
+bool user_experience_in_operative() {
+	if ( user_experience_state  == OPERATIVE ) {
+		return true;
+	}
+	return false;
+}
 
 ///
 static void configuration_sensor_timer_cb(TimerHandle_t xTimer) {

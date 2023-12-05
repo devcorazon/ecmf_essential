@@ -17,6 +17,7 @@
 #include "test.h"
 #include "rgb_led.h"
 #include "statistic.h"
+#include "user_experience.h"
 
 #define	CONTROLLER_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
 #define	CONTROLLER_TASK_PRIORITY			        (1)
@@ -104,7 +105,7 @@ static void controller_task(void *pvParameters) {
 			statistic_update_handler();
 
 			if (get_device_state() & THRESHOLD_FILTER_WARNING) {
-				if (!get_wrn_flt_disable()) {
+				if (!get_wrn_flt_disable() && user_experience_in_operative()) {
 					if (!xTimerIsTimerActive(filter_warning_timer)) {
 						rgb_led_mode(RGB_LED_COLOR_FILTER_WARNING, RGB_LED_MODE_DOUBLE_BLINK, false);
 
