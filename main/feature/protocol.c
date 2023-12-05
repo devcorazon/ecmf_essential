@@ -18,10 +18,9 @@
 #include <storage.h>
 #include <blufi.h>
 #include "protocol.h"
-#include "protocol_internal.h"
 
 static uint8_t calculate_crc(const void *buf, size_t len);
-static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size);
+static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size);
 static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t out_data_size);
 static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t out_data_size);
 static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t out_data_size);
@@ -45,7 +44,7 @@ static uint8_t calculate_crc(const void *buf, size_t len) {
 	return crc;
 }
 
-static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size) {
     size_t index = 0;
 
     // STX
@@ -85,27 +84,27 @@ static void proto_send_data(uint8_t funct, const void *buf, size_t len, uint8_t 
 }
 
 
-static void proto_send_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t out_data_size) {
 	struct protocol_ack_s ack;
 
 	ack.ack_code = ack_code;
 	ack.fuct_code = funct_code;
 	ack.add_data = convert_big_endian_16(add_data);
 
-	proto_send_data(PROTOCOL_FUNCT_ACK, &ack, sizeof(ack),out_data, out_data_size);
+	proto_prepare_trame(PROTOCOL_FUNCT_ACK, &ack, sizeof(ack),out_data, out_data_size);
 }
 
-static void proto_send_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data, uint8_t *out_data, size_t out_data_size) {
 	struct protocol_nack_s nack;
 
 	nack.nack_code = nack_code;
 	nack.fuct_code = funct_code;
 	nack.add_data = convert_big_endian_16(add_data);
 
-	proto_send_data(PROTOCOL_FUNCT_NACK, &nack, sizeof(nack),out_data, out_data_size);
+	proto_prepare_trame(PROTOCOL_FUNCT_NACK, &nack, sizeof(nack),out_data, out_data_size);
 }
 
-static void proto_send_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index, uint8_t *out_data, size_t out_data_size) {
 	struct protocol_content_s content;
 	size_t len;
 
@@ -284,15 +283,15 @@ static void proto_send_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t
 			return;
 	}
 
-	proto_send_data(funct, &content, len, out_data, out_data_size);
+	proto_prepare_trame(funct, &content, len, out_data, out_data_size);
 }
 
-int proto_send_identification(uint8_t *out_data, size_t out_data_size) {
+int proto_prepare_identification(uint8_t *out_data, size_t out_data_size) {
 	struct protocol_identification_s identification;
 
 	identification.device_code = convert_big_endian_16(ECMF_IR_DEVICE_CODE);
 	identification.serial_number = convert_big_endian_32(get_serial_number());
-	proto_send_data(PROTOCOL_FUNCT_IDENTIFICATION, &identification, sizeof(identification), out_data, out_data_size);
+	proto_prepare_trame(PROTOCOL_FUNCT_IDENTIFICATION, &identification, sizeof(identification), out_data, out_data_size);
 
 	return 0;
 }
@@ -310,16 +309,16 @@ static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t ou
 		(obj_id != PROTOCOL_OBJID_WIFI_CONF) && (obj_id != PROTOCOL_OBJID_PROFILE) && (obj_id != PROTOCOL_OBJID_CLOCK) &&
 		(obj_id != PROTOCOL_OBJID_OPER) && (obj_id != PROTOCOL_OBJID_STATS) && (obj_id != PROTOCOL_OBJID_MASTER_STATE) && (obj_id != PROTOCOL_OBJID_STATE)) {
 
-		proto_send_nack(PROTOCOL_NACK_CODE_QUERY_ERR, PROTOCOL_FUNCT_QUERY, obj_id, out_data, out_data_size);
+		proto_prepare_nack(PROTOCOL_NACK_CODE_QUERY_ERR, PROTOCOL_FUNCT_QUERY, obj_id, out_data, out_data_size);
 		return;
 	}
 
 	if (obj_id == PROTOCOL_OBJID_STATS) {
-		proto_send_nack(PROTOCOL_NACK_CODE_STATS_ERR, PROTOCOL_FUNCT_QUERY, PROTOCOL_OBJID_STATS , out_data, out_data_size);
+		proto_prepare_nack(PROTOCOL_NACK_CODE_STATS_ERR, PROTOCOL_FUNCT_QUERY, PROTOCOL_OBJID_STATS , out_data, out_data_size);
 	    return;
 	}
 
-    proto_send_answer_voluntary(PROTOCOL_FUNCT_ANSWER, obj_id, index, out_data, out_data_size);
+    proto_prepare_answer_voluntary(PROTOCOL_FUNCT_ANSWER, obj_id, index, out_data, out_data_size);
 
 }
 
@@ -335,7 +334,7 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 		case PROTOCOL_OBJID_CONF:
 		{
 			if ((content->data.conf.role > 0x01 ) && (content->data.conf.role != VALUE_UNMODIFIED)) {
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
@@ -344,12 +343,12 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 				(content->data.conf.rh_setting  > RH_THRESHOLD_SETTING_HIGH) &&
 				(content->data.conf.rh_setting != VALUE_UNMODIFIED)) {
 
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
 			if ((content->data.conf.lux_setting > LUX_THRESHOLD_SETTING_HIGH) && (content->data.conf.lux_setting != VALUE_UNMODIFIED)) {
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
@@ -358,17 +357,17 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 				(content->data.conf.voc_setting > VOC_THRESHOLD_SETTING_HIGH) &&
 				(content->data.conf.voc_setting != VALUE_UNMODIFIED)) {
 
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
 			if (content->data.conf.fc_setting != 0 && content->data.conf.fc_setting != VALUE_UNMODIFIED) {
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
 			if ((content->data.conf.rotation_setting > 0) && (content->data.conf.rotation_setting != VALUE_UNMODIFIED)) {
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
@@ -395,7 +394,7 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 			if ((((temperature_offset < OFFSET_BOUND_MIN) || (temperature_offset > OFFSET_BOUND_MAX)) && (temperature_offset != VALUE_UNMODIFIED_LONG)) ||
 				(((humidity_offset < OFFSET_BOUND_MIN) || (humidity_offset > OFFSET_BOUND_MAX)) && (humidity_offset != VALUE_UNMODIFIED_LONG))) {
 
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
@@ -422,7 +421,7 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 
 		    // Validate port and period values
 		    if (((port < MIN_PORT_VALUE) || (port > MAX_PORT_VALUE)) && (port != VALUE_UNMODIFIED_LONG)) {
-		        proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+		    	proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 		    }
 
 		    // Configuration logic (currently commented out)
@@ -472,14 +471,14 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 		{
 
 			if (content->data.oper.mode_setting > MODE_AUTOMATIC_CYCLE) {
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id, out_data, out_data_size);
 				return;
 			}
 
 			if (((content->data.oper.mode_setting != MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH)) ||
 				((content->data.oper.mode_setting == MODE_AUTOMATIC_CYCLE) && (content->data.oper.speed_setting > SPEED_HIGH))) {
 
-				proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+				proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
 				return;
 			}
 
@@ -489,11 +488,11 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 		}
 
 		default:
-			proto_send_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+			proto_prepare_nack(PROTOCOL_NACK_CODE_WRITE_ERR, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
 			return;
 	}
 
-	proto_send_ack(PROTOCOL_ACK_CODE_WRITE_OK, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
+	proto_prepare_ack(PROTOCOL_ACK_CODE_WRITE_OK, PROTOCOL_FUNCT_WRITE, obj_id , out_data, out_data_size);
 }
 
 
@@ -511,11 +510,11 @@ static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data
         }
 
         default:
-            proto_send_nack(PROTOCOL_NACK_CODE_EXEC_F_ERR, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
+            proto_prepare_nack(PROTOCOL_NACK_CODE_EXEC_F_ERR, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
             return;
     }
 
-    proto_send_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
+    proto_prepare_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
 }
 
 int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data, size_t out_data_size) {
@@ -559,7 +558,7 @@ int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data
                             break;
 
                         default:
-                            proto_send_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
+                            proto_prepare_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
                             break;
                     }
                     processed = 1;
