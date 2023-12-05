@@ -380,7 +380,9 @@ void tcp_receive_data_task(void *pvParameters) {
 
         if (in_data != NULL) {
             proto_elaborate_data(in_data, in_data_size, out_data, &out_data_size);
-            tcp_send_data(out_data, out_data_size);
+            if (out_data_size) {
+            	tcp_send_data(out_data, out_data_size);
+            }
             vRingbufferReturnItem(xRingBuffer, (void *)in_data);
         }
 
@@ -533,18 +535,22 @@ int tcp_connect_to_server(void) {
     // Start the TCP receive data task
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
     proto_prepare_identification(out_data, &out_data_size);
-    tcp_send_data(out_data, out_data_size);
-
+    if (out_data_size) {
+    	tcp_send_data(out_data, out_data_size);
+    }
     return task_created == pdPASS ? 0 : -1;
 }
 
 int tcp_send_data(const uint8_t *data, size_t len) {
+    size_t lenght = len;
+	size_t offset = 0;
+	int transmit = 0;
+
     if (sock < 0) {
         printf("Invalid socket\n");
         return -1;
     }
-    printf("here_1\n");
-
+    // Uncomment for debugging
     printf("Sending data (length = %zu):\n", len);
     for (size_t i = 0; i < len; ++i) {
         printf("%02x ", data[i]);
@@ -552,21 +558,16 @@ int tcp_send_data(const uint8_t *data, size_t len) {
     }
     printf("\n");
 
-    size_t lenght = len;
-	size_t offset = 0;
-	int transmit = 0;
 	while ((lenght) && ((transmit = send(sock, data + offset, lenght, 0)) > 0)) {
 		offset += transmit;
 		lenght -= transmit;
 	}
-//    int sent = send(sock, data, len, 0x20);
-//    if (sent < 0) {
-//        printf("Failed to send data: errno %d\n", errno);
-//        return -1;
-//    }
+    if (transmit < 0) {
+        printf("Failed to send data: errno %d\n", errno);
+        return -1;
+    }
 
-    printf("here_2\n");
-    return offset; // Return the number of bytes sent
+    return offset;
 }
 
 
