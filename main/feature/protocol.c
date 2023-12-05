@@ -20,10 +20,10 @@
 #include "protocol.h"
 
 static uint8_t calculate_crc(const void *buf, size_t len);
-static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size);
-static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t out_data_size);
-static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t out_data_size);
-static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t out_data_size);
+static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t *out_data_size);
+static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t *out_data_size);
+static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t *out_data_size);
+static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t *out_data_size);
 
 static uint8_t calculate_crc(const void *buf, size_t len) {
 	uint8_t *data = (uint8_t *)buf;
@@ -44,7 +44,7 @@ static uint8_t calculate_crc(const void *buf, size_t len) {
 	return crc;
 }
 
-static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint8_t *out_data, size_t *out_data_size) {
     size_t index = 0;
 
     // STX
@@ -75,16 +75,15 @@ static void proto_prepare_trame(uint8_t funct, const void *buf, size_t len, uint
     // ETX
     out_data[index++] = PROTOCOL_TRAME_ETX;
 
-    // Send trame
-    if (tcp_send_data(out_data, index) < 0) {
-        printf("Failed to send data\n");
+    if (out_data_size != NULL) {
+        *out_data_size = index;
     }
 
     return;
 }
 
 
-static void proto_prepare_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add_data , uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_ack_s ack;
 
 	ack.ack_code = ack_code;
@@ -94,7 +93,7 @@ static void proto_prepare_ack(uint8_t ack_code, uint8_t funct_code, uint16_t add
 	proto_prepare_trame(PROTOCOL_FUNCT_ACK, &ack, sizeof(ack),out_data, out_data_size);
 }
 
-static void proto_prepare_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_nack(uint8_t nack_code, uint8_t funct_code, uint16_t add_data, uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_nack_s nack;
 
 	nack.nack_code = nack_code;
@@ -104,7 +103,7 @@ static void proto_prepare_nack(uint8_t nack_code, uint8_t funct_code, uint16_t a
 	proto_prepare_trame(PROTOCOL_FUNCT_NACK, &nack, sizeof(nack),out_data, out_data_size);
 }
 
-static void proto_prepare_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index, uint8_t *out_data, size_t out_data_size) {
+static void proto_prepare_answer_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index, uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_content_s content;
 	size_t len;
 
@@ -286,7 +285,7 @@ static void proto_prepare_answer_voluntary(uint8_t funct, uint16_t obj_id, uint1
 	proto_prepare_trame(funct, &content, len, out_data, out_data_size);
 }
 
-int proto_prepare_identification(uint8_t *out_data, size_t out_data_size) {
+int proto_prepare_identification(uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_identification_s identification;
 
 	identification.device_code = convert_big_endian_16(ECMF_IR_DEVICE_CODE);
@@ -297,7 +296,7 @@ int proto_prepare_identification(uint8_t *out_data, size_t out_data_size) {
 }
 
 
-static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
+static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_content_s *content = (struct protocol_content_s *)buf;
 	uint16_t obj_id;
 	uint16_t index;
@@ -322,7 +321,7 @@ static void proto_parse_query_data(const void *buf, uint8_t *out_data, size_t ou
 
 }
 
-static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
+static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t *out_data_size) {
 	struct protocol_content_s *content = (struct protocol_content_s *)buf;
 	uint16_t obj_id;
 	uint16_t index;
@@ -496,7 +495,7 @@ static void proto_parse_write_data(const void *buf, uint8_t *out_data, size_t ou
 }
 
 
-static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t out_data_size) {
+static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data, size_t *out_data_size) {
     uint8_t *data = (uint8_t *)buf;
     uint16_t exec_funct_id = convert_big_endian_16(*(uint16_t*)&data[0]);
     uint8_t *add_data = &data[2];
@@ -517,7 +516,7 @@ static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data
     proto_prepare_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
 }
 
-int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data, size_t out_data_size) {
+int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data, size_t *out_data_size) {
     int processed = 0;
 
     for (size_t idx = 0; idx < in_data_size; ++idx) {

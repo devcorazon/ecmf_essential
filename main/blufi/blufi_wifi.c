@@ -379,7 +379,7 @@ void tcp_receive_data_task(void *pvParameters) {
         in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0);
 
         if (in_data != NULL) {
-            proto_elaborate_data(in_data, in_data_size, out_data, out_data_size);
+            proto_elaborate_data(in_data, in_data_size, out_data, &out_data_size);
             tcp_send_data(out_data, out_data_size);
             vRingbufferReturnItem(xRingBuffer, (void *)in_data);
         }
@@ -532,7 +532,7 @@ int tcp_connect_to_server(void) {
 
     // Start the TCP receive data task
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
-    proto_prepare_identification(out_data, out_data_size);
+    proto_prepare_identification(out_data, &out_data_size);
     tcp_send_data(out_data, out_data_size);
 
     return task_created == pdPASS ? 0 : -1;
