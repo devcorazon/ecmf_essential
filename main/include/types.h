@@ -24,8 +24,8 @@
 #define TEMPERATURE_OFFSET_FIXED				(0)
 #define RELATIVE_HUMIDITY_OFFSET_FIXED			(0)
 
-#define OFFSET_BOUND_MIN						(-500)
-#define OFFSET_BOUND_MAX						(500)
+#define OFFSET_BOUND_MIN						(-50)
+#define OFFSET_BOUND_MAX						(50)
 
 #define SET_VALUE_TO_TEMP_RAW(val)				(val == TEMP_F_INVALID ? TEMPERATURE_INVALID : (int16_t) (val * TEMPERATURE_SCALE))
 #define SET_VALUE_TO_RH_RAW(val)				(val == HUM_F_INVALID ? RELATIVE_HUMIDITY_INVALID : (uint16_t) (val * RELATIVE_HUMIDITY_SCALE))
@@ -90,9 +90,6 @@
 // Offset
 #define TEMPERATURE_OFFSET_FIXED				(0)
 #define RELATIVE_HUMIDITY_OFFSET_FIXED			(0)
-
-#define OFFSET_BOUND_MIN						(-500)
-#define OFFSET_BOUND_MAX						(500)
 
 // Filters
 #define FILTER_THRESHOLD						(1000u)

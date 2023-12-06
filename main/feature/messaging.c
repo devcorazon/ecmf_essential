@@ -308,7 +308,7 @@ static void offset_rh_callback(char *pnt_data, size_t length) {
 	 if (offset >= OFFSET_BOUND_MIN && offset <= OFFSET_BOUND_MAX) {
 	     set_relative_humidity_offset(offset);
 	  } else {
-	     printf("Received offset is outside the allowed range (-500 to 500).\n");
+	     printf("Received offset is outside the allowed range (-50 to 50).\n");
 	  }
 }
 
@@ -318,6 +318,6 @@ static void offset_t_callback(char *pnt_data, size_t length) {
 	 if (offset >= OFFSET_BOUND_MIN && offset <= OFFSET_BOUND_MAX) {
 	     set_temperature_offset(offset);
 	  } else {
-	     printf("Received offset is outside the allowed range (-500 to 500).\n");
+	     printf("Received offset is outside the allowed range (-50 to 50).\n");
 	  }
 }
