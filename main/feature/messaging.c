@@ -12,6 +12,7 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 
+#include "esp_efuse.h"
 #include "esp_wifi.h"
 #include "esp_wps.h"
 
@@ -211,8 +212,40 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
     }
 }
 
+#include <stdio.h>
+#include <string.h>
+#include <esp_efuse.h>
+
 static void wifi_active_key_callback(char *pnt_data, size_t length) {
-	printf("WIFI ACTIVE KEY NEED TO BE IMPLEMENTED\n");
+    if (length != 16) {
+        printf("Data length is too short.\n");
+        return;
+    }
+
+    char serial_str[9];
+    sprintf(serial_str, "%08X", (unsigned int)get_serial_number());
+
+    char received_serials[2][9];
+    snprintf(received_serials[0], 9, "%s", pnt_data);
+    snprintf(received_serials[1], 9, "%s", pnt_data + 8);
+
+    if (strcmp(serial_str, received_serials[0]) == 0 && strcmp(serial_str, received_serials[1]) == 0) {
+        printf("Both serial numbers match.\n");
+
+        size_t offset_in_bits = 0 * 8;
+        size_t size_bits = 8;
+
+        uint8_t wifi_key_flag = 1;
+        esp_err_t write_err = esp_efuse_write_block(EFUSE_BLK3, &wifi_key_flag, offset_in_bits, size_bits);
+        if (write_err != ESP_OK) {
+            printf("Error writing EFuse: %s\n", esp_err_to_name(write_err));
+        } else {
+            printf("EFuse written successfully.\n");
+        }
+
+    } else {
+        printf("Serial numbers mismatch.\n");
+    }
 }
 
 static void wifi_wps_callback(char *pnt_data, size_t length) {

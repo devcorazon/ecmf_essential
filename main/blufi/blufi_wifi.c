@@ -366,7 +366,7 @@ void tcp_receive_data_task(void *pvParameters) {
         }
 
         len = recv(sock, recv_buf, sizeof(recv_buf), 0);
-        if (len <= 0) {
+        if (len < 0) {
             printf("Server disconnected or recv error: errno %d\n", errno);
             break;
         }
@@ -374,16 +374,15 @@ void tcp_receive_data_task(void *pvParameters) {
         if (len > 0) {
         //   xTimerStart(reset_rx_trame_timer, 0);
             xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
-        }
+            in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0);
 
-        in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0);
-
-        if (in_data != NULL) {
-            proto_elaborate_data(in_data, in_data_size, out_data, &out_data_size);
-            if (out_data_size) {
-            	tcp_send_data(out_data, out_data_size);
+            if (in_data != NULL) {
+                proto_elaborate_data(in_data, in_data_size, out_data, &out_data_size);
+                if (out_data_size) {
+                	tcp_send_data(out_data, out_data_size);
+                }
+                vRingbufferReturnItem(xRingBuffer, (void *)in_data);
             }
-            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
         }
 
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);

@@ -554,23 +554,23 @@ int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data
                             break;
 
                         case PROTOCOL_FUNCT_WRITE:
-                             proto_parse_write_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                            proto_parse_write_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
                             break;
 
                         case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
-                             proto_parse_execute_function_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                            proto_parse_execute_function_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
                             break;
 
                         default:
                             proto_prepare_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
                             break;
                     }
-                    processed = 1;
+                    processed = length;
                     break;
                 }
             }
         }
     }
 
-    return processed ? 0 : -1;
+    return processed;
 }
