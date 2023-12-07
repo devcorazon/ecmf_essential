@@ -516,7 +516,7 @@ static void proto_parse_execute_function_data(const void *buf, uint8_t *out_data
     proto_prepare_ack(PROTOCOL_ACK_CODE_EXEC_F_OK, PROTOCOL_FUNCT_EXECUTE_FUNCTION, exec_funct_id, out_data, out_data_size);
 }
 
-int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data, size_t *out_data_size) {
+int proto_elaborate_data(uint8_t *in_data, size_t in_data_size, uint8_t *out_data, size_t *out_data_size) {
     int processed = 0;
 
     for (size_t idx = 0; idx < in_data_size; ++idx) {
@@ -528,49 +528,55 @@ int proto_elaborate_data(uint8_t *in_data, size_t in_data_size,uint8_t *out_data
 
             uint16_t length = (in_data[idx + PROTOCOL_TRAME_LENGHT_POS] << 8) |
                               (in_data[idx + PROTOCOL_TRAME_LENGHT_POS + 1]);
-
             length += 2U;
 
-            if ((in_data_size >= (idx + length)) && (in_data[idx + length - 1U] == PROTOCOL_TRAME_ETX)) {
-                uint8_t crc = in_data[idx + length - 2U];
+            if (in_data_size < idx + length) {
+                return 0; // incomplete trame
+            }
 
-                // CRC validation (uncomment to enable)
-                  printf("CRC: %02x\n", calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U));
+            if (in_data[idx + length - 1U] != PROTOCOL_TRAME_ETX) {
+                return -1; // invalide trame
+            }
 
-                if ((address == get_serial_number()) && (crc == calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
-                    uint8_t funct = in_data[idx + PROTOCOL_TRAME_FUNCT_POS];
+            uint8_t crc = in_data[idx + length - 2U];
+            if (crc != calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U)) {
+                return -1; // invalide trame
+            }
 
-                    // Debug log (uncomment to enable)
-                    printf("Receving data (length = %zu):\n", length);
-                    for (size_t i = 0; i < length; ++i) {
-                    	printf("%02x ", in_data[i]);
-                    	if ((i + 1) % 16 == 0) printf("\n");
-                    }
-                    printf("\n");
+            if ((address == get_serial_number()) && (crc == calculate_crc(&in_data[idx + PROTOCOL_TRAME_ADDR_POS], length - 3U))) {
 
-                    switch (funct) {
-                        case PROTOCOL_FUNCT_QUERY:
-                            proto_parse_query_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
-                            break;
+            	printf("CRC: %02x\n", crc);
+                printf("Receiving data (length = %zu):\n", length);
+                for (size_t i = idx; i < idx + length; ++i) {
+                	printf("%02x ", in_data[i]);
+                    if ((i - idx + 1) % 16 == 0) printf("\n");
+                }
+                printf("\n");
 
-                        case PROTOCOL_FUNCT_WRITE:
-                            proto_parse_write_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
-                            break;
+                uint8_t funct = in_data[idx + PROTOCOL_TRAME_FUNCT_POS];
+                switch (funct) {
+                	case PROTOCOL_FUNCT_QUERY:
+                		proto_parse_query_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                        break;
 
-                        case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
-                            proto_parse_execute_function_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
-                            break;
+                    case PROTOCOL_FUNCT_WRITE:
+                        proto_parse_write_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                        break;
+
+                    case PROTOCOL_FUNCT_EXECUTE_FUNCTION:
+                         proto_parse_execute_function_data(&in_data[idx + PROTOCOL_TRAME_DATA_POS], out_data, out_data_size);
+                         break;
 
                         default:
-                            proto_prepare_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
-                            break;
-                    }
-                    processed = length;
-                    break;
+                        proto_prepare_nack(PROTOCOL_NACK_CODE_GENERIC_ERR, funct, 0U , out_data, out_data_size);
+                        break;
                 }
+                processed = length;
+                break;
             }
         }
     }
 
     return processed;
 }
+

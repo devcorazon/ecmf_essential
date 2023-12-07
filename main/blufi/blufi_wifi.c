@@ -349,117 +349,72 @@ void tcp_receive_data_task(void *pvParameters) {
     uint8_t recv_buf[RING_BUFFER_SIZE];
     int len;
     TickType_t tcp_receive_task_time;
-    uint8_t *in_data;
-    size_t in_data_size;
+    uint8_t *temp_buffer = NULL;
+    size_t temp_buffer_size = 0;
 
     tcp_receive_task_time = xTaskGetTickCount();
-
-//   reset_rx_trame_timer = xTimerCreate("Trame Rx Timeout", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_callback);
-    xRingBuffer = xRingbufferCreate(PROTO_TRAME_LEN, RINGBUF_TYPE_BYTEBUF);
+    xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
 
     while (1) {
-        memset(recv_buf, 0, sizeof(recv_buf));
+        memset(recv_buf, 0, RING_BUFFER_SIZE);
 
         if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
             printf("Wi-Fi connection lost, terminating task\n");
             break;
         }
 
-        len = recv(sock, recv_buf, sizeof(recv_buf), 0);
+        len = recv(sock, recv_buf, RING_BUFFER_SIZE, 0);
         if (len < 0) {
             printf("Server disconnected or recv error: errno %d\n", errno);
             break;
         }
 
         if (len > 0) {
-        //   xTimerStart(reset_rx_trame_timer, 0);
             xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
-            in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0);
-
-            if (in_data != NULL) {
-                proto_elaborate_data(in_data, in_data_size, out_data, &out_data_size);
-                if (out_data_size) {
-                	tcp_send_data(out_data, out_data_size);
-                }
-                vRingbufferReturnItem(xRingBuffer, (void *)in_data);
-            }
         }
 
+        while (1) {
+            size_t in_data_size;
+            uint8_t *in_data = (uint8_t *)xRingbufferReceiveUpTo(xRingBuffer, &in_data_size, 0, len);
+            if (!in_data) {
+                break; // no data received
+            }
+
+            temp_buffer = realloc(temp_buffer, temp_buffer_size + in_data_size);
+            memcpy(temp_buffer + temp_buffer_size, in_data, in_data_size);
+            temp_buffer_size += in_data_size;
+            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
+
+            while (temp_buffer_size > 0) {
+                int processed = proto_elaborate_data(temp_buffer, temp_buffer_size, out_data, &out_data_size);
+
+                if (processed < 0) {
+                    // wrong trame
+                    temp_buffer_size = 0;
+                    break;
+                } else if (processed == 0) {
+                    // incomplete trame
+                    break;
+                }
+
+                if (out_data_size) {
+                    tcp_send_data(out_data, out_data_size);
+                }
+
+                memmove(temp_buffer, temp_buffer + processed, temp_buffer_size - processed);
+                temp_buffer_size -= processed;
+            }
+        }
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
 
+    if (temp_buffer) {
+        free(temp_buffer);
+    }
     vRingbufferDelete(xRingBuffer);
     tcp_close_reconnect();
     vTaskDelete(NULL);
 }
-
-//void tcp_receive_data_task(void *pvParameters) {
-//    uint8_t recv_buf[RING_BUFFER_SIZE];
-//    static uint8_t pending_data_buffer[RING_BUFFER_SIZE]; // Renamed buffer for pending data
-//    static size_t pending_data_size = 0; // Size of the data in the pending data buffer
-//    int len;
-//    TickType_t tcp_receive_task_time;
-//    uint8_t *in_data;
-//    size_t in_data_size;
-//    uint8_t out_data[RING_BUFFER_SIZE];
-//    size_t out_data_size = 0;
-//
-//    tcp_receive_task_time = xTaskGetTickCount();
-//
-//    reset_rx_trame_timer = xTimerCreate("Trame Rx Timeout", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_callback);
-//    xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_NOSPLIT);
-//
-//    while (1) {
-//        memset(recv_buf, 0, sizeof(recv_buf));
-//
-//        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
-//            printf("Wi-Fi connection lost, terminating task\n");
-//            break;
-//        }
-//
-//        len = recv(sock, recv_buf, sizeof(recv_buf), 0);
-//        if (len <= 0) {
-//            printf("Server disconnected or recv error: errno %d\n", errno);
-//            break;
-//        }
-//
-//        if (len > 0) {
-//            xTimerStart(reset_rx_trame_timer, 0);
-//            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
-//        }
-//
-//        in_data = (uint8_t *)xRingbufferReceive(xRingBuffer, &in_data_size, 0);
-//
-//        if (in_data != NULL) {
-//            if (pending_data_size > 0) {
-//                if (pending_data_size + in_data_size <= RING_BUFFER_SIZE) {
-//                    memcpy(pending_data_buffer + pending_data_size, in_data, in_data_size);
-//                    pending_data_size += in_data_size;
-//
-//                    int result = proto_elaborate_data(pending_data_buffer, pending_data_size, out_data, out_data_size);
-//                    if (result == 0) {
-//                        pending_data_size = 0; // Clear the pending data buffer if data is processed
-//                    }
-//                } else {
-//                    // Handle buffer overflow or error
-//                }
-//            } else {
-//                int result = proto_elaborate_data(in_data, in_data_size, out_data, out_data_size);
-//                if (result != 0) {
-//                    memcpy(pending_data_buffer, in_data, in_data_size);
-//                    pending_data_size = in_data_size;
-//                }
-//            }
-//            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
-//        }
-//
-//        vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
-//    }
-//
-//    vRingbufferDelete(xRingBuffer);
-//    tcp_close_reconnect();
-//    vTaskDelete(NULL);
-//}
 
 int tcp_connect_to_server(void) {
     uint8_t server_ip[SERVER_SIZE + 1] = {0};
