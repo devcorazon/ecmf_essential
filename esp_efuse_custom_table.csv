@@ -11,5 +11,5 @@
 # !!!!!!!!!!! #
 
 
-USER_DATA.UNLOCKED,                 EFUSE_BLK3,   216,  8,    Unlocked
-USER_DATA.SERIAL_NUMBER,            EFUSE_BLK3,   224, 32,    Serial Number
+USER_DATA.UNLOCKED,                 EFUSE_BLK3,   8,  8,    Unlocked
+USER_DATA.SERIAL_NUMBER,            EFUSE_BLK3,   0, 32,    Serial Number

@@ -21,6 +21,8 @@
 #include "storage.h"
 #include "statistic.h"
 
+#include "esp_efuse_custom_table.h"
+
 typedef void (*command_callback_t) (char *pnt_data, size_t length);
 
 struct custom_command_s {
@@ -232,13 +234,22 @@ static void wifi_active_key_callback(char *pnt_data, size_t length) {
     if (strcmp(serial_str, received_serials[0]) == 0 && strcmp(serial_str, received_serials[1]) == 0) {
         printf("Both serial numbers match.\n");
 
-        size_t offset_in_bits = 0 * 8;
+        size_t offset_in_bits = 8 * 8;
         size_t size_bits = 8;
 
         uint8_t wifi_key_flag = 1;
-        esp_err_t write_err = esp_efuse_write_block(EFUSE_BLK3, &wifi_key_flag, offset_in_bits, size_bits);
-        if (write_err != ESP_OK) {
-            printf("Error writing EFuse: %s\n", esp_err_to_name(write_err));
+
+        esp_efuse_coding_scheme_t coding_scheme = esp_efuse_get_coding_scheme(EFUSE_BLK3);
+        if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
+        	esp_efuse_batch_write_begin();
+        }
+        esp_err_t err = esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &wifi_key_flag, size_bits);
+
+        if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
+        	esp_efuse_batch_write_commit();
+        }
+        if (err != ESP_OK) {
+            printf("Error writing EFuse: %s\n", esp_err_to_name(err));
         } else {
             printf("EFuse written successfully.\n");
         }

@@ -157,50 +157,43 @@ int system_init(void) {
 
 	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 
-	 esp_efuse_coding_scheme_t coding_scheme = esp_efuse_get_coding_scheme(EFUSE_BLK3);
+	esp_efuse_coding_scheme_t coding_scheme = esp_efuse_get_coding_scheme(EFUSE_BLK3);
 
-	 if (coding_scheme == EFUSE_CODING_SCHEME_NONE) {
-	    	printf("Coding Scheme NONE\n");
-	    } else if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
-	    	printf("Coding Scheme RS (Reed-Solomon coding)\n");
+	device_desc_t device_desc;
+
+	// Read the current state of eFuse fields
+	printf("read field\n");
+	esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
+//	esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
+	printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
+
+	// Verify if eFuse fields are in the expected initial state
+	if (device_desc.unlocked == 0) {
+	    // Only proceed if both fields are in the initial state
+	    printf("set struct\n");
+	    device_desc.unlocked = 0xaa;
+	    device_desc.serial_number = 0x8000f1ca;
+	    printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
+
+	    // Write new values to eFuse fields
+	    printf("write field\n");
+	    if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
+	        esp_efuse_batch_write_begin();
 	    }
+	    esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
+//	    esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
+	    if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
+	        esp_efuse_batch_write_commit();
+	    }
+	} else {
+	    printf("eFuse fields are not in the expected initial state. Write operation skipped.\n");
+	}
 
-		device_desc_t device_desc;
-
-		printf("clear struct\n");
-		device_desc.unlocked = 0x0;
-		device_desc.serial_number = 0x0;
-		printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
-
-		printf("read field\n");
-		esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
-		esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
-		printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
-
-		printf("set struct\n");
-		device_desc.unlocked = 0xaa;
-		device_desc.serial_number = 0x8000f1ca;
-		printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
-
-		printf("write field\n");
-		if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
-			esp_efuse_batch_write_begin();
-		}
-		esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
-//		esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
-		if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
-			esp_efuse_batch_write_commit();
-		}
-
-		printf("clear struct\n");
-		device_desc.unlocked = 0x0;
-		device_desc.serial_number = 0x0;
-		printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
-
-		printf("read field\n");
-		esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
-		esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
-		printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
+	// Read and display the eFuse fields after the write operation (if performed)
+	printf("read field\n");
+	esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &device_desc.unlocked, 8);
+//	esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA_SERIAL_NUMBER, &device_desc.serial_number, 32);
+	printf("unlocked: %02x - serial_number: %08lx\n", device_desc.unlocked, device_desc.serial_number);
 
 //	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
 //	    get_mode_set(),

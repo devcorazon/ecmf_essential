@@ -16,7 +16,6 @@ extern "C" {
 // then run `efuse_common_table` or `efuse_custom_table` command it will generate this file.
 // To show efuse_table run the command 'show_efuse_table'.
 
-
 extern const esp_efuse_desc_t* ESP_EFUSE_USER_DATA_UNLOCKED[];
 extern const esp_efuse_desc_t* ESP_EFUSE_USER_DATA_SERIAL_NUMBER[];
 

@@ -495,14 +495,14 @@ int set_wifi_active(uint8_t active) {
 
 static int storage_serial_number_obtain(void) {
     uint8_t serial_number_byte[4];
-    size_t start_bit = 28 * 8;
+    size_t start_bit = 0 * 8;
     size_t num_bits = 4 * 8;
 
     if (esp_efuse_read_block(EFUSE_BLK3, &serial_number_byte, start_bit, num_bits) != ESP_OK) {
     	return -1;
     }
 
-    application_data.runtime_data.serial_number = ((uint32_t)serial_number_byte[0]) << 24 | ((uint32_t)serial_number_byte[1]) << 16 | ((uint32_t)serial_number_byte[2]) << 8 | ((uint32_t)serial_number_byte[3]);
+    application_data.runtime_data.serial_number = ((uint32_t)serial_number_byte[3]) << 24 | ((uint32_t)serial_number_byte[2]) << 16 | ((uint32_t)serial_number_byte[1]) << 8 | ((uint32_t)serial_number_byte[0]);
 
     return 0;
 }
