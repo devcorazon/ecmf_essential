@@ -1,0 +1,15 @@
+# field_name,       |    efuse_block, | bit_start, | bit_count, |comment #
+#                   |    (EFUSE_BLK0  | (0..255)   | (1..-)     |        #
+#                   |     EFUSE_BLK1  |            |MAX_BLK_LEN*|        #
+#                   |     EFUSE_BLK2  |            |            |        #
+#                   |     EFUSE_BLK3) |            |            |        #
+##########################################################################
+"# *) The value MAX_BLK_LEN depends on CONFIG_EFUSE_MAX_BLK_LEN, will be replaced with ""None"" - 256. ""3/4"" - 192. ""REPEAT"" - 128."
+# !!!!!!!!!!! #
+"# After editing this file, run the command manually ""make efuse_common_table"" or ""idf.py efuse-common-table"""
+# this will generate new source files, next rebuild all the sources.
+# !!!!!!!!!!! #
+
+
+USER_DATA.UNLOCKED,                 EFUSE_BLK3,   216,  8,    Unlocked
+USER_DATA.SERIAL_NUMBER,            EFUSE_BLK3,   224, 32,    Serial Number

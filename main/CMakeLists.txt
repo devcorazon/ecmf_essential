@@ -8,6 +8,7 @@ idf_component_register(
 						"hardware/rgb_led.c"
 						"hardware/fan.c"
 						"hardware/ir_receiver.c"
+						"hardware/esp_efuse_custom_table.c"
                     	"driver/sht4x/sht4x.c"
                     	"driver/sgp40/sgp40.c" "driver/sgp40/sensirion_gas_index_algorithm.c"
                     	"driver/ltr303/ltr303.c"
