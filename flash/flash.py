@@ -46,7 +46,7 @@ if not run_command(f'python {ESPTOOL_PATH} --port {ESP_DEVICE} --baud 1152000 --
     print("Error: Failed to flash firmware.")
     sys.exit(1)
 
-print("Burning bits to eFuse...")
+print(" Burning bits to eFuse...")
 if not run_command(burn_command):
     print("Error: Failed to burn eFuse bits.")
     sys.exit(1)

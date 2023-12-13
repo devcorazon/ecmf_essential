@@ -10,7 +10,6 @@
 
 #include "system.h"
 
-
 ///
 void app_main(void) {
 	printf("Starting v%u.%u.%u firmware\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);

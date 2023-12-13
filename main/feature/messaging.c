@@ -49,7 +49,6 @@ static void th_voc_callback(char *pnt_data, size_t length);
 static void offset_rh_callback(char *pnt_data, size_t length);
 static void offset_t_callback(char *pnt_data, size_t length);
 
-
 static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_OTA,		    	ota_callback	         	},
 	{ 	BLUFI_CMD_VERSION,	    	version_callback	     	},
@@ -214,10 +213,6 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
     }
 }
 
-#include <stdio.h>
-#include <string.h>
-#include <esp_efuse.h>
-
 static void wifi_active_key_callback(char *pnt_data, size_t length) {
     if (length != 16) {
         printf("Data length is too short.\n");
@@ -234,9 +229,7 @@ static void wifi_active_key_callback(char *pnt_data, size_t length) {
     if (strcmp(serial_str, received_serials[0]) == 0 && strcmp(serial_str, received_serials[1]) == 0) {
         printf("Both serial numbers match.\n");
 
-        size_t offset_in_bits = 8 * 8;
         size_t size_bits = 8;
-
         uint8_t wifi_key_flag = 1;
 
         esp_efuse_coding_scheme_t coding_scheme = esp_efuse_get_coding_scheme(EFUSE_BLK3);
