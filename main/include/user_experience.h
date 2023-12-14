@@ -8,6 +8,8 @@
 #ifndef MAIN_INCLUDE_USER_EXPERIENCE_H_
 #define MAIN_INCLUDE_USER_EXPERIENCE_H_
 
+#include "system.h"
+
 int user_experience_init();
 bool user_experience_in_operative();
 

@@ -14,7 +14,7 @@
 #include "driver/i2c.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_adc/adc_cali.h"
-
+#include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
 

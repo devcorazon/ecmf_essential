@@ -56,12 +56,12 @@ static bool wifi_scan_on = false;
 static esp_netif_t *ap_netif = NULL;
 static esp_netif_t *sta_netif = NULL;
 
-TimerHandle_t reset_rx_trame_timer;
-
 int blufi_wifi_connect(void);
 
 static TimerHandle_t tcp_reconnect_timer = NULL;
 static TimerHandle_t wifi_reconnect_timer = NULL;
+static TimerHandle_t voluntary_periodic_timer  = NULL;
+static TimerHandle_t reset_rx_trame_timer = NULL;
 
 static int sock = -1; // Global socket descriptor
 
@@ -77,6 +77,7 @@ const int FAIL_BIT = BIT1;
 /* store the station info for send back to phone */
 static bool gl_sta_connected = false;
 static bool gl_sta_got_ip = false;
+static bool gl_tcp_connected = false;
 static bool ble_is_connected = false;
 static uint8_t gl_sta_bssid[BSSID_SIZE] = {0};
 static uint8_t gl_sta_ssid[SSID_SIZE] = {0};
@@ -92,6 +93,9 @@ static esp_wps_config_t gl_wps_config = WPS_CONFIG_INIT_DEFAULT(WPS_MODE);
 RingbufHandle_t xRingBuffer;
 static uint8_t out_data[RING_BUFFER_SIZE];
 static size_t out_data_size = 0;
+
+uint8_t *temp_buffer = NULL;
+size_t temp_buffer_size = 0;
 
 enum wifi_connection_state {
     WIFI_DISCONNECTED = 0,
@@ -110,9 +114,16 @@ void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
     }
 }
 
-//void reset_rx_trame_callback(TimerHandle_t xTimer) {
-//                                                       // TCP Rx trame callback
-//}
+void voluntary_periodic_timer_callback(TimerHandle_t xTimer) {
+    blufi_wifi_send_voluntary(PROTOCOL_FUNCT_VOLUNTARY, PROTOCOL_OBJID_STATE, 0);   // Send voluntary message
+
+}
+
+void reset_rx_trame_timer_callback(TimerHandle_t xTimer) {
+     printf("Reseting TCP Receive trame.\n");          // TCP Rx trame callback
+     vRingbufferDelete(xRingBuffer);
+     xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
+}
 
 bool get_sta_connected(void) {
     return gl_sta_connected;
@@ -128,6 +139,14 @@ bool get_sta_got_ip(void) {
 
 void set_sta_got_ip(bool value) {
     gl_sta_got_ip = value;
+}
+
+bool get_tcp_connected(void) {
+    return gl_tcp_connected;
+}
+
+void set_tcp_connected(bool value) {
+    gl_tcp_connected = value;
 }
 
 bool get_ble_is_connected(void) {
@@ -306,6 +325,8 @@ int blufi_wifi_connect(void) {
 int tcp_close_reconnect(void) {
     close(sock);
     sock = -1;
+    set_tcp_connected(false);
+    xTimerStop(voluntary_periodic_timer,0);
     // Start the reconnect timer to retry after a delay
     xTimerStart(tcp_reconnect_timer, 0);
 
@@ -349,8 +370,6 @@ void tcp_receive_data_task(void *pvParameters) {
     uint8_t recv_buf[RING_BUFFER_SIZE];
     int len;
     TickType_t tcp_receive_task_time;
-    uint8_t *temp_buffer = NULL;
-    size_t temp_buffer_size = 0;
 
     tcp_receive_task_time = xTaskGetTickCount();
     xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
@@ -370,6 +389,7 @@ void tcp_receive_data_task(void *pvParameters) {
         }
 
         if (len > 0) {
+ //       	xTimerStart(reset_rx_trame_timer,0);
             xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
         }
 
@@ -407,6 +427,8 @@ void tcp_receive_data_task(void *pvParameters) {
         }
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
+
+//    xTimerStop(reset_rx_trame_timer,0);
 
     if (temp_buffer) {
         free(temp_buffer);
@@ -485,6 +507,7 @@ int tcp_connect_to_server(void) {
     }
 
     printf("Successfully connected to the server\n");
+    set_tcp_connected(true);
 
     // Start the TCP receive data task
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
@@ -522,6 +545,17 @@ int tcp_send_data(const uint8_t *data, size_t len) {
     }
 
     return offset;
+}
+
+int blufi_wifi_send_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index) {
+	if ( get_tcp_connected()) {
+		proto_prepare_answer_voluntary(funct, obj_id, index , out_data, &out_data_size);
+
+    	if (out_data_size) {
+    		tcp_send_data(out_data, out_data_size);
+    	}
+	}
+    return 0;
 }
 
 int softap_get_current_connection_number(void) {
@@ -862,6 +896,14 @@ int blufi_wifi_init(void) {
 
     // Create the reconnect timer if it hasn't been created yet
     tcp_reconnect_timer = xTimerCreate("TCP Reconnect Timer", pdMS_TO_TICKS(TCP_RECONNECTING_DELAY), pdFALSE, (void *)0, tcp_reconnect_timer_callback);
+
+    // Create the voluntary periodic
+    if (get_wifi_period()) {
+    voluntary_periodic_timer = xTimerCreate("Voluntary periodic Timer", pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())), pdFALSE, (void *)0, voluntary_periodic_timer_callback);
+    }
+
+    // Create the TCP receive reset timer
+    reset_rx_trame_timer = xTimerCreate("TCP Reset Rx Trame Timer", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_timer_callback);
 
 	ret = esp_wifi_start();
 	if (ret != ESP_OK) {

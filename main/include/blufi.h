@@ -31,6 +31,8 @@ void blufi_get_wifi_address(uint8_t* addr);
 int blufi_get_wifi_connection_state(void);
 int blufi_get_wifi_active(void);
 
+int blufi_wifi_send_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index);
+
 int blufi_ble_init(void);
 int blufi_ble_deinit(void);
 
@@ -59,6 +61,9 @@ void set_sta_connected(bool value);
 
 bool get_sta_got_ip(void);
 void set_sta_got_ip(bool value);
+
+bool get_tcp_connected(void);
+void set_tcp_connected(bool value);
 
 bool get_ble_is_connected(void);
 void set_ble_is_connected(bool value);

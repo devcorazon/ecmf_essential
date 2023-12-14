@@ -33,7 +33,22 @@ int fan_init() {
 }
 
 int fan_set(uint8_t direction, uint8_t speed) {
+#if 0
+	static uint8_t last_direction = DIRECTION_NONE;
 
+    // Check if the direction has changed
+    if (last_direction != direction) {
+        // Set speed to zero and update
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+        // Wait for 7 seconds
+        vTaskDelay(pdMS_TO_TICKS(7000));
+
+        // Update last direction
+        last_direction = direction;
+    }
+#endif
 	if ( direction == DIRECTION_IN) {
     gpio_set_level(FAN_DIRECTION_PIN, 0);
 	} else if( direction == DIRECTION_OUT) {
@@ -62,8 +77,22 @@ int fan_set(uint8_t direction, uint8_t speed) {
 }
 
 int fan_set_percentage(uint8_t direction, uint8_t speed_percent) {
-    uint32_t fan_speed;
+#if 0
+	static uint8_t last_direction = DIRECTION_NONE;
 
+    // Check if the direction has changed
+    if (last_direction != direction) {
+        // Set speed to zero and update
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+
+        // Wait for 7 seconds
+        vTaskDelay(pdMS_TO_TICKS(7000));
+
+        // Update last direction
+        last_direction = direction;
+    }
+#endif
     if (direction == DIRECTION_IN) {
         gpio_set_level(FAN_DIRECTION_PIN, 0);
         fan_speed = (FAN_PWM_MAX * speed_percent) / 100;

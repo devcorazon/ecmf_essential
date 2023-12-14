@@ -36,8 +36,8 @@
 #define BLUFI_CMD_OFFSET_T   	   "OFFSET_T"
 
 
-#define WIFI_ADDRESS_LEN           20
-#define BT_ADDRESS_LEN             20
+#define WIFI_ADDRESS_LEN           6
+#define BT_ADDRESS_LEN             6
 
 #define BLUFI_TASK_STACK_SIZE			(configMINIMAL_STACK_SIZE * 4)
 #define	BLUFI_TASK_PRIORITY				(1)
@@ -70,7 +70,7 @@
 
 #define BLE_ADV_EXPIRY_TIME                       1     // ( in min )
 #define TCP_RECONNECTING_DELAY                 1000     // ( in msec )
-#define TCP_TRAME_RX_TIMEOUT                   5000     // ( in msec )
+#define TCP_TRAME_RX_TIMEOUT                   2000     // ( in msec )
 #define WIFI_RECONNECTING_DELAY                1000     // ( in msec )
 
 #define TCP_KEEPALIVE_IDLE_TIME                  30     // Time in seconds that the connection must be idle before starting to send keepalive probes

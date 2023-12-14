@@ -10,6 +10,7 @@
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
 
+#include "blufi.h"
 #include "storage.h"
 #include "ir_receiver.h"
 #include "test.h"
@@ -17,6 +18,7 @@
 #include "blufi.h"
 #include "statistic.h"
 #include "user_experience.h"
+#include "protocol.h"
 
 ///
 #define	USER_EXPERIENCE_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
@@ -40,6 +42,10 @@ static void user_experience_task(void *pvParameters);
 static void user_experience_state_machine(void);
 static TimerHandle_t configuration_sensor_timer = NULL;
 static uint8_t user_experience_state = OPERATIVE;
+
+static uint8_t last_voc_set = VOC_THRESHOLD_SETTING_NOT_CONFIGURED;
+static uint8_t last_lux_set = LUX_THRESHOLD_SETTING_NOT_CONFIGURED;
+static uint8_t last_rh_set = RH_THRESHOLD_SETTING_NOT_CONFIGURED;
 
 bool user_experience_in_operative() {
 	if ( user_experience_state  == OPERATIVE ) {
@@ -321,6 +327,13 @@ static void user_experience_state_machine(void) {
 //					}
 //					break;
 	  }
+
+    if (get_voc_set() != last_voc_set || get_lux_set() != last_lux_set || get_relative_humidity_set() != last_rh_set) {
+        blufi_wifi_send_voluntary(PROTOCOL_FUNCT_VOLUNTARY, PROTOCOL_OBJID_CONF, 0);
+        last_voc_set = get_voc_set();
+        last_lux_set = get_lux_set();
+        last_rh_set = get_relative_humidity_set();
+    }
 }
 
 int user_experience_init() {

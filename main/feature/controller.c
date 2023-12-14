@@ -4,7 +4,6 @@
  *  Created on: 4 sept. 2023
  *      Author: youcef.benakmoume
  */
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -12,12 +11,16 @@
 
 #include "math.h"
 
+#include "blufi.h"
+#include "controller.h"
 #include "storage.h"
 #include "fan.h"
 #include "test.h"
 #include "rgb_led.h"
 #include "statistic.h"
 #include "user_experience.h"
+#include "protocol.h"
+
 
 #define	CONTROLLER_TASK_STACK_SIZE			        (configMINIMAL_STACK_SIZE * 4)
 #define	CONTROLLER_TASK_PRIORITY			        (1)
@@ -121,8 +124,11 @@ static void controller_task(void *pvParameters) {
 static void controller_state_machine(void) {
 	uint8_t mode_set = get_mode_set();
 	uint8_t mode_state = get_mode_state();
+	uint8_t speed_set = get_speed_set();
+	uint8_t speed_state = get_speed_state();
 
 	mode_state &= ~(MODE_AUTOMATIC_CYCLE_EXTRA_CYCLE | MODE_AUTOMATIC_CYCLE_CALCULATE_DURATION);
+	speed_state &= ~(SPEED_AUTOMATIC_CYCLE_FORCE_BOOST | SPEED_AUTOMATIC_CYCLE_FORCE_NIGHT);
 
 	if (mode_state != mode_set) {
 		xTimerStop(controller_timer, 0);
@@ -180,9 +186,13 @@ static void controller_state_machine(void) {
 			break;
 		}
 	}
-	controller_set();
 
+	controller_set();
 	fan_set(get_direction_state(), ADJUST_SPEED(get_speed_state()));
+
+	if ( mode_state != mode_set || speed_state != speed_set ) {
+		blufi_wifi_send_voluntary(PROTOCOL_FUNCT_VOLUNTARY,PROTOCOL_OBJID_OPER,0);
+	}
 
 	controller_log();
 }

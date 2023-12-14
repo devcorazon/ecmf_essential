@@ -27,12 +27,7 @@
 #include "ir_receiver.h"
 #include "blufi.h"
 #include "user_experience.h"
-
-#include "esp_efuse.h"
-#include "esp_efuse_table.h"
-#include "esp_efuse_custom_table.h"
-
-#include "../feature/controller.c"
+#include "controller.h"
 
 typedef struct {
     uint8_t unlocked;

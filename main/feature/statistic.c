@@ -11,7 +11,7 @@
 #include "structs.h"
 #include "fan.h"
 
-#define SAVING_THRESHOLD_STATS				(50u)
+#define SAVING_THRESHOLD_STATS				(1000u)
 
 typedef struct {
     struct {
