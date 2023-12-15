@@ -21,8 +21,6 @@
 #include "storage.h"
 #include "statistic.h"
 
-#include "esp_efuse_custom_table.h"
-
 typedef void (*command_callback_t) (char *pnt_data, size_t length);
 
 struct custom_command_s {
@@ -37,7 +35,7 @@ static void password_callback(char *pnt_data, size_t length);
 static void server_callback(char *pnt_data, size_t length);
 static void port_callback(char *pnt_data, size_t length);
 static void wifi_active_callback(char *pnt_data, size_t length);
-static void wifi_active_key_callback(char *pnt_data, size_t length);
+static void wifi_unlock_callback(char *pnt_data, size_t length);
 static void wifi_wps_callback(char *pnt_data, size_t length);
 static void wrn_flt_disable_callback(char *pnt_data, size_t length);
 static void wrn_flt_clear_callback(char *pnt_data, size_t length);
@@ -57,7 +55,7 @@ static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_SERVER,		    server_callback		    	},
 	{ 	BLUFI_CMD_PORT,			    port_callback	    	    },
 	{	BLUFI_CMD_WIFI_ACTIVE,	    wifi_active_callback	    },
-	{	BLUFI_CMD_WIFI_ACTIVE_KEY,	wifi_active_key_callback },
+	{	BLUFI_CMD_WIFI_UNLOCK,   	wifi_unlock_callback },
 	{   BLUFI_CMD_WIFI_WPS,         wifi_wps_callback           },
 	{	BLUFI_CMD_WRN_FLT_DISABLE,	wrn_flt_disable_callback    },
 	{	BLUFI_CMD_WRN_FLT_CLEAR,	wrn_flt_clear_callback     	},
@@ -173,39 +171,43 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
 	wifi_active -= 0x30;
 
 	if (length == 1) {
-		if (get_wifi_active() != wifi_active) {
-			if (wifi_active) {
-				char ssid[SSID_SIZE + 1] = { 0 };
-				char pwd[PASSWORD_SIZE + 1] = { 0 };
-				char server[SERVER_SIZE + 1] = { 0 };
-				char port[PORT_SIZE + 1] = { 0 };
+		if (get_wifi_unlocked()) {
+			if (get_wifi_active() != wifi_active) {
+				if (wifi_active) {
+					char ssid[SSID_SIZE + 1] = { 0 };
+					char pwd[PASSWORD_SIZE + 1] = { 0 };
+					char server[SERVER_SIZE + 1] = { 0 };
+					char port[PORT_SIZE + 1] = { 0 };
 
-				get_ssid((uint8_t *) ssid);
-				get_password((uint8_t *) pwd);
-				get_server((uint8_t *) server);
-				get_port((uint8_t *) port);
+					get_ssid((uint8_t*) ssid);
+					get_password((uint8_t*) pwd);
+					get_server((uint8_t*) server);
+					get_port((uint8_t*) port);
 
-				if (!strlen(ssid) || !strlen(pwd) || !strlen(server) || !strlen(port)) {
-					printf("SSID, PSK, SERVER and PORT missing\n");
-					return;
+					if (!strlen(ssid) || !strlen(pwd) || !strlen(server)
+							|| !strlen(port)) {
+						printf("SSID, PSK, SERVER and PORT missing\n");
+						return;
+					}
+				}
+
+				set_wifi_active(wifi_active);
+				if (get_wifi_active()) {
+					if (get_sta_connected() == true) {
+						tcp_connect_to_server();
+					} else {
+						blufi_wifi_connect();
+					}
+				} else {
+					if (get_sta_connected() == true) {
+						tcp_close_reconnect();
+						esp_wifi_disconnect();
+					}
 				}
 			}
-
-			set_wifi_active(wifi_active);
-			if (get_wifi_active()) {
-				if (get_sta_connected() == true) {
-				    tcp_connect_to_server();
-				}
-				else {
-				    blufi_wifi_connect();
-				}
-			}
-			else {
-				if (get_sta_connected() == true) {
-				    tcp_close_reconnect();
-				    esp_wifi_disconnect();
-				}
-			}
+		}
+		else {
+			 printf("No WIFI Unlocked.\n");
 		}
 	}
     else {
@@ -213,7 +215,7 @@ static void wifi_active_callback(char *pnt_data, size_t length) {
     }
 }
 
-static void wifi_active_key_callback(char *pnt_data, size_t length) {
+static void wifi_unlock_callback(char *pnt_data, size_t length) {
     if (length != 16) {
         printf("Data length is too short.\n");
         return;
@@ -229,22 +231,14 @@ static void wifi_active_key_callback(char *pnt_data, size_t length) {
     if (strcmp(serial_str, received_serials[0]) == 0 && strcmp(serial_str, received_serials[1]) == 0) {
         printf("Both serial numbers match.\n");
 
-        size_t size_bits = 8;
-        uint8_t wifi_key_flag = 1;
+        uint8_t key_flag = WIFI_UNLOCKED_VALUE;
 
-        esp_efuse_coding_scheme_t coding_scheme = esp_efuse_get_coding_scheme(EFUSE_BLK3);
-        if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
-        	esp_efuse_batch_write_begin();
-        }
-        esp_err_t err = esp_efuse_write_field_blob(ESP_EFUSE_USER_DATA_UNLOCKED, &wifi_key_flag, size_bits);
-
-        if (coding_scheme == EFUSE_CODING_SCHEME_RS) {
-        	esp_efuse_batch_write_commit();
-        }
-        if (err != ESP_OK) {
-            printf("Error writing EFuse: %s\n", esp_err_to_name(err));
+        esp_err_t err = esp_efuse_write_block(EFUSE_BLK4, &key_flag, 0, 8); // Writing 1 byte at block 4, offset 0
+        if (err == ESP_OK) {
+            printf("Written %02X to eFUSE block4 offset 0\n", key_flag);
+            set_wifi_unlocked(1);
         } else {
-            printf("EFuse written successfully.\n");
+            printf("Error writing to eFUSE: %d\n", err);
         }
 
     } else {

@@ -150,7 +150,13 @@ int system_init(void) {
 	get_ota_url(ota_url);
 	printf("OTA URL: %s\n", ota_url);
 
+#warning
+	set_wifi_period(30);
+
+	printf("Wifi Period: %d\n", get_wifi_period());
+
 	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
+
 
 //	printf("mode_set: %d - speed_set: %d - r_hum_set: %d - lux_set: %d - voc_set: %d - temp_offset: %d - r_hum_offset: %d - filter_operating: %d\r\n",
 //	    get_mode_set(),

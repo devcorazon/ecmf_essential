@@ -100,5 +100,7 @@ int set_ota_url(const uint8_t *ota_url);
 uint8_t get_wifi_active(void);
 int set_wifi_active(uint8_t active);
 
+uint8_t get_wifi_unlocked(void);
+int set_wifi_unlocked(uint8_t unlocked);
 
 #endif /* MAIN_INCLUDE_STORAGE_H_ */

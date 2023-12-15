@@ -115,8 +115,12 @@ void wifi_reconnect_timer_callback(TimerHandle_t xTimer) {
 }
 
 void voluntary_periodic_timer_callback(TimerHandle_t xTimer) {
-    blufi_wifi_send_voluntary(PROTOCOL_FUNCT_VOLUNTARY, PROTOCOL_OBJID_STATE, 0);   // Send voluntary message
-
+	if ( get_wifi_period() ) {
+		printf("Sending Voluntary Trame\n");
+		blufi_wifi_send_voluntary(PROTOCOL_FUNCT_VOLUNTARY, PROTOCOL_OBJID_STATE, 0);   // Send voluntary message
+		xTimerChangePeriod(voluntary_periodic_timer,pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
+		xTimerStart(voluntary_periodic_timer,0);
+	}
 }
 
 void reset_rx_trame_timer_callback(TimerHandle_t xTimer) {
@@ -425,6 +429,12 @@ void tcp_receive_data_task(void *pvParameters) {
                 temp_buffer_size -= processed;
             }
         }
+        if (get_wifi_period()) {
+        	if (!xTimerIsTimerActive(voluntary_periodic_timer)) {
+        		xTimerChangePeriod(voluntary_periodic_timer,pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
+        		xTimerStart(voluntary_periodic_timer,0);
+        	}
+        }
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
 
@@ -508,7 +518,10 @@ int tcp_connect_to_server(void) {
 
     printf("Successfully connected to the server\n");
     set_tcp_connected(true);
-
+    if (get_wifi_period()) {
+    	xTimerChangePeriod(voluntary_periodic_timer,pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
+    	xTimerStart(voluntary_periodic_timer,0);
+    }
     // Start the TCP receive data task
     BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
     proto_prepare_identification(out_data, &out_data_size);
@@ -548,7 +561,7 @@ int tcp_send_data(const uint8_t *data, size_t len) {
 }
 
 int blufi_wifi_send_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index) {
-	if ( get_tcp_connected()) {
+	if ( get_tcp_connected() ) {
 		proto_prepare_answer_voluntary(funct, obj_id, index , out_data, &out_data_size);
 
     	if (out_data_size) {
@@ -898,9 +911,7 @@ int blufi_wifi_init(void) {
     tcp_reconnect_timer = xTimerCreate("TCP Reconnect Timer", pdMS_TO_TICKS(TCP_RECONNECTING_DELAY), pdFALSE, (void *)0, tcp_reconnect_timer_callback);
 
     // Create the voluntary periodic
-    if (get_wifi_period()) {
-    voluntary_periodic_timer = xTimerCreate("Voluntary periodic Timer", pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())), pdFALSE, (void *)0, voluntary_periodic_timer_callback);
-    }
+    voluntary_periodic_timer = xTimerCreate("Voluntary periodic Timer", pdMS_TO_TICKS(SECONDS_TO_MS(30)), pdFALSE, (void *)0, voluntary_periodic_timer_callback);
 
     // Create the TCP receive reset timer
     reset_rx_trame_timer = xTimerCreate("TCP Reset Rx Trame Timer", pdMS_TO_TICKS(TCP_TRAME_RX_TIMEOUT), pdFALSE, (void *)0, reset_rx_trame_timer_callback);

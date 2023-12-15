@@ -110,6 +110,9 @@
 
 #define RGB_LED_MODE_FOREVER					(UINT8_MAX)
 
+// WIFI Activation data
+#define WIFI_UNLOCKED_VALUE                     0xAA
+
 // Enumerations
 
 // Rh threshold setting
