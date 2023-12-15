@@ -769,8 +769,7 @@ CONFIG_SPI_SLAVE_ISR_IN_IRAM=y
 #
 # eFuse Bit Manager
 #
-CONFIG_EFUSE_CUSTOM_TABLE=y
-CONFIG_EFUSE_CUSTOM_TABLE_FILENAME="esp_efuse_custom_table.csv"
+# CONFIG_EFUSE_CUSTOM_TABLE is not set
 # CONFIG_EFUSE_VIRTUAL is not set
 CONFIG_EFUSE_MAX_BLK_LEN=256
 # end of eFuse Bit Manager

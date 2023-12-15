@@ -515,6 +515,15 @@ static int cmd_reboot_func(int argc, char **argv) {
 	 return 0;
 }
 
+static int cmd_period_func(int argc, char **argv) {
+	char *endptr;
+	long index = strtol(argv[1], &endptr, 10);
+
+	set_wifi_period(index);
+	printf("period set = %d\n",get_wifi_period());
+	return 0;
+}
+
 ///
 int test_init(void) {
 	esp_console_register_help_command();
@@ -619,6 +628,15 @@ int test_init(void) {
 	     };
 
 	 esp_console_cmd_register(&cmd_reboot);
+
+	 const esp_console_cmd_t cmd_period = {
+	       .command = "period",
+	       .help = "period",
+	       .hint = NULL,
+	       .func = cmd_period_func,
+	     };
+
+	 esp_console_cmd_register(&cmd_period);
 
 	 return 0;
 }

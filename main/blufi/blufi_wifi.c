@@ -125,8 +125,12 @@ void voluntary_periodic_timer_callback(TimerHandle_t xTimer) {
 
 void reset_rx_trame_timer_callback(TimerHandle_t xTimer) {
      printf("Reseting TCP Receive trame.\n");          // TCP Rx trame callback
-     vRingbufferDelete(xRingBuffer);
-     xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
+     size_t itemSize;
+     void* item = NULL;
+     item = xRingbufferReceive(xRingBuffer, &itemSize, 0);
+     if ( item != NULL) {
+         vRingbufferReturnItem(xRingBuffer,item);
+     }
 }
 
 bool get_sta_connected(void) {
@@ -393,7 +397,7 @@ void tcp_receive_data_task(void *pvParameters) {
         }
 
         if (len > 0) {
- //       	xTimerStart(reset_rx_trame_timer,0);
+        	xTimerStart(reset_rx_trame_timer,0);
             xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
         }
 
@@ -437,8 +441,6 @@ void tcp_receive_data_task(void *pvParameters) {
         }
         vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
     }
-
-//    xTimerStop(reset_rx_trame_timer,0);
 
     if (temp_buffer) {
         free(temp_buffer);
