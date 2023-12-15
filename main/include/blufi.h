@@ -52,6 +52,9 @@ int tcp_connect_to_server(void);
 int tcp_close_reconnect(void);
 int tcp_send_data(const uint8_t *data, size_t len);
 
+void tcp_receive_data_task(void *pvParameters);
+void send_voluntary_task(void *pvParameters);
+
 // Getters & Setters
 esp_wps_config_t get_wps_config(void);
 void set_wps_config(const esp_wps_config_t* config);

@@ -51,6 +51,10 @@
 #define	TCP_RECEIVE_TASK_PRIORITY			        (1)
 #define	TCP_RECEIVE_TASK_PERIOD				        (100ul / portTICK_PERIOD_MS)
 
+#define	SEND_VOLUNTARY_TASK_STACK_SIZE			    (configMINIMAL_STACK_SIZE * 4)
+#define	SEND_VOLUNTARY_TASK_PRIORITY			    (1)
+#define	SEND_VOLUNTARY_TASK_PERIOD				    (100ul / portTICK_PERIOD_MS)
+
 static bool wifi_scan_on = false;
 
 static esp_netif_t *ap_netif = NULL;
@@ -374,82 +378,6 @@ static int tcp_enable_keepalive(int sock) {
     return 0;
 }
 
-void tcp_receive_data_task(void *pvParameters) {
-    uint8_t recv_buf[RING_BUFFER_SIZE];
-    int len;
-    TickType_t tcp_receive_task_time;
-
-    tcp_receive_task_time = xTaskGetTickCount();
-    xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
-
-    while (1) {
-        memset(recv_buf, 0, RING_BUFFER_SIZE);
-
-        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
-            printf("Wi-Fi connection lost, terminating task\n");
-            break;
-        }
-
-        len = recv(sock, recv_buf, RING_BUFFER_SIZE, 0);
-        if (len < 0) {
-            printf("Server disconnected or recv error: errno %d\n", errno);
-            break;
-        }
-
-        if (len > 0) {
-        	xTimerStart(reset_rx_trame_timer,0);
-            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
-        }
-
-        while (1) {
-            size_t in_data_size;
-            uint8_t *in_data = (uint8_t *)xRingbufferReceiveUpTo(xRingBuffer, &in_data_size, 0, len);
-            if (!in_data) {
-                break; // no data received
-            }
-
-            temp_buffer = realloc(temp_buffer, temp_buffer_size + in_data_size);
-            memcpy(temp_buffer + temp_buffer_size, in_data, in_data_size);
-            temp_buffer_size += in_data_size;
-            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
-
-            while (temp_buffer_size > 0) {
-                int processed = proto_elaborate_data(temp_buffer, temp_buffer_size, out_data, &out_data_size);
-
-                if (processed < 0) {
-                    // wrong trame
-                    temp_buffer_size = 0;
-                    break;
-                } else if (processed == 0) {
-                    // incomplete trame
-                    break;
-                }
-
-                if (out_data_size) {
-                    tcp_send_data(out_data, out_data_size);
-                }
-
-                memmove(temp_buffer, temp_buffer + processed, temp_buffer_size - processed);
-                temp_buffer_size -= processed;
-            }
-        }
-        if (get_wifi_period()) {
-        	if (!xTimerIsTimerActive(voluntary_periodic_timer)) {
-        		xTimerChangePeriod(voluntary_periodic_timer,pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
-        		xTimerStart(voluntary_periodic_timer,0);
-        	}
-        }
-        vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
-    }
-
-    if (temp_buffer) {
-        free(temp_buffer);
-    }
-    vRingbufferDelete(xRingBuffer);
-    tcp_close_reconnect();
-    vTaskDelete(NULL);
-}
-
 int tcp_connect_to_server(void) {
     uint8_t server_ip[SERVER_SIZE + 1] = {0};
     uint8_t port_str[PORT_SIZE + 1] = {0};
@@ -520,17 +448,17 @@ int tcp_connect_to_server(void) {
 
     printf("Successfully connected to the server\n");
     set_tcp_connected(true);
-    if (get_wifi_period()) {
-    	xTimerChangePeriod(voluntary_periodic_timer,pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
-    	xTimerStart(voluntary_periodic_timer,0);
-    }
+
     // Start the TCP receive data task
-    BaseType_t task_created = xTaskCreate(tcp_receive_data_task, "TCPReceiveTask", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
+    xTaskCreate(tcp_receive_data_task, "TCP Receive Task", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
     proto_prepare_identification(out_data, &out_data_size);
     if (out_data_size) {
     	tcp_send_data(out_data, out_data_size);
     }
-    return task_created == pdPASS ? 0 : -1;
+    // Start the send voluntary task
+    xTaskCreate(send_voluntary_task, "Send Voluntary task", TCP_RECEIVE_TASK_STACK_SIZE, NULL, TCP_RECEIVE_TASK_PRIORITY, NULL);
+
+    return 0;
 }
 
 int tcp_send_data(const uint8_t *data, size_t len) {
@@ -560,6 +488,100 @@ int tcp_send_data(const uint8_t *data, size_t len) {
     }
 
     return offset;
+}
+
+void tcp_receive_data_task(void *pvParameters) {
+    uint8_t recv_buf[RING_BUFFER_SIZE];
+    int len;
+    TickType_t tcp_receive_task_time;
+
+    tcp_receive_task_time = xTaskGetTickCount();
+    xRingBuffer = xRingbufferCreate(RING_BUFFER_SIZE, RINGBUF_TYPE_BYTEBUF);
+
+    while (1) {
+        memset(recv_buf, 0, RING_BUFFER_SIZE);
+
+        if ((xEventGroupGetBits(wifi_event_group) & CONNECTED_BIT) != CONNECTED_BIT) {
+            printf("Wi-Fi connection lost, terminating task\n");
+            break;
+        }
+
+        len = recv(sock, recv_buf, RING_BUFFER_SIZE, 0);
+        if (len < 0) {
+            printf("Server disconnected or recv error: errno %d\n", errno);
+            break;
+        }
+
+        if (len > 0) {
+        	xTimerStart(reset_rx_trame_timer,0);
+            xRingbufferSend(xRingBuffer, recv_buf, len, portMAX_DELAY);
+        }
+
+        while (1) {
+            size_t in_data_size;
+            uint8_t *in_data = (uint8_t *)xRingbufferReceiveUpTo(xRingBuffer, &in_data_size, 0, len);
+            if (!in_data) {
+                break; // no data received
+            }
+
+            temp_buffer = realloc(temp_buffer, temp_buffer_size + in_data_size);
+            memcpy(temp_buffer + temp_buffer_size, in_data, in_data_size);
+            temp_buffer_size += in_data_size;
+            vRingbufferReturnItem(xRingBuffer, (void *)in_data);
+
+            while (temp_buffer_size > 0) {
+                int processed = proto_elaborate_data(temp_buffer, temp_buffer_size, out_data, &out_data_size);
+
+                if (processed < 0) {
+                    // wrong trame
+                    temp_buffer_size = 0;
+                    break;
+                } else if (processed == 0) {
+                    // incomplete trame
+                    break;
+                }
+
+                if (out_data_size) {
+                    tcp_send_data(out_data, out_data_size);
+                }
+
+                memmove(temp_buffer, temp_buffer + processed, temp_buffer_size - processed);
+                temp_buffer_size -= processed;
+            }
+        }
+        vTaskDelayUntil(&tcp_receive_task_time, TCP_RECEIVE_TASK_PERIOD);
+    }
+
+    if (temp_buffer) {
+        free(temp_buffer);
+    }
+    vRingbufferDelete(xRingBuffer);
+    tcp_close_reconnect();
+    vTaskDelete(NULL);
+}
+
+void send_voluntary_task(void *pvParameters) {
+	TickType_t send_voluntary_time;
+	send_voluntary_time = xTaskGetTickCount();
+
+    if (get_wifi_period()) {
+    	xTimerChangePeriod(voluntary_periodic_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())),0);
+    	xTimerStart(voluntary_periodic_timer,0);
+    }
+	while (1) {
+		if (!get_tcp_connected()) {
+			break;
+		} else {
+			if (get_wifi_period()) {
+				if (!xTimerIsTimerActive(voluntary_periodic_timer)) {
+					xTimerChangePeriod(voluntary_periodic_timer, pdMS_TO_TICKS(SECONDS_TO_MS(get_wifi_period())), 0);
+					xTimerStart(voluntary_periodic_timer, 0);
+				}
+			}
+		}
+		vTaskDelayUntil(&send_voluntary_time, TCP_RECEIVE_TASK_PERIOD);
+	}
+    vTaskDelete(NULL);
 }
 
 int blufi_wifi_send_voluntary(uint8_t funct, uint16_t obj_id, uint16_t index) {
