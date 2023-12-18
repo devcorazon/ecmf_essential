@@ -15,8 +15,9 @@
 #define VOC_INVALID								UINT16_MAX
 #define LUX_INVALID								UINT16_MAX
 
-#define TEMPERATURE_SCALE						(10)
-#define RELATIVE_HUMIDITY_SCALE					(10u)
+#warning //Check scale
+#define TEMPERATURE_SCALE						(100)
+#define RELATIVE_HUMIDITY_SCALE					(100u)
 #define VOC_SCALE								(1u)
 #define LUX_SCALE						        (1u)
 
@@ -24,8 +25,8 @@
 #define TEMPERATURE_OFFSET_FIXED				(0)
 #define RELATIVE_HUMIDITY_OFFSET_FIXED			(0)
 
-#define OFFSET_BOUND_MIN						(-50)
-#define OFFSET_BOUND_MAX						(50)
+#define OFFSET_BOUND_MIN						(-5 * TEMPERATURE_SCALE)
+#define OFFSET_BOUND_MAX						(5 * TEMPERATURE_SCALE)
 
 #define SET_VALUE_TO_TEMP_RAW(val)				(val == TEMP_F_INVALID ? TEMPERATURE_INVALID : (int16_t) (val * TEMPERATURE_SCALE))
 #define SET_VALUE_TO_RH_RAW(val)				(val == HUM_F_INVALID ? RELATIVE_HUMIDITY_INVALID : (uint16_t) (val * RELATIVE_HUMIDITY_SCALE))
@@ -33,13 +34,19 @@
 #define SET_VALUE_TO_LUX_RAW(val)				(val == LUX_F_INVALID ? LUX_INVALID : (uint16_t) (val * LUX_SCALE))
 
 #define TEMP_RAW_TO_INT(t)						(int16_t) (t / TEMPERATURE_SCALE)
-#define TEMP_RAW_TO_DEC(t)						(int16_t) (abs((int) t) % TEMPERATURE_SCALE)
+#define TEMP_RAW_TO_DEC(t)						(uint16_t) (abs((int) t) % TEMPERATURE_SCALE)
 
 #define RH_RAW_TO_INT(rh)						(uint16_t) (rh / RELATIVE_HUMIDITY_SCALE)
 #define RH_RAW_TO_DEC(rh)						(uint16_t) (rh % RELATIVE_HUMIDITY_SCALE)
 
 #define LUX_RAW_TO_INT(lux)						(uint16_t) (lux / LUX_SCALE)
 #define LUX_RAW_TO_DEC(lux)						(uint16_t) (abs((int) lux ) % LUX_SCALE)
+
+#define OFFSET_TEMP_RAW_TO_INT(t)			    (int16_t) (t / TEMPERATURE_SCALE)
+#define OFFSET_TEMP_RAW_TO_DEC(t)			    (uint16_t) (abs((int) t) % TEMPERATURE_SCALE)
+
+#define OFFSET_RH_RAW_TO_INT(rh)				(int16_t) (rh / (int16_t) RELATIVE_HUMIDITY_SCALE)
+#define OFFSET_RH_RAW_TO_DEC(rh)				(uint16_t) (abs((int) rh) % RELATIVE_HUMIDITY_SCALE)
 
 #define SECONDS_PER_HOUR						3600u
 #define DAYS_PER_WEEK                           7u
@@ -96,7 +103,7 @@
 
 #define THRESHOLD_FILTER_WARNING				BIT(0)
 
-#define VALUE_UNMODIFIED                         0xFF
+#define VALUE_UNMODIFIED                         0x7F
 #define VALUE_UNMODIFIED_LONG                    0x7FFF
 
 // Filter coefficients

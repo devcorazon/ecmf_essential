@@ -472,11 +472,11 @@ int tcp_send_data(const uint8_t *data, size_t len) {
     }
     // Uncomment for debugging
     printf("Sending data (length = %zu):\n", len);
-//    for (size_t i = 0; i < len; ++i) {
-//        printf("%02x ", data[i]);
-//        if ((i + 1) % 16 == 0) printf("\n");
-//    }
-//    printf("\n");
+    for (size_t i = 0; i < len; ++i) {
+        printf("%02x ", data[i]);
+        if ((i + 1) % 16 == 0) printf("\n");
+    }
+    printf("\n");
 
 	while ((lenght) && ((transmit = send(sock, data + offset, lenght, 0)) > 0)) {
 		offset += transmit;

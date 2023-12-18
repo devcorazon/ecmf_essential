@@ -459,7 +459,7 @@ static int cmd_info_func(int argc, char **argv) {
     printf("VOC threshold: %s\n", threshold_str[get_voc_set() & 0x7f]);
     printf("Luminosity threshold: %s\n", threshold_str[get_lux_set()]);
 
-    printf("Temperature Offset: %d - Humidity Offset: %d\n", get_temperature_offset(), get_relative_humidity_offset());
+    printf("Temperature Offset: %d.%01u - Humidity Offset: %d.%01u\n", OFFSET_TEMP_RAW_TO_INT(get_temperature_offset()), OFFSET_TEMP_RAW_TO_DEC(get_temperature_offset()), OFFSET_RH_RAW_TO_INT(get_relative_humidity_offset()), OFFSET_RH_RAW_TO_DEC(get_relative_humidity_offset()));
 
     printf("Setting Mode: %s - Setting Speed: %s\n", mode_str[get_mode_set()], speed_str[get_speed_set()]);
     printf("Mode: %s [calculate duration: %s]  [extra cycle: %s]  \n", mode_str[get_mode_state() & 0x1f], get_mode_state() & 0x80 ? "Yes" : "No", get_mode_state() & 0x40 ? "Yes" : "No");
@@ -470,7 +470,7 @@ static int cmd_info_func(int argc, char **argv) {
 	if (temp == TEMPERATURE_INVALID) {
 		printf("Temperature reading error\n");
 	} else {
-		printf("Temperature: %d.%01d C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
+		printf("Temperature: %d.%01u C\n", TEMP_RAW_TO_INT(temp), TEMP_RAW_TO_DEC(temp));
 	}
 
 	uint16_t rh = get_relative_humidity();
@@ -484,7 +484,7 @@ static int cmd_info_func(int argc, char **argv) {
 	if (voc == VOC_INVALID) {
 		printf("VOC Index reading error\n");
 	} else {
-		printf("VOC Index: %u4 \n", voc);
+		printf("VOC Index: %u \n", voc);
 	}
 
 	ltr303_measure_lux(&lux);

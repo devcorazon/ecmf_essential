@@ -29,11 +29,6 @@
 #include "user_experience.h"
 #include "controller.h"
 
-typedef struct {
-    uint8_t unlocked;
-    uint32_t serial_number;
-} device_desc_t;
-
 ///
 static struct i2c_dev_s i2c_dev;
 static struct adc_dev_s adc_dev;
@@ -150,7 +145,9 @@ int system_init(void) {
 	get_ota_url(ota_url);
 	printf("OTA URL: %s\n", ota_url);
 
-	printf("Wifi Period: %d\n", get_wifi_period());
+	printf("WIFI Period: %d (s)\n", get_wifi_period());
+
+	printf("WIFI Unlocked: %s\n", get_wifi_unlocked() ? "Yes" : "No");
 
 	printf("WIFI Active: %s\n", get_wifi_active() ? "Yes" : "No");
 

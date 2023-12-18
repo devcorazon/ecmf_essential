@@ -497,7 +497,7 @@ int set_wifi_active(uint8_t active) {
 }
 
 uint8_t get_wifi_unlocked(void) {
-	return application_data.wifi_configuration_settings.active;
+	return application_data.wifi_configuration_settings.unlocked;
 }
 
 int set_wifi_unlocked(uint8_t unlocked) {
