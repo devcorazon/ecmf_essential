@@ -224,13 +224,67 @@ static void wifi_unlock_callback(char *pnt_data, size_t length) {
     }
 
     // Read key from eFUSE block 5
-    uint8_t key[16]; // Assuming the key size is 16 bytes (128 bits)
+    uint8_t key[16];
     esp_err_t err = esp_efuse_read_block(EFUSE_BLK5, key, 0, 128);
     if (err != ESP_OK) {
         printf("Error reading key from eFUSE: %d\n", err);
         return;
     }
+
+    // Initialize BLUFI security with the eFUSE key
+    if (blufi_security_init_with_key(key) != ESP_OK) {
+        printf("Failed to initialize BLUFI security with eFUSE key\n");
+        return;
+    }
+
+    uint8_t hex_data[8]; // Buffer for the converted data (8 bytes)
+    for (int i = 0; i < 8; i++) {
+        sscanf(pnt_data + (i * 2), "%2hhx", &hex_data[i]);
+    }
+
+    uint8_t iv8 = 0; // Same IV as used in encryption
+
+    // Decrypt the received data
+    if (blufi_aes_decrypt(iv8, hex_data, 16) < 0) {
+        printf("Decryption failed.\n");
+        return;
+    }
+
+    // Debug: Print decrypted data
+    printf("Decrypted Data: ");
+    for (int i = 0; i < 8; i++) {
+        printf("%02X", hex_data[i]);
+    }
+    printf("\n");
+
+    // Prepare expected data: repeat the serial number twice in a 16-byte array
+    uint8_t expected_data[8];
+    uint32_t serial_number = get_serial_number();
+    for (int i = 0; i < 8; i++) {
+        expected_data[i] = (serial_number >> (i * 8)) & 0xFF;
+    }
+
+    // Debug: Print expected data (8 bytes)
+    printf("Expected Data: ");
+    for (int i = 0; i < 8; i++) {
+        printf("%02X", expected_data[i]);
+    }
+    printf("\n");
+
+    if (memcmp(hex_data, expected_data, 8) == 0) {
+        printf("Unlocking successful.\n");
+        int8_t key_flag = WIFI_UNLOCKED_VALUE;
+        if (esp_efuse_write_block(EFUSE_BLK4, &key_flag, 0, 8) == ESP_OK) {           // Writing 1 byte at block 4, offset 0
+        	printf("Written %02X to eFUSE block4 offset 0\n", key_flag);
+            set_wifi_unlocked(1);
+        } else {
+            printf("Error writing to eFUSE: %d\n", err);
+        }
+    } else {
+        printf("Unlocking failed.\n");
+    }
 }
+
 
 static void wifi_wps_callback(char *pnt_data, size_t length) {
 	int ret;

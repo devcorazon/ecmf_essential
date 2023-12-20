@@ -530,7 +530,7 @@ static int cmd_period_func(int argc, char **argv) {
 
 static int cmd_encrypt_func(int argc, char **argv) {
     // Read key from eFUSE block 5
-    uint8_t key[16]; // Assuming the key size is 16 bytes (128 bits)
+    uint8_t key[16];
     esp_err_t err = esp_efuse_read_block(EFUSE_BLK5, key, 0, 128);
     if (err != ESP_OK) {
         printf("Error reading key from eFUSE: %d\n", err);
@@ -543,17 +543,13 @@ static int cmd_encrypt_func(int argc, char **argv) {
         return -1;
     }
 
-    // Get serial number (assuming get_serial_number() returns a uint32_t)
-    uint32_t serial_number = get_serial_number();
-
     // Prepare data to encrypt: repeat the serial number twice in a 16-byte array
     uint8_t data_to_encrypt[16];
     for (int i = 0; i < 8; i++) {
-        data_to_encrypt[i] = ((serial_number >> (i * 8)) & 0xFF);
-        data_to_encrypt[i + 8] = data_to_encrypt[i]; // Repeat the serial number twice
+        data_to_encrypt[i] = ((get_serial_number() >> (i * 8)) & 0xFF);
+        data_to_encrypt[i + 8] = data_to_encrypt[i];
     }
 
-    // Prepare an IV (Initialization Vector)
     uint8_t iv8 = 0; // Ideally, this should be a random or unique value for each encryption
 
     // Encrypt the data
@@ -562,20 +558,17 @@ static int cmd_encrypt_func(int argc, char **argv) {
         return -1;
     }
 
-    // Print the encrypted data in hex
     printf("Encrypted Data: ");
     for (int i = 0; i < 8; i++) {
         printf("%02X", data_to_encrypt[i]);
     }
     printf("\n");
 
-    // Optional: Decrypt to verify
     if (blufi_aes_decrypt(iv8, data_to_encrypt, 16) < 0) {
         printf("Decryption failed.\n");
         return -1;
     }
 
-    // Print the decrypted data in hex
     printf("Decrypted Data: ");
     for (int i = 0; i < 8; i++) {
         printf("%02X", data_to_encrypt[i]);
