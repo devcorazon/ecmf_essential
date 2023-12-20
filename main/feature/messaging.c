@@ -21,6 +21,8 @@
 #include "storage.h"
 #include "statistic.h"
 
+extern struct blufi_security *blufi_sec;
+
 typedef void (*command_callback_t) (char *pnt_data, size_t length);
 
 struct custom_command_s {
@@ -55,7 +57,7 @@ static const struct custom_command_s custom_commands_table[] = {
 	{ 	BLUFI_CMD_SERVER,		    server_callback		    	},
 	{ 	BLUFI_CMD_PORT,			    port_callback	    	    },
 	{	BLUFI_CMD_WIFI_ACTIVE,	    wifi_active_callback	    },
-	{	BLUFI_CMD_WIFI_UNLOCK,   	wifi_unlock_callback },
+	{	BLUFI_CMD_WIFI_UNLOCK,   	wifi_unlock_callback        },
 	{   BLUFI_CMD_WIFI_WPS,         wifi_wps_callback           },
 	{	BLUFI_CMD_WRN_FLT_DISABLE,	wrn_flt_disable_callback    },
 	{	BLUFI_CMD_WRN_FLT_CLEAR,	wrn_flt_clear_callback     	},
@@ -221,28 +223,12 @@ static void wifi_unlock_callback(char *pnt_data, size_t length) {
         return;
     }
 
-    char serial_str[9];
-    sprintf(serial_str, "%08X", (unsigned int)get_serial_number());
-
-    char received_serials[2][9];
-    snprintf(received_serials[0], 9, "%s", pnt_data);
-    snprintf(received_serials[1], 9, "%s", pnt_data + 8);
-
-    if (strcmp(serial_str, received_serials[0]) == 0 && strcmp(serial_str, received_serials[1]) == 0) {
-        printf("Both serial numbers match.\n");
-
-        uint8_t key_flag = WIFI_UNLOCKED_VALUE;
-
-        esp_err_t err = esp_efuse_write_block(EFUSE_BLK4, &key_flag, 0, 8); // Writing 1 byte at block 4, offset 0
-        if (err == ESP_OK) {
-            printf("Written %02X to eFUSE block4 offset 0\n", key_flag);
-            set_wifi_unlocked(1);
-        } else {
-            printf("Error writing to eFUSE: %d\n", err);
-        }
-
-    } else {
-        printf("Serial numbers mismatch.\n");
+    // Read key from eFUSE block 5
+    uint8_t key[16]; // Assuming the key size is 16 bytes (128 bits)
+    esp_err_t err = esp_efuse_read_block(EFUSE_BLK5, key, 0, 128);
+    if (err != ESP_OK) {
+        printf("Error reading key from eFUSE: %d\n", err);
+        return;
     }
 }
 

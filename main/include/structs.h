@@ -15,6 +15,7 @@ struct noinit_data_s {
 
 };
 
+///
 struct runtime_data_s {
 	uint32_t    serial_number;
 	uint16_t    fw_version_v_ctrl;
@@ -29,6 +30,11 @@ struct runtime_data_s {
 	int16_t     internal_temperature;
 	int16_t     external_temperature;
 	uint16_t    automatic_cycle_duration;
+	uint8_t     wifi_unlocked;
+};
+
+////
+struct saved_data_s {
 	uint32_t    filter_operating;
 };
 
@@ -41,7 +47,6 @@ struct configuration_settings_s {
 	uint8_t     voc_set;
 	int16_t		temperature_offset;
 	int16_t    	relative_humidity_offset;
-	uint16_t    automatic_cycle_duration;
 	uint8_t     wrn_flt_disable;
 
 };
@@ -55,13 +60,13 @@ struct wifi_configuration_settings_s {
 	uint8_t     port[PORT_SIZE + 1];
 	uint16_t    period;
 	uint8_t     ota_url[OTA_URL_SIZE + 1];
-	uint8_t     unlocked;
 };
 
 struct application_data_s {
 	struct noinit_data_s				noinit_data;
 	uint32_t							crc_noinit_data;
 	struct runtime_data_s				runtime_data;
+	struct saved_data_s	            	saved_data;
 	struct configuration_settings_s		configuration_settings;
 	struct wifi_configuration_settings_s wifi_configuration_settings;
 };

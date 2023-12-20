@@ -128,7 +128,6 @@ static void ble_event_callback(esp_blufi_cb_event_t event, esp_blufi_cb_param_t 
     	printf("BLUFI ble connect\n");
         set_ble_is_connected(true);
         esp_blufi_adv_stop();
-        blufi_security_init();
         current_ble_state = BLE_CONNECTED;
         ble_connection_count++;
         if (!test_in_progress()) {

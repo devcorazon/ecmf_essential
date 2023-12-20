@@ -5,18 +5,18 @@
  *      Author: Daniele Schirosi
  */
 
-#include "test.h"
-#include "stdbool.h"
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 #include <freertos/timers.h>
 
+#include "test.h"
+#include "stdbool.h"
 
 #include "esp_console.h"
 #include "esp_wifi.h"
 #include "esp_idf_version.h"
+#include "esp_efuse.h"
 
 #include "board.h"
 #include "system.h"
@@ -130,7 +130,6 @@ static int cmd_test_led_func(int argc, char** argv) {
 		return -1;
 	}
 
-
 	char *endptr;
 	long index = strtol(argv[1], &endptr, 10); // Base 10 is used.
 
@@ -181,10 +180,11 @@ static int cmd_test_all_func(int argc, char **argv) {
 		printf("Make sure to run test_start \n");
 	}
 	else {
-
-		uint32_t serial_number = get_serial_number();
-
-		printf("Serial Number: %08lx\n", serial_number);
+	    printf("Device Serial Number: %02X%02X%02X%02X\n",
+	           (get_serial_number()) & 0xFF,
+	           (get_serial_number() >> 8) & 0xFF,
+	           (get_serial_number() >> 16) & 0xFF,
+	           (get_serial_number() >> 24) & 0xFF);
 
 		printf("Firmware version: v%d.%d.%d\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
 
@@ -384,7 +384,6 @@ static int cmd_fan_cycle_func(int argc, char **argv) {
     return 0;
 }
 
-
 static int cmd_test_start_func(int argc, char **argv) {
     if (test_in_progress() == true) {
         printf("Run test_stop and start again! \n");
@@ -445,7 +444,12 @@ static int cmd_info_func(int argc, char **argv) {
 
     printf("Firmware version: %d.%d.%d\n", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
     printf("ESP version: %d.%d.%d\n", ESP_IDF_VERSION_MAJOR, ESP_IDF_VERSION_MINOR, ESP_IDF_VERSION_PATCH);
-	printf("Device Serial Number: %08lx\n", get_serial_number());
+    // Print the serial number in reverse byte order
+    printf("Device Serial Number: %02X%02X%02X%02X\n",
+           (get_serial_number()) & 0xFF,
+           (get_serial_number() >> 8) & 0xFF,
+           (get_serial_number() >> 16) & 0xFF,
+           (get_serial_number() >> 24) & 0xFF);
 
     blufi_get_ble_address(bt_addr);
     printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", bt_addr[0], bt_addr[1], bt_addr[2], bt_addr[3], bt_addr[4], bt_addr[5]);
@@ -522,6 +526,63 @@ static int cmd_period_func(int argc, char **argv) {
 	set_wifi_period(index);
 	printf("period set = %d\n",get_wifi_period());
 	return 0;
+}
+
+static int cmd_encrypt_func(int argc, char **argv) {
+    // Read key from eFUSE block 5
+    uint8_t key[16]; // Assuming the key size is 16 bytes (128 bits)
+    esp_err_t err = esp_efuse_read_block(EFUSE_BLK5, key, 0, 128);
+    if (err != ESP_OK) {
+        printf("Error reading key from eFUSE: %d\n", err);
+        return -1;
+    }
+
+    // Initialize BLUFI security with the eFUSE key
+    if (blufi_security_init_with_key(key) != ESP_OK) {
+    	printf("Failed to initialize BLUFI security with eFUSE key\n");
+        return -1;
+    }
+
+    // Get serial number (assuming get_serial_number() returns a uint32_t)
+    uint32_t serial_number = get_serial_number();
+
+    // Prepare data to encrypt: repeat the serial number twice in a 16-byte array
+    uint8_t data_to_encrypt[16];
+    for (int i = 0; i < 8; i++) {
+        data_to_encrypt[i] = ((serial_number >> (i * 8)) & 0xFF);
+        data_to_encrypt[i + 8] = data_to_encrypt[i]; // Repeat the serial number twice
+    }
+
+    // Prepare an IV (Initialization Vector)
+    uint8_t iv8 = 0; // Ideally, this should be a random or unique value for each encryption
+
+    // Encrypt the data
+    if (blufi_aes_encrypt(iv8, data_to_encrypt, 16) < 0) {
+        printf("Encryption failed.\n");
+        return -1;
+    }
+
+    // Print the encrypted data in hex
+    printf("Encrypted Data: ");
+    for (int i = 0; i < 8; i++) {
+        printf("%02X", data_to_encrypt[i]);
+    }
+    printf("\n");
+
+    // Optional: Decrypt to verify
+    if (blufi_aes_decrypt(iv8, data_to_encrypt, 16) < 0) {
+        printf("Decryption failed.\n");
+        return -1;
+    }
+
+    // Print the decrypted data in hex
+    printf("Decrypted Data: ");
+    for (int i = 0; i < 8; i++) {
+        printf("%02X", data_to_encrypt[i]);
+    }
+    printf("\n");
+
+    return 0;
 }
 
 ///
@@ -637,6 +698,15 @@ int test_init(void) {
 	     };
 
 	 esp_console_cmd_register(&cmd_period);
+
+	 const esp_console_cmd_t cmd_encrypt = {
+	       .command = "encrypt",
+	       .help = "encrypt",
+	       .hint = NULL,
+	       .func = cmd_encrypt_func,
+	     };
+
+	 esp_console_cmd_register(&cmd_encrypt);
 
 	 return 0;
 }

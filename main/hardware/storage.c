@@ -23,18 +23,15 @@
 #define VOC_SET_KEY		      "voc_set"
 #define TEMP_OFFSET_KEY	      "temp_offset"
 #define R_HUM_OFFSET_KEY      "r_hum_offset"
-#define DEVICE_STATE_KEY      "device_state"
 #define FILTER_OPERATING_KEY  "filter"
 #define WRN_FLT_DISABLE_KEY   "wrnfltdisable"
 #define WIFI_SSID_KEY         "ssid"
 #define WIFI_PASSWORD_KEY     "password"
 #define WIFI_ACTIVE_KEY       "active"
-#define WIFI_UNLOCKED_KEY     "unlocked"
 #define WIFI_PERIOD_KEY       "wifiperiod"
 #define SERVER_KEY            "server"
 #define PORT_KEY              "port"
 #define OTA_URL_KEY           "ota"
-
 
 static nvs_handle_t storage_handle;
 
@@ -58,17 +55,15 @@ static struct storage_entry_s storage_entry_poll[] = {
 		{ TEMP_OFFSET_KEY,    	       &application_data.configuration_settings.temperature_offset,			  DATA_TYPE_INT16, 	  2 },
 		{ R_HUM_OFFSET_KEY,  	       &application_data.configuration_settings.relative_humidity_offset,	  DATA_TYPE_INT16, 	  2 },
 
- 		{ DEVICE_STATE_KEY,            &application_data.runtime_data.device_state,                           DATA_TYPE_UINT8,    1 },
- 		{ FILTER_OPERATING_KEY,        &application_data.runtime_data.filter_operating,                       DATA_TYPE_UINT32,   4 },
+ 		{ FILTER_OPERATING_KEY,        &application_data.saved_data.filter_operating,                         DATA_TYPE_UINT32,   4 },
  		{ WRN_FLT_DISABLE_KEY,         &application_data.configuration_settings.wrn_flt_disable,              DATA_TYPE_UINT8,    1 },
 
 		{ WIFI_SSID_KEY,               &application_data.wifi_configuration_settings.ssid,                    DATA_TYPE_STRING,   SSID_SIZE + 1 },
 		{ WIFI_PASSWORD_KEY,           &application_data.wifi_configuration_settings.password,                DATA_TYPE_STRING,   PASSWORD_SIZE + 1 },
 		{ WIFI_ACTIVE_KEY,             &application_data.wifi_configuration_settings.active,                  DATA_TYPE_UINT8,    1 },
-		{ WIFI_UNLOCKED_KEY,           &application_data.wifi_configuration_settings.unlocked,                DATA_TYPE_UINT8,    1 },
 		{ SERVER_KEY,                  &application_data.wifi_configuration_settings.server,                  DATA_TYPE_STRING,   SERVER_SIZE + 1 },
 		{ PORT_KEY,                    &application_data.wifi_configuration_settings.port,                    DATA_TYPE_STRING,   PORT_SIZE + 1 },
-		{ WIFI_PERIOD_KEY,             &application_data.wifi_configuration_settings.period,                  DATA_TYPE_UINT16,    2 },
+		{ WIFI_PERIOD_KEY,             &application_data.wifi_configuration_settings.period,                  DATA_TYPE_UINT16,   2 },
 		{ OTA_URL_KEY,                 &application_data.wifi_configuration_settings.ota_url,                 DATA_TYPE_STRING,   OTA_URL_SIZE + 1 }
 };
 
@@ -91,7 +86,11 @@ static void storage_init_runtime_data(void) {
 	application_data.runtime_data.internal_temperature = TEMPERATURE_INVALID;
 	application_data.runtime_data.external_temperature = TEMPERATURE_INVALID;
 	application_data.runtime_data.device_state = 0;
-	application_data.runtime_data.filter_operating = 0;
+	application_data.runtime_data.wifi_unlocked = 0;
+}
+
+static void storage_init_saved_data(void) {
+	memset(&application_data.saved_data, 0, sizeof(application_data.saved_data));
 }
 
 static void storage_init_configuration_settings(void) {
@@ -116,6 +115,7 @@ int storage_init(void) {
 
 	storage_init_noinit_data();
     storage_init_runtime_data();
+    storage_init_saved_data();
     storage_init_configuration_settings();
     storage_init_wifi_configuration_settings();
 
@@ -144,6 +144,7 @@ int storage_set_default(void) {
 
 	storage_init_noinit_data();
 	storage_init_runtime_data();
+    storage_init_saved_data();
 	storage_init_configuration_settings();
 	storage_save_all_entry();
 
@@ -151,7 +152,6 @@ int storage_set_default(void) {
 }
 
 /// runtime data
-
 uint32_t get_serial_number(void) {
 	return application_data.runtime_data.serial_number;
 }
@@ -212,8 +212,6 @@ uint8_t get_device_state(void) {
 
 int set_device_state(uint8_t device_state) {
 	application_data.runtime_data.device_state= device_state;
-
-	storage_save_entry_with_key(DEVICE_STATE_KEY);
 
 	return 0;
 }
@@ -384,12 +382,12 @@ int set_automatic_cycle_duration(uint16_t automatic_cycle_duration) {
 }
 
 uint32_t get_filter_operating(void) {
-    return application_data.runtime_data.filter_operating;
+    return application_data.saved_data.filter_operating;
 
 }
 
 int set_filter_operating(uint32_t filter_operating) {
-    application_data.runtime_data.filter_operating = filter_operating;
+    application_data.saved_data.filter_operating = filter_operating;
 
     storage_save_entry_with_key(FILTER_OPERATING_KEY);
 
@@ -483,7 +481,6 @@ int set_ota_url(const uint8_t *ota_url) {
     return 0;
 }
 
-
 uint8_t get_wifi_active(void) {
 	return application_data.wifi_configuration_settings.active;
 }
@@ -497,13 +494,11 @@ int set_wifi_active(uint8_t active) {
 }
 
 uint8_t get_wifi_unlocked(void) {
-	return application_data.wifi_configuration_settings.unlocked;
+	return application_data.runtime_data.wifi_unlocked;
 }
 
 int set_wifi_unlocked(uint8_t unlocked) {
-	application_data.wifi_configuration_settings.unlocked = unlocked;
-
-	storage_save_entry_with_key(WIFI_UNLOCKED_KEY);
+	application_data.runtime_data.wifi_unlocked = unlocked;
 
 	return 0;
 }
@@ -511,32 +506,22 @@ int set_wifi_unlocked(uint8_t unlocked) {
 static int storage_efuse_obtain(void) {
     uint8_t serial_number_byte[4];
     uint8_t wifi_unlocked_key = 0;
-    uint8_t encrypt_key[16];
 
     // Obtain serial number from block 3
     if (esp_efuse_read_block(EFUSE_BLK3, &serial_number_byte, 0, 32) != ESP_OK) {
     	return -1;
     }
-    application_data.runtime_data.serial_number = ((uint32_t)serial_number_byte[3]) << 24 | ((uint32_t)serial_number_byte[2]) << 16 | ((uint32_t)serial_number_byte[1]) << 8 | ((uint32_t)serial_number_byte[0]);
+    application_data.runtime_data.serial_number = ((uint32_t)serial_number_byte[0]) << 24 | ((uint32_t)serial_number_byte[1]) << 16 | ((uint32_t)serial_number_byte[2]) << 8 | ((uint32_t)serial_number_byte[3]);
 
     // Obtain wifi key flag from block 4
     if (esp_efuse_read_block(EFUSE_BLK4, &wifi_unlocked_key, 0, 8) != ESP_OK) {
     	return -1;
     }
-#warning
-#if 0
     if ( wifi_unlocked_key == WIFI_UNLOCKED_VALUE ) {
     	set_wifi_unlocked(1);
     	printf("Setting wifi unlocked to 1\n");
     }
-#else
-    set_wifi_unlocked(1);
-#endif
 
-    // Obtain encryption key from block 5 ( 16 byte )
-    if (esp_efuse_read_block(EFUSE_BLK5, &encrypt_key, 0, 128) != ESP_OK) {
-    	return -1;
-    }
     return 0;
 }
 

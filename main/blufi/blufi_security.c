@@ -36,7 +36,6 @@
 #define SEC_TYPE_DH_G           0x03
 #define SEC_TYPE_DH_PUBLIC      0x04
 
-
 struct blufi_security {
 #define DH_SELF_PUB_KEY_LEN     128
 #define DH_SELF_PUB_KEY_BIT_LEN (DH_SELF_PUB_KEY_LEN * 8)
@@ -184,10 +183,14 @@ uint16_t blufi_crc_checksum(uint8_t iv8, uint8_t *data, int len) {
     return esp_crc16_be(0, data, len);
 }
 
-esp_err_t blufi_security_init(void) {
+int blufi_security_init_with_key(const uint8_t *key) {
+    if (!key) {
+        return -1;
+    }
+
     blufi_sec = (struct blufi_security *)malloc(sizeof(struct blufi_security));
     if (blufi_sec == NULL) {
-        return ESP_FAIL;
+        return -1;
     }
 
     memset(blufi_sec, 0x0, sizeof(struct blufi_security));
@@ -195,23 +198,26 @@ esp_err_t blufi_security_init(void) {
     mbedtls_dhm_init(&blufi_sec->dhm);
     mbedtls_aes_init(&blufi_sec->aes);
 
-    memset(blufi_sec->iv, 0x0, 16);
+    // Set the AES key
+    mbedtls_aes_setkey_enc(&blufi_sec->aes, key, 128); // 128-bit key length
+
+    // Initialize the IV or other components as needed
+    memset(blufi_sec->iv, 0x0, 16); // Example, use a proper IV initialization
+
     return 0;
 }
 
 void blufi_security_deinit(void) {
-    if (blufi_sec == NULL) {
-        return;
-    }
-    if (blufi_sec->dh_param) {
-        free(blufi_sec->dh_param);
-        blufi_sec->dh_param = NULL;
-    }
-    mbedtls_dhm_free(&blufi_sec->dhm);
-    mbedtls_aes_free(&blufi_sec->aes);
+    if (blufi_sec) {
+        mbedtls_dhm_free(&blufi_sec->dhm);
+        mbedtls_aes_free(&blufi_sec->aes);
 
-    memset(blufi_sec, 0x0, sizeof(struct blufi_security));
+        if (blufi_sec->dh_param) {
+            free(blufi_sec->dh_param);
+        }
 
-    free(blufi_sec);
-    blufi_sec =  NULL;
+        memset(blufi_sec, 0x0, sizeof(struct blufi_security));
+        free(blufi_sec);
+        blufi_sec = NULL;
+    }
 }
