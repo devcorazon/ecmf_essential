@@ -11,9 +11,7 @@
 #include "system.h"
 
 void statistic_init(void);
-
 void statistic_update_handler(void);
-
 void statistic_reset_filter(void);
 
 

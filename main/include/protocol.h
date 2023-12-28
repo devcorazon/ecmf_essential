@@ -12,7 +12,6 @@
 #include "blufi_internal.h"
 #include "protocol_internal.h"
 
-
 #define PROTO_TRAME_LEN 1024
 
 int proto_elaborate_data(uint8_t *in_data, size_t in_data_size, uint8_t *out_data, size_t *out_data_size);

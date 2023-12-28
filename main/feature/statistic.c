@@ -27,7 +27,6 @@ static uint32_t filter_operating = 0;
 static statistics_ts statistics_current;
 
 void statistic_init(void) {
-
     statistics_current.speed_counters_tot_sec.night = 0;
     statistics_current.speed_counters_tot_sec.low = 0;
     statistics_current.speed_counters_tot_sec.medium = 0;

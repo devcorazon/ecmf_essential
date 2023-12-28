@@ -66,8 +66,8 @@ static const struct custom_command_s custom_commands_table[] = {
 	{   BLUFI_CMD_TH_RH,            th_rh_callback              },
 	{   BLUFI_CMD_TH_LUX,           th_lux_callback             },
 	{   BLUFI_CMD_TH_VOC,           th_voc_callback             },
-	{   BLUFI_CMD_OFFSET_RH,        offset_rh_callback             },
-	{   BLUFI_CMD_OFFSET_T,         offset_t_callback             },
+	{   BLUFI_CMD_OFFSET_RH,        offset_rh_callback          },
+	{   BLUFI_CMD_OFFSET_T,         offset_t_callback           },
 };
 
 int ble_analyse_received_data(const uint8_t *data, uint32_t data_len) {

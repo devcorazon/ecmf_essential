@@ -627,7 +627,7 @@ int test_init(void) {
 	       .func = cmd_test_fan_func,
 	     };
 
-	 esp_console_cmd_register(&cmd_test_fan);
+	esp_console_cmd_register(&cmd_test_fan);
 
 	const esp_console_cmd_t cmd_fan_fix = {
 		   .command = "fan_fix",

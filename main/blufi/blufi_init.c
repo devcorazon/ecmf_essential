@@ -10,7 +10,7 @@
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
 
-#include "../include/blufi.h"
+#include "blufi.h"
 
 int esp_blufi_host_init(void) {
     int ret;
